@@ -1,0 +1,21 @@
+{
+  "overall": "PASS",
+  "transport": "REAL_HTTP_MYSQL_REDIS",
+  "production_selected_count": 0,
+  "account_id": 23,
+  "modes": {
+    "PRODUCTION": {
+      "http_status": 200,
+      "operation_count": 16,
+      "selected_count": 0
+    },
+    "DIAGNOSTIC": {
+      "http_status": 200,
+      "operation_count": 16,
+      "selected_count": 0
+    }
+  },
+  "executions_created": 0,
+  "unknown_account_status": 404,
+  "temporary_account_deleted": true
+}

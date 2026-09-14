@@ -1,0 +1,180 @@
+x-runtime-env: &runtime-env
+  DATABASE_URL: ${DOCKER_DATABASE_URL:?Set DOCKER_DATABASE_URL in .env}
+  REDIS_URL: redis://redis:6379/0
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  DEPENDENCY_TIMEOUT_SECONDS: ${DEPENDENCY_TIMEOUT_SECONDS:-3}
+  ONEBOT_HTTP_URL: ${ONEBOT_HTTP_URL:-}
+  ONEBOT_WS_URL: ${ONEBOT_WS_URL:-}
+  ONEBOT_ACCESS_TOKEN: ${ONEBOT_ACCESS_TOKEN:-}
+  ONEBOT_TIMEOUT_SECONDS: ${ONEBOT_TIMEOUT_SECONDS:-5}
+  ONEBOT_RETRIES: ${ONEBOT_RETRIES:-1}
+  ONEBOT_HTTP_TIMEOUT: ${ONEBOT_HTTP_TIMEOUT:-5}
+  ONEBOT_CONNECT_TIMEOUT: ${ONEBOT_CONNECT_TIMEOUT:-3}
+  ONEBOT_MAX_RETRIES: ${ONEBOT_MAX_RETRIES:-1}
+  ONEBOT_WS_RECONNECT_MIN_SECONDS: ${ONEBOT_WS_RECONNECT_MIN_SECONDS:-1}
+  ONEBOT_WS_RECONNECT_MAX_SECONDS: ${ONEBOT_WS_RECONNECT_MAX_SECONDS:-30}
+  ONEBOT_WS_HEARTBEAT_TIMEOUT: ${ONEBOT_WS_HEARTBEAT_TIMEOUT:-60}
+  ONEBOT_POLL_INTERVAL: ${ONEBOT_POLL_INTERVAL:-15}
+  ONEBOT_NODE_TOKENS: ${ONEBOT_NODE_TOKENS:-{}}
+  QQ_WEB_BASE_URL: ${QQ_WEB_BASE_URL:-}
+  QQ_TASK_CENTER_URL: ${QQ_TASK_CENTER_URL:-}
+  QQ_ACTIVITY_URL: ${QQ_ACTIVITY_URL:-}
+  BROWSER_HEADLESS: ${BROWSER_HEADLESS:-true}
+  BROWSER_TIMEOUT: ${BROWSER_TIMEOUT:-5}
+  BROWSER_NAVIGATION_TIMEOUT: ${BROWSER_NAVIGATION_TIMEOUT:-15}
+  BROWSER_MAX_CONTEXTS: ${BROWSER_MAX_CONTEXTS:-5}
+  BROWSER_USER_AGENT: ${BROWSER_USER_AGENT:-}
+  BROWSER_LOCALE: ${BROWSER_LOCALE:-zh-CN}
+  BROWSER_TIMEZONE: ${BROWSER_TIMEZONE:-Asia/Shanghai}
+  BROWSER_STORAGE_KEY: ${BROWSER_STORAGE_KEY:-}
+  BROWSER_STATE_DIR: /srv/artifacts/browser-state
+  BROWSER_SCREENSHOT_DIR: /srv/artifacts/screenshots
+  EXECUTOR_PRIORITIES: ${EXECUTOR_PRIORITIES:-{}}
+  TASK_STREAM_NAME: ${TASK_STREAM_NAME:-qq:task:stream}
+  TASK_CONSUMER_GROUP: ${TASK_CONSUMER_GROUP:-qq-workers}
+  TASK_DLQ_NAME: ${TASK_DLQ_NAME:-qq:task:dlq}
+  TASK_LOCK_PREFIX: ${TASK_LOCK_PREFIX:-task-lock:}
+  WORKER_KEY_PREFIX: ${WORKER_KEY_PREFIX:-worker:}
+  WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
+  WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-10}
+  WORKER_HEARTBEAT_TTL: ${WORKER_HEARTBEAT_TTL:-60}
+  EXECUTION_LEASE_SECONDS: ${EXECUTION_LEASE_SECONDS:-60}
+  TASK_LOCK_TTL: ${TASK_LOCK_TTL:-60}
+  TASK_TIMEOUT_SECONDS: ${TASK_TIMEOUT_SECONDS:-30}
+  WORKER_SHUTDOWN_TIMEOUT: ${WORKER_SHUTDOWN_TIMEOUT:-20}
+  MAINTENANCE_INTERVAL: ${MAINTENANCE_INTERVAL:-5}
+  OUTBOX_REPUBLISH_SECONDS: ${OUTBOX_REPUBLISH_SECONDS:-30}
+  MAX_AUTO_RETRY: ${MAX_AUTO_RETRY:-2}
+  AUTO_RETRY_BASE_SECONDS: ${AUTO_RETRY_BASE_SECONDS:-5}
+  SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-true}
+  SCHEDULE_HOUR: ${SCHEDULE_HOUR:-1}
+  SCHEDULE_MINUTE: ${SCHEDULE_MINUTE:-0}
+  BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-Asia/Shanghai}
+
+services:
+  backend:
+    build: ./backend
+    image: ${COMPOSE_PROJECT_NAME:-newqq}-backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - browser_data:/srv/artifacts:ro
+    environment:
+      <<: *runtime-env
+      ADMIN_ACCESS_TOKEN: ${ADMIN_ACCESS_TOKEN:?Set ADMIN_ACCESS_TOKEN in .env}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/system/health', timeout=5)"]
+      interval: 15s
+      timeout: 6s
+      retries: 3
+    restart: unless-stopped
+  migrate:
+    build: ./backend
+    image: ${COMPOSE_PROJECT_NAME:-newqq}-backend
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL:?Set DOCKER_DATABASE_URL in .env}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: "no"
+  worker:
+    init: true
+    shm_size: 256mb
+    volumes:
+      - browser_data:/srv/artifacts
+    build: ./backend
+    image: ${COMPOSE_PROJECT_NAME:-newqq}-backend
+    command: ["python", "-m", "app.workers.worker"]
+    environment:
+      <<: *runtime-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    stop_grace_period: ${WORKER_STOP_GRACE_PERIOD:-60s}
+    restart: unless-stopped
+
+  scheduler:
+    build: ./backend
+    image: ${COMPOSE_PROJECT_NAME:-newqq}-backend
+    command: ["python", "-m", "app.scheduler.scheduler"]
+    environment:
+      <<: *runtime-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  onebot-listener:
+    build: ./backend
+    image: ${COMPOSE_PROJECT_NAME:-newqq}-backend
+    command: ["python", "-m", "app.adapters.onebot.listener"]
+    environment:
+      <<: *runtime-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-account_tasks}
+      MYSQL_USER: ${MYSQL_USER:-platform}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_PASSWORD\" mysql -h 127.0.0.1 -u\"$$MYSQL_USER\" \"$$MYSQL_DATABASE\" -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+volumes:
+  browser_data:
+  mysql_data:
+  redis_data:

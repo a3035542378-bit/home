@@ -1,0 +1,32 @@
+[project]
+name = "account-task-platform"
+version = "0.1.0"
+description = "Layered account automation management platform"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1",
+  "pydantic-settings>=2.7,<3", "sqlalchemy[asyncio]>=2.0,<2.1",
+  "asyncmy>=0.2.10,<0.3", "redis>=5.2,<7", "alembic>=1.14,<2",
+  "httpx>=0.28,<1", "websockets>=15,<18",
+  "apscheduler>=3.11,<4", "playwright>=1.51,<2", "cryptography>=44,<47",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.3,<9", "pytest-asyncio>=0.25,<1", "httpx>=0.28,<1", "aiosqlite>=0.20,<1", "ruff>=0.11,<1"]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = ["real_onebot_business: 显式真实 QQ 只读业务测试", "real_onebot_task: 显式真实 OneBot 任务测试", "real_onebot: 显式启用的真实 NapCat 只读测试", "browser_integration: 本地 Chromium 集成测试"]
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100

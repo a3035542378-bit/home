@@ -1,0 +1,64 @@
+{
+  "overall": "REAL_BROWSER_FIXTURE_PASS",
+  "backend": "REAL_HTTP_MYSQL_REDIS_WORKER",
+  "browser": "REAL_CHROMIUM",
+  "site": "LOCAL_FIXTURE",
+  "real_qq_web": "REAL_QQ_WEB_NOT_TESTED",
+  "executions": [
+    {
+      "task_code": "QQ_WEB_LOGIN_STATUS",
+      "execution_id": "4fc71d83-e00d-4936-8e6b-51b06e105caf",
+      "status": "SUCCESS",
+      "data": {
+        "login_state": "AUTHENTICATED",
+        "authenticated": true
+      }
+    },
+    {
+      "task_code": "QQ_WEB_PAGE_STATUS",
+      "execution_id": "e5c6febc-1abf-4d29-8e5a-1b56042e1be2",
+      "status": "SUCCESS",
+      "data": {
+        "available": true,
+        "login_state": "AUTHENTICATED",
+        "authenticated": true
+      }
+    },
+    {
+      "task_code": "QQ_TASK_CENTER_SUMMARY",
+      "execution_id": "c60ea191-a87d-4abd-b0e4-6773456a2c1c",
+      "status": "SUCCESS",
+      "data": {
+        "items": [
+          {
+            "title": "阅读状态",
+            "status": "COMPLETED",
+            "task_key": "read"
+          },
+          {
+            "title": "访问状态",
+            "status": "PENDING",
+            "task_key": "visit"
+          },
+          {
+            "title": "可领取状态",
+            "status": "CLAIMABLE",
+            "task_key": "reward"
+          }
+        ],
+        "total": 3,
+        "pending": 1,
+        "completed": 1
+      }
+    },
+    {
+      "task_code": "QQ_ACTIVITY_SUMMARY",
+      "execution_id": "398d2966-1153-4649-a79a-3e8ef314d5dc",
+      "status": "SUCCESS",
+      "data": {
+        "activity_count": 2,
+        "available_count": 1
+      }
+    }
+  ]
+}
