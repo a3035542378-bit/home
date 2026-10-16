@@ -1,0 +1,57 @@
+{
+  "apk_sha256": "d24dd03473cdaeb2cfddea13f2f96250e7f5b20c2be69cf45987f2d178a6d2d3",
+  "apk_bytes": 2078137845,
+  "bridge_sha256": "e6eaf0dabc390763c1ec51716ba162bd1263b72ce0177ad49b8517bd8349fea2",
+  "diagnostic_hooks_absent": true,
+  "signature": {
+    "verified": true,
+    "v1": true,
+    "v2": true,
+    "v3": true
+  },
+  "date": "2026-10-16T12:42:42.398137+08:00",
+  "release": "V6.1 MATERIALS R3 PARTIAL",
+  "status": "STANDALONE_THREE_MATERIAL_PURCHASES_PASSED_SIX_CATEGORIES_PARTIAL",
+  "apk": "/Users/baize/Downloads/newqq/artifacts/zmxol-offline/v61-20261016/15.7.2-offline-v61-materials-r3.apk",
+  "balance": 1959998,
+  "initial_test_credit": 2000000,
+  "credit_migration_once_verified": true,
+  "quantities": {
+    "502000": 22,
+    "502001": 6,
+    "530002": 2
+  },
+  "five_pet_ids": [
+    4399,
+    4400,
+    4401,
+    4402,
+    4403
+  ],
+  "receipt_count": 4,
+  "test_consumed": 40002,
+  "cold_save_bytes_equal": true,
+  "save_bytes": 12490,
+  "save_sha256": "553a747866a85b31fb18805e34e285d6664d6ce2254de48381df28561ab0834a",
+  "installed_bridge_matches_apk": true,
+  "internet_permission_absent_device_verified": true,
+  "old_v53_backup_unchanged": true,
+  "old_v60_r4_apk_unchanged": true,
+  "rejected_candidates": [
+    "R1: cached list reset point; second purchase ledger drifted",
+    "R2: inconsistent balance guard rejected second purchase"
+  ],
+  "automated_tests": {
+    "passed": 909,
+    "seconds": 30.29
+  },
+  "device": "AOSP Android 11 ARM64 emulator-5576, nonroot shell during player actions",
+  "remaining": [
+    "six category UI",
+    "special bag_type 1/4 materials",
+    "pet/fashion/equipment instance purchases",
+    "gift opening/selection",
+    "material usage and costume equip",
+    "physical phone; battle not rerun this round"
+  ]
+}

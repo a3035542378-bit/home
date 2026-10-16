@@ -1,0 +1,77 @@
+{
+  "original_apk_sha256": "ecff6494a962e066812434497282adb614c0163cb7be856c1f64be36861e3d6a",
+  "files": [
+    {
+      "target": "skeleton/pet/221.json",
+      "source": "assets/images/hd/skeleton/221.json",
+      "bytes": 101249,
+      "sha256": "f5512dfb5400ef74d28eb972ccf08ad88c6ea25a7135a7d7f86b10955466c936"
+    },
+    {
+      "target": "skeleton/pet/221.atlas",
+      "source": "assets/images/hd/skeleton/221.atlas",
+      "bytes": 1505,
+      "sha256": "899096e7627f58c97742b61fe9e35fa67689dd2dbabe19f899cc954be5f38412"
+    },
+    {
+      "target": "skeleton/pet/221.png",
+      "source": "assets/images/hd/skeleton/221.png",
+      "bytes": 22531,
+      "sha256": "31319e5afc7dc6a4d06c5be41b45a7a7e734f54e65d2a5d4f2d06df96e4bda1b"
+    },
+    {
+      "target": "skeleton/pet/229.json",
+      "source": "assets/images/hd/skeleton/229.json",
+      "bytes": 318518,
+      "sha256": "0c2a5a8b030e6c2adea31e0ab20f2b9b04634a7731c0c8af5373e5cd443ba0e2"
+    },
+    {
+      "target": "skeleton/pet/229.atlas",
+      "source": "assets/images/hd/skeleton/229.atlas",
+      "bytes": 4337,
+      "sha256": "b3671060f6225abe671d691bd1a34e7b573db960eb14b98fd95a66226e69487e"
+    },
+    {
+      "target": "skeleton/pet/229.png",
+      "source": "assets/images/hd/skeleton/229.png",
+      "bytes": 65088,
+      "sha256": "dedc47a20f002fe33804375f4abb87d3ef0b2f1cc5bb948028bbd7751e57c6ff"
+    },
+    {
+      "target": "skeleton/pet/9001.json",
+      "source": "assets/images/hd/skeleton/9001.json",
+      "bytes": 399684,
+      "sha256": "c877cfa9aae1a9e9394ca5986c16fa9c50d478fbe62bb5c0ecbba3520547a06c"
+    },
+    {
+      "target": "skeleton/pet/9001.atlas",
+      "source": "assets/images/hd/skeleton/9001.atlas",
+      "bytes": 2580,
+      "sha256": "b9a3e080d8c87d2b9b71c1a703c0a50252ee38c235a6e6012185524e4cbf82dd"
+    },
+    {
+      "target": "skeleton/pet/9001.png",
+      "source": "assets/images/hd/skeleton/9001.png",
+      "bytes": 114850,
+      "sha256": "fea925fa91e2e8a399e3ca6c078d0dbb794ad0e89ee79650cd6d52adf321bb11"
+    },
+    {
+      "target": "skeleton/pet/9003.json",
+      "source": "assets/images/hd/skeleton/9003.json",
+      "bytes": 673706,
+      "sha256": "3572d4d1f81d94898f857fd81c69a1c03c7e4dbc730501b3df72fa39b5354be9"
+    },
+    {
+      "target": "skeleton/pet/9003.atlas",
+      "source": "assets/images/hd/skeleton/9003.atlas",
+      "bytes": 3577,
+      "sha256": "8eaed05d4ee67b3b807a84d3dae01b09cc413f90a3e73c9bce3e339bb2217227"
+    },
+    {
+      "target": "skeleton/pet/9003.png",
+      "source": "assets/images/hd/skeleton/9003.png",
+      "bytes": 125414,
+      "sha256": "ecc383e9835274f99fefacb24cd19a51d2234ebf7f4e4dd2230482bf321c8677"
+    }
+  ]
+}

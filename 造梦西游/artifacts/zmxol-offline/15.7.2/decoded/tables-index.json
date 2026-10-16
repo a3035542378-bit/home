@@ -1,0 +1,2567 @@
+[
+  {
+    "asset": "assets/database/abyss_challenge_level.sdb",
+    "entries": 15,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/abyss_challenge_level_rule.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/abyssal_battle_level_buff_config.sdb",
+    "entries": 129,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_monkey_shadow_await.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_monkey_shadow_follow_master.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_monkey_shadow_patrol.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_213.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_213_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_217.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_217_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_221.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_221_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_225.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_225_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_229.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_229_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_233.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_233_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_236.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_236_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_239.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_239_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_241.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_243.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_244.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_244_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_249.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_249_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_250.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_250_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_251.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_251_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_252.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_252_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_253.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_253_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_254.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_254_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_255.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_255_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_298.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_298_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6000.sdb",
+    "status": "FAIL",
+    "error_type": "ValueError"
+  },
+  {
+    "asset": "assets/database/ai_pet_6700.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6700_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6715.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6715_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6719.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6719_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6720.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6720_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6724.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6724_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6738.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6738_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6742.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6742_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6746.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6746_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6750.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6750_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6752.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6752_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6756.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_6756_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9000.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9000_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9001.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9001_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9002.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9002_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9003.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9003_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9004.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9004_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9005.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9005_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9006.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9006_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9007.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9007_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9008.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9008_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9009.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9009_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9010.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9010_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9011.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9011_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9012.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9012_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9013.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9013_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9014.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9014_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9015.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9015_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9016.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9016_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9017.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9017_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9018.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9018_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9019.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9019_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9020.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9020_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9021.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9021_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9022.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9022_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9023.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9023_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9024.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9024_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9025.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9025_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9026.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9026_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9027.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9027_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9028.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9028_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9029.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_902930_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9029_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9030.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9030_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9031.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9031_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9032.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9032_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9033.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9033_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9034.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9034_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9035.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9035_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9036.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9036_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9037.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9037_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9038.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9038_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9039.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9039_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9040.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9040_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9041.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9041_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9042.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9042_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9043.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9043_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9044.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9044_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9045.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_9045_pk.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_cast_buff_skill.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_cast_passive_skill.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_cast_pk_buff_skill.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_dodge_bullet.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_follow_master.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_follow_master_fly_pet.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_patrol.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_patrol_fly_pet.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_pk_template.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_pk_template_fly_pet.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_pk_try_attack_template.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_pk_try_attack_template_fly_pet.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_pk_try_cast_skill_template.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_pk_try_cast_skill_template_fly_pet.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_special_pk_template.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_special_pk_try_attack_template.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_special_pk_try_cast_skill_template.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_special_try_attack_template.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_special_try_cast_skill_template.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_try_attack_template.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_try_attack_template_fly_pet.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_try_cast_skill_template.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_pet_try_cast_skill_template_fly_pet.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_681.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_682.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_683.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_684.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_685.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_686.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_687.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_688.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_689.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_690.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_691.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_692.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_693.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_694.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_695.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_follow_master.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_follow_master_fly_summon.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_keepdistance_with_hatred.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_patrol.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_patrol_fly_summon.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_special_try_attack_template.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_special_try_attack_template_fly.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_special_try_attack_template_fly_close.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_special_try_cast_skill_template.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_special_try_cast_skill_template_fly.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ai_summon_special_try_cast_skill_template_fly_close.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_decompose_config.sdb",
+    "entries": 756,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_equip_affix_config.sdb",
+    "entries": 171,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_equip_character.sdb",
+    "entries": 21,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_equip_compound.sdb",
+    "entries": 17,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_equip_entries_weight.sdb",
+    "entries": 45,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_equip_extract_grid.sdb",
+    "entries": 20,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_equip_fairy_decompose.sdb",
+    "entries": 105,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_equip_forge.sdb",
+    "entries": 21,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_equip_grade.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_equip_inheritance.sdb",
+    "entries": 108,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_equip_refining_spectra.sdb",
+    "entries": 756,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_equip_sideline_privilege.sdb",
+    "entries": 20,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_leviathan_magic.sdb",
+    "entries": 43,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_leviathan_magic_position.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ancient_leviathan_suppress.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/arousal_skill.sdb",
+    "entries": 26,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/arousal_stone.sdb",
+    "entries": 18,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/artifactSkill_effect.sdb",
+    "entries": 34,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/artifact_air_combat_bullet.sdb",
+    "entries": 0,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/artifact_aircombat_config.sdb",
+    "entries": 40,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/artifact_id_2_skill_effect.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/artifact_interrupt_skill_config.sdb",
+    "entries": 160,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/artifact_raise_degree.sdb",
+    "entries": 40,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/artifact_spirit_confs.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/artifactinfo.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/asgard_fairy_trick.sdb",
+    "entries": 42,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/attachment_id_2_skill_effect.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/attachmetSkill_effect.sdb",
+    "entries": 7,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/aura_ball.sdb",
+    "entries": 48,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/avatar.sdb",
+    "entries": 14,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/avatar_equip.sdb",
+    "entries": 18,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/avatar_equip_offering.sdb",
+    "entries": 15,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/avatar_equip_soul.sdb",
+    "entries": 840,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/avatar_meta.sdb",
+    "entries": 100,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/avatar_skill.sdb",
+    "entries": 720,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/avatar_skill_fairy_domain.sdb",
+    "entries": 14,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/badge_hide_attr.sdb",
+    "entries": 28,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/bag_size_price.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/beast_armor_skill_desc.sdb",
+    "entries": 188,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/beast_mix_rule.sdb",
+    "entries": 704,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/blind_box_room.sdb",
+    "entries": 4,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/boss_skill_info.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/buff.sdb",
+    "entries": 2879,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/buff_exchange_debuff_config.sdb",
+    "entries": 14,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/buff_role_skill.sdb",
+    "entries": 264,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/bullet.sdb",
+    "entries": 7083,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/bullet_effect.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/chaos_force_job.sdb",
+    "entries": 150,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/chaos_level_config.sdb",
+    "entries": 14,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ck_number.sdb",
+    "entries": 11,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/compose.sdb",
+    "entries": 167,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/cooking_food.sdb",
+    "entries": 24,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/cooking_level_drop.sdb",
+    "entries": 28,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/cooking_material.sdb",
+    "entries": 50,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/decompose_keeper_config.sdb",
+    "entries": 12,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/dream_wulin_escort.sdb",
+    "entries": 16,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/dream_wulin_sect_ranking.sdb",
+    "entries": 20,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/dream_wulin_wanderer_befriend.sdb",
+    "entries": 5,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/dream_wulin_wanderer_bond.sdb",
+    "entries": 25,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/dream_wulin_wanderer_present.sdb",
+    "entries": 5,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/dream_wulin_wanderer_reward.sdb",
+    "entries": 55,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/drop.sdb",
+    "entries": 11,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/endless_mission.sdb",
+    "entries": 15,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/enemy.sdb",
+    "entries": 3943,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/enemy_skill_desc.sdb",
+    "entries": 951,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/equip.sdb",
+    "entries": 1118,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/equip_raise_degree_tip.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/exam_question.sdb",
+    "entries": 293,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/experimental_suppress.sdb",
+    "entries": 23,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/extra_tip.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_device_ascension_grade_config.sdb",
+    "entries": 15,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_device_ascension_quality_config.sdb",
+    "entries": 120,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_device_composite_config.sdb",
+    "entries": 88,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_device_enchant_attr_config.sdb",
+    "entries": 520,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_device_enchant_basic_config.sdb",
+    "entries": 340,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_device_enchant_config.sdb",
+    "entries": 16,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_device_enlivener_wit_config.sdb",
+    "entries": 9,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_device_entries_weight.sdb",
+    "entries": 99,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_device_secondary_profession_task.sdb",
+    "entries": 4,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_device_stunt_fixed.sdb",
+    "entries": 91,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_composite.sdb",
+    "entries": 9,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_grade.sdb",
+    "entries": 59,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_identify.sdb",
+    "entries": 8,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_level.sdb",
+    "entries": 85,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_mirror_drop.sdb",
+    "entries": 27,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_mirror_offline.sdb",
+    "entries": 8,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_mirror_offline_output.sdb",
+    "entries": 27,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_monster.sdb",
+    "entries": 63,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_monster_revive.sdb",
+    "entries": 6,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_monster_talent.sdb",
+    "entries": 15,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_produce_basic.sdb",
+    "entries": 10,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_produce_special.sdb",
+    "entries": 21,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_domain_tip.sdb",
+    "entries": 67,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_equip_spirit.sdb",
+    "entries": 22,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_equip_spirit_config.sdb",
+    "entries": 17,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_equip_spirit_enhance_config.sdb",
+    "entries": 270,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_equip_spirit_skill.sdb",
+    "entries": 22,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_magic_daohen_config.sdb",
+    "entries": 21,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_magic_degree_config.sdb",
+    "entries": 44,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_magic_grade_config.sdb",
+    "entries": 11,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_magic_jinglian_config.sdb",
+    "entries": 16,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_magic_jinglian_consume_config.sdb",
+    "entries": 660,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_magic_skill_config.sdb",
+    "entries": 462,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_magic_star_config.sdb",
+    "entries": 44,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_skill_enlightenment_realm.sdb",
+    "entries": 342,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_skill_enlightenment_realm_add.sdb",
+    "entries": 432,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_skill_illustrated_catalogue.sdb",
+    "entries": 342,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_skill_ingenious_change.sdb",
+    "entries": 345,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fairy_skill_practice_divinity.sdb",
+    "entries": 27,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fashion_slot.sdb",
+    "entries": 8,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fashion_stripe_config.sdb",
+    "entries": 121,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fategod_extra_skill_effect.sdb",
+    "entries": 60,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fategod_raise_degree.sdb",
+    "entries": 90,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/festival_skill.sdb",
+    "entries": 5,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fish.sdb",
+    "entries": 29,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fish_illustrated.sdb",
+    "entries": 5,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/fishing_rod.sdb",
+    "entries": 20,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/forge.sdb",
+    "entries": 156,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/gameobj_common_skill.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/gdroop_limit.sdb",
+    "entries": 53,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ghost_cave_ice_round_rewards.sdb",
+    "entries": 16,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/ghost_cave_ice_wave_rewards.sdb",
+    "entries": 192,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/gift_pack_for_client.sdb",
+    "entries": 4,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/goddess_passive.sdb",
+    "entries": 114,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/guide_prince_sequence.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/guide_prince_step.sdb",
+    "entries": 38,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/guide_sequence.sdb",
+    "entries": 94,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/guide_step.sdb",
+    "entries": 441,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/guild_battle_map.sdb",
+    "entries": 19600,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/guild_island.sdb",
+    "entries": 51,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/guildtown_building.sdb",
+    "entries": 9,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/holding_sword_config.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/holding_sword_enemy.sdb",
+    "entries": 110,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/holding_sword_parameter.sdb",
+    "entries": 64,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/honor_privilege.sdb",
+    "entries": 120,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/hyperborea_material_composite_config.sdb",
+    "entries": 259,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/hyperborea_task_chain.sdb",
+    "entries": 44,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/hyperborea_task_text.sdb",
+    "entries": 146,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/illustrated_book.sdb",
+    "entries": 565,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/initiative_skill.sdb",
+    "entries": 106,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/insect_collect_book.sdb",
+    "entries": 35,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/interruptable_skills_config.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/item.sdb",
+    "entries": 6267,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/item_illustrated.sdb",
+    "entries": 704,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/karma.sdb",
+    "entries": 48,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/killimmortal_effect.sdb",
+    "entries": 20,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/league_offer_hidden_tasks_npc.sdb",
+    "entries": 300,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/league_offer_hunter_ex.sdb",
+    "entries": 160,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/league_offer_reward.sdb",
+    "entries": 69,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/league_skill.sdb",
+    "entries": 13,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/league_war_buff.sdb",
+    "entries": 43,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/level.sdb",
+    "entries": 172,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/level_restriction.sdb",
+    "entries": 15,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/level_suppress_config.sdb",
+    "entries": 21,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/levelnoacc.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/lion_camel_ridge_enemy.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/lion_camel_ridge_mechanism.sdb",
+    "entries": 14,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/loot.sdb",
+    "entries": 2123,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/lottery.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic.sdb",
+    "entries": 74,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_refiner_experience.sdb",
+    "entries": 21,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_refiner_peel.sdb",
+    "entries": 18,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_refiner_perfusion_consume.sdb",
+    "entries": 18,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_refiner_refining_show.sdb",
+    "entries": 18,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_tower_debuff.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_upgrade_config.sdb",
+    "entries": 45,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_upquality_config.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_weapon_degree.sdb",
+    "entries": 924,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_weapon_position.sdb",
+    "entries": 6,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_weapon_relic_vip.sdb",
+    "entries": 20,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_weapon_update_cost.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/magic_weapon_war_enemy_skill.sdb",
+    "entries": 36,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/map_element.sdb",
+    "entries": 103,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/map_element_conf.sdb",
+    "entries": 69,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/map_explore.sdb",
+    "entries": 20,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/method_level.sdb",
+    "entries": 101,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/method_personality.sdb",
+    "entries": 42,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/mission.sdb",
+    "entries": 94,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/module_open_guide.sdb",
+    "entries": 29,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/mohist_organ.sdb",
+    "entries": 10,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/mountain_jump_event_config.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/mystical_painting_npc_chat.sdb",
+    "entries": 70,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/need_check_actions.sdb",
+    "entries": 71,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/noblest_enhance.sdb",
+    "entries": 51,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/noblest_equip.sdb",
+    "entries": 119,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/noblest_skill.sdb",
+    "entries": 17,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/novice_boot_task.sdb",
+    "entries": 104,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/passive_skill.sdb",
+    "entries": 6,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/pet.sdb",
+    "entries": 180,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/pet_direct_mix_config.sdb",
+    "entries": 21,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/pet_equip.sdb",
+    "entries": 24,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/pet_lineage.sdb",
+    "entries": 6,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/pet_passive_skill.sdb",
+    "entries": 81,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/pet_pill.sdb",
+    "entries": 48,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/pet_skill.sdb",
+    "entries": 309,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/pet_suit_effect.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/portal.sdb",
+    "entries": 30,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/potion_effect.sdb",
+    "entries": 163,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/potion_field.sdb",
+    "entries": 9,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/potion_seed.sdb",
+    "entries": 386,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/potion_shop.sdb",
+    "entries": 388,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/power_war_level.sdb",
+    "entries": 20,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/practice_break_stone.sdb",
+    "entries": 140,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/primordial_spirit.sdb",
+    "entries": 38,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/primordial_spirit_cast.sdb",
+    "entries": 5,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/primordial_spirit_character.sdb",
+    "entries": 10,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/primordial_spirit_dialog.sdb",
+    "entries": 131,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/primordial_spirit_divine_power.sdb",
+    "entries": 14,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/primordial_spirit_form.sdb",
+    "entries": 6,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/primordial_spirit_insight.sdb",
+    "entries": 30,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/primordial_spirit_skill.sdb",
+    "entries": 180,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/primordial_spirit_talent.sdb",
+    "entries": 15,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/primordial_spirit_temple.sdb",
+    "entries": 60,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/proficient_skill.sdb",
+    "entries": 50,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/proficient_skill_effect.sdb",
+    "entries": 1150,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/proficient_skill_upgrade_config.sdb",
+    "entries": 2050,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/purgatory_card.sdb",
+    "entries": 15,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/purgatory_card_deck.sdb",
+    "entries": 12,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/purgatory_debuff.sdb",
+    "entries": 5,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/purgatory_item.sdb",
+    "entries": 5,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/purgatory_level.sdb",
+    "entries": 12,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/purgatory_score.sdb",
+    "entries": 16,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role.sdb",
+    "entries": 38,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_blood_examine_rank.sdb",
+    "entries": 45,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_blood_grade.sdb",
+    "entries": 9,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_blood_level.sdb",
+    "entries": 9,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_fairy_skill.sdb",
+    "entries": 342,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_fairy_skill_exchange.sdb",
+    "entries": 108,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_fairy_skill_fair_conf.sdb",
+    "entries": 68,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_grow_up_config.sdb",
+    "entries": 29,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_practice_config.sdb",
+    "entries": 28,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_skill_confs.sdb",
+    "entries": 149,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_skill_desc.sdb",
+    "entries": 263,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_stunt_confs.sdb",
+    "entries": 167,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/role_suit.sdb",
+    "entries": 68,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/rule.sdb",
+    "entries": 341,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/rune_composite_config.sdb",
+    "entries": 75,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/section.sdb",
+    "entries": 102,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/skill_style.sdb",
+    "entries": 178,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/sky_piea_template_config.sdb",
+    "entries": 30,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/skyfire_celebration_crafted_item.sdb",
+    "entries": 60,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/skyfire_celebration_gala.sdb",
+    "entries": 35,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/skyfire_celebration_inspiration.sdb",
+    "entries": 3,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/skyfire_celebration_store_area.sdb",
+    "entries": 40,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/skyfire_celebration_store_level.sdb",
+    "entries": 12,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/special_artifact_confs.sdb",
+    "entries": 32,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/spiritual_body.sdb",
+    "entries": 90,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/spiritual_element.sdb",
+    "entries": 9,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/spiritual_fairy_skill.sdb",
+    "entries": 66,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/spiritual_role_skill_effect.sdb",
+    "entries": 480,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/spiritual_role_skill_index.sdb",
+    "entries": 100,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/spiritual_role_skill_slot.sdb",
+    "entries": 48,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/spiritual_root.sdb",
+    "entries": 405,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/spiritual_stone.sdb",
+    "entries": 729,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/stone.sdb",
+    "entries": 63,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/sublevel.sdb",
+    "entries": 127,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/suit_effect.sdb",
+    "entries": 139,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/suit_skill.sdb",
+    "entries": 137,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/summon.sdb",
+    "entries": 21,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/suppress_condition.sdb",
+    "entries": 135,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/suppress_effect.sdb",
+    "entries": 97,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/suppresses.sdb",
+    "entries": 142,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/taoism.sdb",
+    "entries": 8,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/title.sdb",
+    "entries": 313,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/tower_of_brahma_break_evil.sdb",
+    "entries": 15,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/tower_of_brahma_law.sdb",
+    "entries": 149,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/tower_of_brahma_level.sdb",
+    "entries": 2480,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/tower_of_brahma_relic_stage.sdb",
+    "entries": 248,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/tower_of_brahma_spiritual_root.sdb",
+    "entries": 9,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/transaction_bank_goods.sdb",
+    "entries": 762,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/trap.sdb",
+    "entries": 10,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/true_spirit_auxiliary_config.sdb",
+    "entries": 66,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/true_spirit_blood_config.sdb",
+    "entries": 52,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/true_spirit_main_config.sdb",
+    "entries": 11,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/update_resource.sdb",
+    "entries": 128,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/update_resource_category.sdb",
+    "entries": 30,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/verification_config.sdb",
+    "entries": 57,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/vice_occupation_blood_potion.sdb",
+    "entries": 206,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/vice_occupation_blood_potion_effect.sdb",
+    "entries": 216,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/vice_occupation_decompose_config.sdb",
+    "entries": 1512,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/vice_occupation_decompose_spirit_stones_config.sdb",
+    "entries": 12,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/vice_occupation_fairy_device_remove_skills.sdb",
+    "entries": 9,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/vice_occupation_forge_energy_consumption.sdb",
+    "entries": 28,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/vice_occupation_forger_level_config.sdb",
+    "entries": 7,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/vice_occupation_furnace_refine_config.sdb",
+    "entries": 2,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/vice_occupation_level_config.sdb",
+    "entries": 63,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/vice_occupation_potion_compose.sdb",
+    "entries": 149,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/vice_occupation_potion_effect.sdb",
+    "entries": 149,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/war_fantasy_enhance.sdb",
+    "entries": 87,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/warorder_giftpackage_config.sdb",
+    "entries": 75,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/warteam_building.sdb",
+    "entries": 8,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/weapon_fashion_effect.sdb",
+    "entries": 67,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/weapon_fashion_id_2_skill_effect.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/weapon_soul_evolution_star.sdb",
+    "entries": 300,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/weapon_soul_evolution_summon.sdb",
+    "entries": 25,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/weapon_soul_power.sdb",
+    "entries": 4,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/welfare_advertise.sdb",
+    "entries": 7,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/west_journey_level_config.sdb",
+    "entries": 12,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/west_journey_map_mode_config.sdb",
+    "entries": 17,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/wild_boss_rate_config.sdb",
+    "entries": 149,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/wine.sdb",
+    "entries": 7,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/wine_map_explore.sdb",
+    "entries": 20,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/wine_reward.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/world_boss_rewards.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/zmxyx_enemy_edit.sdb",
+    "entries": 1,
+    "status": "PASS"
+  },
+  {
+    "asset": "assets/database/zmxyx_pet_edit.sdb",
+    "entries": 1,
+    "status": "PASS"
+  }
+]

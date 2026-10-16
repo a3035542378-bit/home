@@ -1,0 +1,23 @@
+{
+  "original_apk_sha256": "ecff6494a962e066812434497282adb614c0163cb7be856c1f64be36861e3d6a",
+  "files": [
+    {
+      "source": "assets/images/hd/skeleton/95011.json",
+      "target": "skeleton/beast_armor/9501/95011.json",
+      "bytes": 540932,
+      "sha256": "3e922b02741e694d13dff937d4db9e6ad6e64f9d8b37cdfca0890bccea1a4e17"
+    },
+    {
+      "source": "assets/images/hd/skeleton/95011.atlas",
+      "target": "skeleton/beast_armor/9501/95011.atlas",
+      "bytes": 2513,
+      "sha256": "7c13f4ab4ac118a5f47ee162096e2df314775fb4ff341460c9f89d6c03434812"
+    },
+    {
+      "source": "assets/images/hd/skeleton/95011.png",
+      "target": "skeleton/beast_armor/9501/95011.png",
+      "bytes": 109959,
+      "sha256": "7cd26f314e65cfa6d0cd6be286e6f83904dfa522a57d0cf3f3950cdebb4b17b9"
+    }
+  ]
+}

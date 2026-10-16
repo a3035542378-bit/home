@@ -1,0 +1,1 @@
+{"509100":{"type":44,"id":509100,"extra_attr":{"CRITICAL":[0,0.001],"MP_RECOVER":[0.1,0.3],"HP_RECOVER":[0.1,0.3],"MAG_DEF":[0,0.001],"GODPOWER":[-2,4],"IMMUNITY":[-2,4]},"limit_attr":{"THOUGHT":[60,10],"HP":[600,60],"DEF":[20,2],"MP":[200,20],"STR":[125,12.5]}}}

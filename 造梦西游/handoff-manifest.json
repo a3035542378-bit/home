@@ -1,0 +1,3227 @@
+[
+  {
+    "path": "AGENTS.md",
+    "bytes": 1422,
+    "sha256": "682079aacc8a268653b86fc6adfc56c96ca5db396f9a0ae5bbfd23f0219c99c0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/abyss_challenge_level.json",
+    "bytes": 5568,
+    "sha256": "6b658f74c05ae59794f38c9086d5edec14e9df306fb55b4607e5d21c5a78482f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/abyss_challenge_level_rule.json",
+    "bytes": 7084,
+    "sha256": "81093337c603282f4fe545208f262b637d0390587cb4ace7a03d508f32d4f620"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/abyssal_battle_level_buff_config.json",
+    "bytes": 50429,
+    "sha256": "33675946eca762514370381e00122983e8c98c600578f75bca6fb65d8d3fe626"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_monkey_shadow_await.json",
+    "bytes": 560,
+    "sha256": "33e3fd76f963d22ab28d6159615aa34287e9fb04cc85e11ac9682f1cb0b9a777"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_monkey_shadow_follow_master.json",
+    "bytes": 789,
+    "sha256": "aeb206ca638438d693e922f9c7ddf01098900ad7128e030901928f2f3c854ae3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_monkey_shadow_patrol.json",
+    "bytes": 977,
+    "sha256": "44211728541fe3f6dd7a038ec6736c1e3ce9d00965bf0a0a04fdea7e2f646499"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_213.json",
+    "bytes": 1259,
+    "sha256": "235c6c2f86285b42b26deba69e8334db0676962bf36a765e8951d86748c02dbd"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_213_pk.json",
+    "bytes": 110,
+    "sha256": "365ab21c0be284234c4a103cb450c70a1efda2674ec668e986596f17dcfffb21"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_217.json",
+    "bytes": 1259,
+    "sha256": "d15e74ce2f0c22f47dd1cf777850bf7515a8de5b4d3304eb24520b23a66dff6b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_217_pk.json",
+    "bytes": 110,
+    "sha256": "abfe32cd74ba8e56342e87166a9d5db28d8019cc38583fa4f4a1fbd227d897bf"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_221.json",
+    "bytes": 1259,
+    "sha256": "f30e44abe4e6d917d672dbe2c5f52675af3e0e4357b0193599a6d6aebd53e91b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_221_pk.json",
+    "bytes": 110,
+    "sha256": "8adf923a6632cddac6460d3bc80193079722e8b5a22b96db0e2ad051f730331c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_225.json",
+    "bytes": 1259,
+    "sha256": "20a5ddace49bf6e3496ff0338323b38a07a0cbf9af2732af25cf12e7992eba80"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_225_pk.json",
+    "bytes": 110,
+    "sha256": "e4a7fcbc971c3d9f3a9bc36e6f78929305a0aa7cd50e91879373c2aae82a2a4b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_229.json",
+    "bytes": 1259,
+    "sha256": "a494dd07be8c8e51acd4bce8f9aa78f65e71cb63d9c1adec8d05938be3b32a58"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_229_pk.json",
+    "bytes": 110,
+    "sha256": "a5986395e545688d8421b61370b883afe7a4d8e6dd3d15295885bfc88b9949cd"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_233.json",
+    "bytes": 1259,
+    "sha256": "e2e35fef57878a677c9e7e57c437054753961d02241f25ae355186a482f3a56e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_233_pk.json",
+    "bytes": 110,
+    "sha256": "09f0d8c08dbc32a13575770367b3afb41fdcc94e8830ad549a85a7cdaba43359"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_236.json",
+    "bytes": 1259,
+    "sha256": "3566dac24705ecdc9a3fd110065ffeb73e3d5bc548c5d3779b56c86f3eb1a36d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_236_pk.json",
+    "bytes": 110,
+    "sha256": "f30aee324b5ee36bfad27542c8e0217cf40c2e0da769672f5871e7add2a2bd24"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_239.json",
+    "bytes": 1259,
+    "sha256": "417ff5cea5548fd66f7e3873b5b16f2d18d3364ca4b21a19fd77ccf06b1f5823"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_239_pk.json",
+    "bytes": 110,
+    "sha256": "730cee0b868e90004cf4a0843ae235807af8125a5bfc52a90d469004a98fe77d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_241.json",
+    "bytes": 1197,
+    "sha256": "356c2124413b49bc21586ccde7714cbc6e86c2870c0ca9c8284aca62f90cadb2"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_243.json",
+    "bytes": 1197,
+    "sha256": "a42deafb3f5f89b0e8fb40c27fc80445b968f007ce05269d85b30077401a4292"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_244.json",
+    "bytes": 1259,
+    "sha256": "854a52894fba7bcdc1a228a96397986d680d11a4150c663e07e631e1f40e1b72"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_244_pk.json",
+    "bytes": 110,
+    "sha256": "a059807b4732bf108ee7b64bc891d5b03b20c9b0ee9dbae18e61ef6381522cb3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_249.json",
+    "bytes": 1267,
+    "sha256": "a5254c38711226d5cef0cf2b7d7287e00215ccb8e13562713f525ab66ae416e4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_249_pk.json",
+    "bytes": 118,
+    "sha256": "7f54de8509110e93c705bc1c03dc62af995ae4d635baf190743bbed4a70b7b27"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_250.json",
+    "bytes": 1267,
+    "sha256": "c0896d8c496b979c4e1918c1f7ee724dd9becede469e5d5b993cf3ab31a12b06"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_250_pk.json",
+    "bytes": 118,
+    "sha256": "7e2a50898b2db0e0ba91880204a3e67daadc936c45755c900a97edd98f934f47"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_251.json",
+    "bytes": 1267,
+    "sha256": "8be0de5f29c19318d194f54c8f261239b4df272c2c40328481e3f8150b6fd43a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_251_pk.json",
+    "bytes": 118,
+    "sha256": "2f78419b91741d3b1e1bb16245abaaaec706a8d38e8b5f872796ebaed5b34101"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_252.json",
+    "bytes": 1267,
+    "sha256": "53107b3e1d48c9338e0599bae0902a10473861f06184b1d67b2c1dcbf8e8cfbc"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_252_pk.json",
+    "bytes": 118,
+    "sha256": "590a324fdbcb3149454db3c33d1782956f86b85962a1cdc1bc85958372418784"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_253.json",
+    "bytes": 1267,
+    "sha256": "aa20151ea195355a69ff2a550093314e595ddc986d1a931dabc51582634c144c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_253_pk.json",
+    "bytes": 118,
+    "sha256": "e2bf29dd6aa95a8ca5924de08ac84252454ab3ba25d5fdb8e1e154161b7bda3a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_254.json",
+    "bytes": 1267,
+    "sha256": "0b95e54ab45ab1a4bc4635432efc26b46b221ba7d7927f40cbdc113808632f24"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_254_pk.json",
+    "bytes": 118,
+    "sha256": "e177d6c03b571bbdb85ad64485885f6200d3c4d22a2323dd1fa7cffa7d0e38c7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_255.json",
+    "bytes": 1267,
+    "sha256": "793d7b09eaf5423c70b2ed85a3144296b8e16c0372bebf7e00cd2cf8cadcc2c3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_255_pk.json",
+    "bytes": 118,
+    "sha256": "00ed0f4fab0bf21b16084e01f24f8916403a3a6de6d74367d3792397f9382a71"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_298.json",
+    "bytes": 1267,
+    "sha256": "01cdf0781accadcb317c735f53d0026624075aa1caabda15df533153fb991a06"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_298_pk.json",
+    "bytes": 118,
+    "sha256": "997cbd90a3597d23ab8ba543973bb5b4d0d10d013dd87d4ae65f2fce7c09f58c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6700.json",
+    "bytes": 1264,
+    "sha256": "07af610c94db252e9cfa9f9c53622529a77ef0189609418a0cec96a1247028e8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6700_pk.json",
+    "bytes": 115,
+    "sha256": "8224daa60ac6f6012dd08805d7ccfecddf3a3050431081dd199d5a46fcee2d87"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6715.json",
+    "bytes": 1305,
+    "sha256": "ddeced030d67dfed9b4fe56e59caa810b18418cdeb8b6eeb85a00522ff5af79c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6715_pk.json",
+    "bytes": 123,
+    "sha256": "b09e792ca651f59a96130030a297da6a1f10624fc4c245c3465eb467a0b2b9a7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6719.json",
+    "bytes": 1272,
+    "sha256": "ad90f8820dd51c6db15a22d1bb77ddc5b76420f1d937a96869578f350da481d3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6719_pk.json",
+    "bytes": 123,
+    "sha256": "176043e591931f519e809f4c8a5c5b01637dfae484f1e99d9100c00e2f2f8a2b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6720.json",
+    "bytes": 1382,
+    "sha256": "d01cec812fe7d0bb5cb5f09af5ae2f4e244939876a7983233ae4f9055d289faf"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6720_pk.json",
+    "bytes": 115,
+    "sha256": "f78efb268bccd222db9486f997a3ba3c0eea8793174c893e21d56139ec371ae8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6724.json",
+    "bytes": 1264,
+    "sha256": "881e84b8f5680c77f0dc1d34a91bddc50bb623686395f8884f81ee5347b919fd"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6724_pk.json",
+    "bytes": 115,
+    "sha256": "a2d936b71bf982bcb96e000196b01d792843ac6a25547462f30dde2da4a54447"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6738.json",
+    "bytes": 1374,
+    "sha256": "960840e3b09604f7e92231bdf880869a52bc130b8d85fdae78535591d3faf476"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6738_pk.json",
+    "bytes": 107,
+    "sha256": "3c910e0cd7190f00970f08d876e58bbced3c4b7b7e2b6ab90250b36b303834e3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6742.json",
+    "bytes": 1382,
+    "sha256": "3f7c9f883d5683bee6e4effe42637908f23544ea9309070e2246aac6b17b1cf8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6742_pk.json",
+    "bytes": 115,
+    "sha256": "ae305b0132fd92d4361e49bde39cefe6b859f7937ff4916e61a43f7aa5a9d1bb"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6746.json",
+    "bytes": 1374,
+    "sha256": "5d01b33146f186ad76ddfd5f89806615b1daff427df9dae585d4d7e83007e670"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6746_pk.json",
+    "bytes": 107,
+    "sha256": "5fbb53f5bb67f87616d3557f0e2b59e5f125b38dc025eb750ce55df06a6b4124"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6750.json",
+    "bytes": 1305,
+    "sha256": "1a920b5af55eeeca0d7760bb8f599e801b5dad77492d8ccc6bf5b3a187cfe392"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6750_pk.json",
+    "bytes": 123,
+    "sha256": "23af5301edf1fcb6274a1ac6f96069ef357e2db609d1084a12a65682ab1f8994"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6752.json",
+    "bytes": 1382,
+    "sha256": "6cca316aaaac2a157d0675da8e348c0fe29d1cd54056c643483c3b8568f0251d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6752_pk.json",
+    "bytes": 115,
+    "sha256": "668cdbfd96ec9a8020ed6eb1c9bb1861ef664fb90ba0558a35da4c67a8de5f00"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6756.json",
+    "bytes": 1382,
+    "sha256": "fb1539dc2b49fa27f34acc98eb9bdb1a27dd32c9e3b8f575583c5854247d2d97"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_6756_pk.json",
+    "bytes": 115,
+    "sha256": "064dfb1ad7dfd5b0f5d49b9d53a16a21d1f7d523fa05647e741c1303f5f92a35"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9000.json",
+    "bytes": 1374,
+    "sha256": "86a39f335f848af47dd710162eee644e2fcc892c3782304ac2a1eedcacce9d7e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9000_pk.json",
+    "bytes": 107,
+    "sha256": "f3c9708493724d4637effd290d83db0f0a21ead2578885e3b7c3f3dea0c81715"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9001.json",
+    "bytes": 1374,
+    "sha256": "07734b3a140770536953a24652f894c760e99a68b7f83a66526205d751112c03"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9001_pk.json",
+    "bytes": 107,
+    "sha256": "1a023e7b21d7a1459d1a5746672274a3ad421a7477fb6a46d95528f3e19abc19"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9002.json",
+    "bytes": 1374,
+    "sha256": "84a980c80de67978946ef0e23be3d358f15f59f0174e50bdccc564a78c97a468"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9002_pk.json",
+    "bytes": 107,
+    "sha256": "57216a27815a73f23b75a5f61c0350b741ed435a56c98795d3836e545fb0554e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9003.json",
+    "bytes": 1374,
+    "sha256": "9dbbbab0a06ec10bcde44d55eacfdd093699b1edbad5c513f042d5164f483c2f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9003_pk.json",
+    "bytes": 107,
+    "sha256": "925e6490341a4a336bc3eb195e7cc0e3a84f3685274098a5b1c1a368709e3efc"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9004.json",
+    "bytes": 1374,
+    "sha256": "b9943a015a47ee46138fe440e47262b6bd86ee350ba70174c04f0c6f0486dcbd"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9004_pk.json",
+    "bytes": 107,
+    "sha256": "fe1bda3e72ee57a2778a74bc2995ca0552f50fbd595b471848cd9f29da5fde9d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9005.json",
+    "bytes": 1374,
+    "sha256": "b2b496b40c1bc76897d0134d9d2d3784456dd871a9aeb3d1e8adaa1a1c2ca998"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9005_pk.json",
+    "bytes": 108,
+    "sha256": "11e342d77fe9442abb5be22ebd422b3e7598eef93f6894edb126df77e6a4daf3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9006.json",
+    "bytes": 1374,
+    "sha256": "09f01c3ba0251dc8996198970df2f8cce0d30995462e0972e11b73e15ff5a048"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9006_pk.json",
+    "bytes": 107,
+    "sha256": "864b876f97c2639864fa1a4f6e54fef1f156aed13a943bd6c0367f6270424eb9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9007.json",
+    "bytes": 1374,
+    "sha256": "9534997c4ed2697002b991ad9d6bd2b2fdb23210fa82785b2f7256c37a13fb0b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9007_pk.json",
+    "bytes": 107,
+    "sha256": "65c8e1559a9f420c36597b8f8863dd9231e89d48482a41d34daf731e16c32ab0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9008.json",
+    "bytes": 1374,
+    "sha256": "77c8c7f2ad0550df7d85f76bcd9fa6157022466a13d29b6be34489ecad61d557"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9008_pk.json",
+    "bytes": 107,
+    "sha256": "4765f2711c70a142d0d6d28394b0e10b1befa86d5588c31db8aa674632ead1b4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9009.json",
+    "bytes": 1374,
+    "sha256": "05523fb2f57940d3315c646e0df806f4e76c8b2101d5fa5b2924b0a1c1b318a6"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9009_pk.json",
+    "bytes": 107,
+    "sha256": "35ec96fae237a9ddd6c4f284c076aed39debf795eb42a8d58b5c1e191e5ed328"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9010.json",
+    "bytes": 1297,
+    "sha256": "5640de85481eb0c0a0caad1b17e73e4e52fcc92482cf32f716feb9a6ad26439f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9010_pk.json",
+    "bytes": 115,
+    "sha256": "74726755f1a4aa6db7faa4fdd660831827c48835b517c69bbb73b2aa546c08fa"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9011.json",
+    "bytes": 1297,
+    "sha256": "69d5ece3584c376997575296561df157e55faf95bc9bd91882a09ac80571ff02"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9011_pk.json",
+    "bytes": 115,
+    "sha256": "ac1d1ec72f89fd94828ca70460466ff6159b20cc8e713bab602ec87a20b38b62"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9012.json",
+    "bytes": 1297,
+    "sha256": "6731b2988af053820fbe4049f12356b2de4bf7772b7f7fc40df8953ff7f33ce4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9012_pk.json",
+    "bytes": 115,
+    "sha256": "3767e9208f1dfa79ae7fab9fe5419679626bbe803d5242375aab9e27a28e54d2"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9013.json",
+    "bytes": 1297,
+    "sha256": "d1778393781e34556da501dcfcdc438cd8a74cfc3f3cd0df66c7a87152a856dc"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9013_pk.json",
+    "bytes": 115,
+    "sha256": "3134ffe1769e47027effd4d59e7b5f112d67ac58b8a9c3a58a7993ccfff4f7ce"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9014.json",
+    "bytes": 1297,
+    "sha256": "0c0844667d234fa65104573993b38fdceb169cfbd6a9ecd3b74ad903680e33ad"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9014_pk.json",
+    "bytes": 115,
+    "sha256": "f9fa87da9b3b377f3fda7ee6da49c7af3093d664624f1b5cf76f8de4823eac92"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9015.json",
+    "bytes": 1297,
+    "sha256": "6df5839116daac0f549db25ec612eb052fed9b9d6b316ddfd3641d0474ad8ea9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9015_pk.json",
+    "bytes": 115,
+    "sha256": "bdb9056718d59cb2aa58bd493ad339e0dc58486d5adc43c9aa120576c68da3d8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9016.json",
+    "bytes": 1297,
+    "sha256": "d8ee336166fbc0c12decad79ae3c5b817c7664c87b4b85e5709f60995e7a99ef"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9016_pk.json",
+    "bytes": 115,
+    "sha256": "cb4fe6adf5f944392927b8f5cc0c6ce2984cfdbc07c3ba27cf1d6a50c0850096"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9017.json",
+    "bytes": 1374,
+    "sha256": "e8e8269392c18f006574f4ece0c83e4c2ba36e3fe3ff1d2bdd3a415cf0a58055"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9017_pk.json",
+    "bytes": 107,
+    "sha256": "d86810a26b164807b1e7e8764a615e16d88c13e2ec1b2758436b63441f60d31a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9018.json",
+    "bytes": 1374,
+    "sha256": "a53e0b0c5bc7921e3ee2059c78dd3c4962e4abf332fff3cae935a04f65f8117d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9018_pk.json",
+    "bytes": 107,
+    "sha256": "4f14cc7536c4e91e97f83b88ba82505cd13c0e1f5aa7ffb59cf9c9a1534d481b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9019.json",
+    "bytes": 1374,
+    "sha256": "44a36ca255f7e54fba6dc4575b80f1ae29b26e15dbaccb7eb38b63530c4ce378"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9019_pk.json",
+    "bytes": 107,
+    "sha256": "7945ea60d3f8cfc9d2fc5f65eedb533000b442cb585ecf78bad138f4effdc1d5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9020.json",
+    "bytes": 1374,
+    "sha256": "d980f3330038f582bee0f15894888396ecde4f72b3c6098f31d6bc9e2c43e9d3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9020_pk.json",
+    "bytes": 107,
+    "sha256": "f0dec69f69c5a63cedcd3e6b23c7f952fa7c8df5ea07361eca4f383dac42a7c6"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9021.json",
+    "bytes": 1374,
+    "sha256": "a053558813d125291a1c6a1b9c21c2c77131934ef485af14c0358f5e921a2d5f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9021_pk.json",
+    "bytes": 107,
+    "sha256": "50dc49dcc67e8fb8e152a3e50ae5761dff9bb0e236a0855a56f78a9cabb11fb9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9022.json",
+    "bytes": 1374,
+    "sha256": "9df7a4a0bc5268e3e04b9e56038cc3d19c16831bfcabf3982e2272b762e3f266"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9022_pk.json",
+    "bytes": 107,
+    "sha256": "e539c621caf4e256d4294cbae7d9d0261f03137796f5bbd66d8fbd2341db0f52"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9023.json",
+    "bytes": 1374,
+    "sha256": "59efa0451a5a9fc3f2f5411fc9e533fe4b1dc85fd74eeaefdecb58f1e7d1b651"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9023_pk.json",
+    "bytes": 107,
+    "sha256": "4385fb3df7b33de2c4fe4d4946bf30042cf47094362ee91dcebd58b0903902cb"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9024.json",
+    "bytes": 1374,
+    "sha256": "e5a319b89bdf7dc6def485e9e0152d92a4b55b3514339351a3de487d058a1803"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9024_pk.json",
+    "bytes": 107,
+    "sha256": "018fa222c40abd4e4fce5a644eed5c6c68dc939ae4f353dfdee9990ca073b3c0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9025.json",
+    "bytes": 1374,
+    "sha256": "bc4d23b7a28a69638daf727d297cba3cc740b2fc0ef1a2252fbe01bcd01f639d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9025_pk.json",
+    "bytes": 107,
+    "sha256": "c6b33e4bd022759f5a4d239333df83cc4e18cd6da0bca15633f94c31f2180b57"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9026.json",
+    "bytes": 1374,
+    "sha256": "6a22b1ce4898dd595c18426b1018c0faac986bfbd41d8eca641b531fb9f60373"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9026_pk.json",
+    "bytes": 107,
+    "sha256": "27b3a70993cb93dcfe7df28a6e36e624b6ef60c56772313bb1675f756eeeb10c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9027.json",
+    "bytes": 1374,
+    "sha256": "4e369827d5ee9d4d6f41d4c9a6f34dc86d21273a995ef2654db9802ebb104bf3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9027_pk.json",
+    "bytes": 107,
+    "sha256": "051c7b5d34f03934f68772123a174eb4bbbbd99c275985ed2a28e2ceade25e0a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9028.json",
+    "bytes": 1374,
+    "sha256": "b1d7463a9512df1e61a61e5807f913a713c45dce36a3f9856974f517e7b0bf0a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9028_pk.json",
+    "bytes": 107,
+    "sha256": "25ad0023027fc3ba2be530b751e55a186ce0fed7f05dbc7e91abbc071e4185c0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9029.json",
+    "bytes": 1374,
+    "sha256": "865f8ee010a7b0bbadd90cbfac1a4e3d043df62d46b0cb086ca0926660789d9a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_902930_pk.json",
+    "bytes": 107,
+    "sha256": "8ea66c614348f20af0c1594edf7403d346a489736bc6508b55896f4ae385438f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9029_pk.json",
+    "bytes": 107,
+    "sha256": "a00b2f4a6aa826537044017c194c1f3d1edc75d7342a9496c8f889797f958fc3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9030.json",
+    "bytes": 1374,
+    "sha256": "6e1b429a00f5732b43538280ac3bff4efe7864689435d17977fe9e59dd4b5d66"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9030_pk.json",
+    "bytes": 107,
+    "sha256": "8ea66c614348f20af0c1594edf7403d346a489736bc6508b55896f4ae385438f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9031.json",
+    "bytes": 1374,
+    "sha256": "8d222e599669c175725d4c7ce04d66a77ab1e0b26c78f2de34fc5979058d3479"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9031_pk.json",
+    "bytes": 107,
+    "sha256": "545cf2e987479e77e9cae5cad1e356aadc84716c73b7a95eec20e350e65f8e8b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9032.json",
+    "bytes": 1374,
+    "sha256": "6baf7e6df0c30689ef5687070c91bc7fc2e62097955b45394bdb1c16df490037"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9032_pk.json",
+    "bytes": 107,
+    "sha256": "efea1c69b5aa303b11d00e7bbec1dade8883bb3b608efca3da5f02c6235a2c35"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9033.json",
+    "bytes": 1374,
+    "sha256": "4af7551dcc90f8d9ef6b2135cbbfd59493cbbd3db3f790918494b6cd0797ed58"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9033_pk.json",
+    "bytes": 107,
+    "sha256": "8c3cd85f916e29891a1510ec9ba1b09f1631c3f066698c0a49044ae0a51dd235"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9034.json",
+    "bytes": 1374,
+    "sha256": "303c55ccaa269e5d0164ebc79c9e8d5f43ac311280ad14f2fd315f14c8e6bd58"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9034_pk.json",
+    "bytes": 107,
+    "sha256": "08053f23675878dc48deaa7fec4ab2a17c68e403d391f357ae5d44434fc117ce"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9035.json",
+    "bytes": 1374,
+    "sha256": "aab92fdba248aa8df081515bfc77b128395389ab2ffca90014e90f16a0777d12"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9035_pk.json",
+    "bytes": 107,
+    "sha256": "580ab83588f336824f7c67e3445a7c7efd2ae840c58686d601d237f08a912594"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9036.json",
+    "bytes": 1374,
+    "sha256": "00d0e8abaf38bf8ad7a96ed43d7b7f0bf2909141f415777777e314a6a013f014"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9036_pk.json",
+    "bytes": 107,
+    "sha256": "44fc52da423308a9f48048c583cdd8d3c1498a253fa23f8e3db2157a6c952d0e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9037.json",
+    "bytes": 1374,
+    "sha256": "22534c0dad21626d88c11316b4605b4beb7bdc2937086922c47a2cf65c8765e9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9037_pk.json",
+    "bytes": 107,
+    "sha256": "5a214f99da603ec9c2e280f9f259f81ba2c5b10bb871fb52a06ca867e6649739"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9038.json",
+    "bytes": 1374,
+    "sha256": "f67af5ca102cc50fae0c41319e198cec2cda1534bb30bf8d8c2965d0ef86b5b0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9038_pk.json",
+    "bytes": 107,
+    "sha256": "b23f65b3390250d1b53caa748e1129aa3e7950817f2c8ca176339bf112ff48c1"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9039.json",
+    "bytes": 1374,
+    "sha256": "d6e262394f4a78b70c849e5b0fe612954896e8a7872a68dcf8e4640b0f8d681c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9039_pk.json",
+    "bytes": 107,
+    "sha256": "9a2b44f2f98298154f84b0649a620f044a16e88a13bc37f91f16d54c90e95b0a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9040.json",
+    "bytes": 1374,
+    "sha256": "9c1f4dc63dde4ec16a4ba42493f7e6a6d86cbb87ad9f75928d81e98bd82e1820"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9040_pk.json",
+    "bytes": 107,
+    "sha256": "8c3ef84e12f9b0934f2595fa4e29ae24ec3e2689bf6b9e397302fc003358c8c9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9041.json",
+    "bytes": 1374,
+    "sha256": "9bae94e3091f9e7d7094f06d7393906e6400144ab74ac786f8e5e934234d9150"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9041_pk.json",
+    "bytes": 107,
+    "sha256": "cc3e7fde32d69c8aedb9ad275f8a7074b4765a9d8a53a8a5dff641ed741b955b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9042.json",
+    "bytes": 1297,
+    "sha256": "95e7027495b13ddfb92fbbaec808ac94af8b0690538cbf8b5c7a4599f1c7db5c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9042_pk.json",
+    "bytes": 115,
+    "sha256": "d64cc8eb3b428d8f6d0a6466e0a1417f6be5a2300eacdfd1788ca7bbc50277d7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9043.json",
+    "bytes": 1313,
+    "sha256": "2fbfaa7ca4da5b99ee39ae02e954bdd53ce31ed0637e2751b833f288de80df1f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9043_pk.json",
+    "bytes": 131,
+    "sha256": "682fc62953f3003f0391737c92b33f7975d1dd2a9041adb326fbb69c94723133"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9044.json",
+    "bytes": 1313,
+    "sha256": "c61cbe0a3408226b6e8f833688ba64828ee39d1cd622b4d5fcc2a9cf99941476"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9044_pk.json",
+    "bytes": 131,
+    "sha256": "0179924354cc097a9966b93ab5066beaea7ebc33ce58e0a462a438c5770fe2ce"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9045.json",
+    "bytes": 1297,
+    "sha256": "a7ddcb8f44d7210b340482bbaa84a4507f0a5b304acb08f714592667eec0e7e0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_9045_pk.json",
+    "bytes": 115,
+    "sha256": "7430a28776c0ac4ab9d515c4ff00eb293cfe04805fac255810db442f056e6388"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_cast_buff_skill.json",
+    "bytes": 41,
+    "sha256": "cff724f872d5f9b65e6ec70910e461489e7dc2a97a4252ab7a530bd7316522cb"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_cast_passive_skill.json",
+    "bytes": 41,
+    "sha256": "a8986f7cc71f4de8aaf323f3e69fbb13702e8594acafa353c2cf08efd8005412"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_cast_pk_buff_skill.json",
+    "bytes": 41,
+    "sha256": "808298a659368be228cbabf62442fa82d3809b6c8903ff0b8b5d6be7aafff837"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_dodge_bullet.json",
+    "bytes": 1843,
+    "sha256": "a86d87003882610459ade8f732e4e572ed8a7ad1d652373fe4b5ee13f108a794"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_follow_master.json",
+    "bytes": 968,
+    "sha256": "d08969a93971895bde1a8f5c9cf85c4a79e00afb7225e02671009a2bf744a6df"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_follow_master_fly_pet.json",
+    "bytes": 970,
+    "sha256": "84c06429bb14fc1ba8b825d9b85a86ef4bf9738776de59809fce90c2ceb71ce4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_patrol.json",
+    "bytes": 1110,
+    "sha256": "07f497e488713088dfd3a5616d41ad5db74a5a3620309d3704b3b287931c479d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_patrol_fly_pet.json",
+    "bytes": 1138,
+    "sha256": "1edc42e69e2ee866b47b0bc662055b3303391671ffbe3187e02a230fb67b2df8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_pk_template.json",
+    "bytes": 1024,
+    "sha256": "f7fc690b140a1244a70cc2e705c5de0892f90c07c4b2b3394b02048cfca0cb77"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_pk_template_fly_pet.json",
+    "bytes": 1083,
+    "sha256": "cd5c55aaae8395b61e656edd1ad2de4be4aaed16fb713220ee10dac0ed51ffca"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_pk_try_attack_template.json",
+    "bytes": 328,
+    "sha256": "ac92e3263d93888b33702baaf880f5f9704b86ad11bf47ea2e4bea2367f776b7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_pk_try_attack_template_fly_pet.json",
+    "bytes": 336,
+    "sha256": "61948cd2c0a8759a11150488c48e3accb744c81cbe6b73b5986dc0d7fb6a61be"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_pk_try_cast_skill_template.json",
+    "bytes": 2207,
+    "sha256": "fa1bb8ff73e43bf5e12768e81996a83cfdf315379d8e6996224c2b8bf7d0e88a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_pk_try_cast_skill_template_fly_pet.json",
+    "bytes": 3174,
+    "sha256": "6cd44a1355c359dea7ecd74ffc5f5d5fc27f6535a53110207f7ec2ddac8c5159"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_special_pk_template.json",
+    "bytes": 1032,
+    "sha256": "2f6054549157155bea19885134532bbbb7f502eb348e388b4b5ea8283eddc5b7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_special_pk_try_attack_template.json",
+    "bytes": 336,
+    "sha256": "1ac8549741c296be6da2a47db15434f788785f54e8761db59bb357a3b53bb8bd"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_special_pk_try_cast_skill_template.json",
+    "bytes": 2399,
+    "sha256": "a3dd357790292371125d94933be9978e076350ab9a107b21926016f828c7b146"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_special_try_attack_template.json",
+    "bytes": 363,
+    "sha256": "79d36f50fbf791695477f74101008eb1819c1fbbba1cb81eecff41996a6d16a1"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_special_try_cast_skill_template.json",
+    "bytes": 2322,
+    "sha256": "3a126ff4af977a8b6d14ed7198125916b0647c3c5d325e8d398c5744dd22a16a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_try_attack_template.json",
+    "bytes": 355,
+    "sha256": "8a19079c64f9831193a1d15e39c2f70ce69b20d5936331d516ac51a422af153a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_try_attack_template_fly_pet.json",
+    "bytes": 363,
+    "sha256": "2dc12eedeb9c7c470541c34fcbd3ee55879a715c678f31950f77e9b499ac2f5e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_try_cast_skill_template.json",
+    "bytes": 2298,
+    "sha256": "c4d8e92a102430993f1f0c53f5ddbd9c77fd48bccd42ba3b6678ff0a522b6aa3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_pet_try_cast_skill_template_fly_pet.json",
+    "bytes": 2298,
+    "sha256": "c4d8e92a102430993f1f0c53f5ddbd9c77fd48bccd42ba3b6678ff0a522b6aa3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_681.json",
+    "bytes": 1151,
+    "sha256": "9636eedf466b1194f29abafc158baffaa5aaf374bda648cd3b76d1c4c1a2eb72"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_682.json",
+    "bytes": 1158,
+    "sha256": "b31967cdfedcec306147877f5b63246ab72724643fdb6692beb9c822e3199d7e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_683.json",
+    "bytes": 1165,
+    "sha256": "3522be769f63bfd7e302460d4109aacc6703fe6e46d5ed4d12ed2a3174926f99"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_684.json",
+    "bytes": 1177,
+    "sha256": "b56244f1481aa30c5b20534b29fbb5188d057bd27d03b5603b2e051975d265d8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_685.json",
+    "bytes": 1184,
+    "sha256": "43d5f36b1b3bf436318d9cbbed90fe564814e08c78ef6818e1ad3905882d76ae"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_686.json",
+    "bytes": 1191,
+    "sha256": "5ae3430181c6b2b926f9c08f603a7693f6a9402011f98b5d533d2233cf356fe3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_687.json",
+    "bytes": 1530,
+    "sha256": "6a4f403b39e7dfb6607819aa6a05dde5e9901cc97a12b2860033e795a3b9c931"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_688.json",
+    "bytes": 1537,
+    "sha256": "8558099326535bc3722b1720c74e056ea2e694623a2b6f655b33d746648ea5b4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_689.json",
+    "bytes": 1544,
+    "sha256": "9a8f3fd915ed1d2e13ec7bf9fc181e8d51a2858116d1ab9b9a9442cf773a139b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_690.json",
+    "bytes": 1151,
+    "sha256": "44b51e3401af5c11898b4cb54ab36613ed0581db55d44f8276187f317678155a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_691.json",
+    "bytes": 1184,
+    "sha256": "d9edd1581947fd82b4571a084508a96cfc42bf64c694079b170953a3a6838bcf"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_692.json",
+    "bytes": 1184,
+    "sha256": "63f0c9a172aa31de78d3b907fbd7f843b5b69a8382d48752b75a4025cbeaad1b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_693.json",
+    "bytes": 1151,
+    "sha256": "41a48a639393443114e84fb540a14b55cf5565ebcacc3049d87006f49fc9778b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_694.json",
+    "bytes": 1190,
+    "sha256": "e393c6aa6c145b2b6b163e064101599dabf40a238d5a568e2a5a9bbad8807ae4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_695.json",
+    "bytes": 1191,
+    "sha256": "e33b54152232df5971543428d5980c461b4a40cd3f81533805ad4c3f2c9fe2d2"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_follow_master.json",
+    "bytes": 834,
+    "sha256": "6f8b69cb16b24e3355e8b54de90dd11c9ca0adda51b39b794cde2a2759ecf5c0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_follow_master_fly_summon.json",
+    "bytes": 835,
+    "sha256": "c6efbb2fac908f30e1b9e6251cbb3c5f0f9a727afb187ef4d8d06b241775560a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_keepdistance_with_hatred.json",
+    "bytes": 1408,
+    "sha256": "0df955f4e2d0465d2e22f9eae5fb0d4a25771d6e8f4d1c82d7256bae6967afff"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_patrol.json",
+    "bytes": 977,
+    "sha256": "44211728541fe3f6dd7a038ec6736c1e3ce9d00965bf0a0a04fdea7e2f646499"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_patrol_fly_summon.json",
+    "bytes": 1005,
+    "sha256": "d7c1438fffe6899a0abe9f877dc87d83078ff483f333e78e0a2b11a8411a33ec"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_special_try_attack_template.json",
+    "bytes": 375,
+    "sha256": "b80170f0997c105ae90aee27375c431b286818ff6f71f22cbc3803ed653d6bd0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_special_try_attack_template_fly.json",
+    "bytes": 379,
+    "sha256": "b0e1152b6b568ccb551daf36b885cbb6a22605206be4827bba18c47dc4656b7c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_special_try_attack_template_fly_close.json",
+    "bytes": 385,
+    "sha256": "41580e022ad860d78087097a5e600500b3d33a4df4cd3dbde16c997856de47fc"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_special_try_cast_skill_template.json",
+    "bytes": 2270,
+    "sha256": "0e24d69cf26203e28e1667109336c4322c3f7cb6248384a4554a07a6c21dca54"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_special_try_cast_skill_template_fly.json",
+    "bytes": 4660,
+    "sha256": "2e50242a4d9ca23e14cd8f458b2268cdb58e9a44faeba6cc7982e2839dc39c30"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ai_summon_special_try_cast_skill_template_fly_close.json",
+    "bytes": 3946,
+    "sha256": "29d5b92ce79b2db13674f87369d747841a64389715cdcbe0871a84b337e32310"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_decompose_config.json",
+    "bytes": 334107,
+    "sha256": "3ca6e8533459ca6a958f377bc4dde4c0877c630e8652b9204f4179f7120dc26a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_equip_affix_config.json",
+    "bytes": 94999,
+    "sha256": "f29b0db4085d6d9e2915c5274c5b4affc334c8150760e3416b5566497d1acd9a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_equip_character.json",
+    "bytes": 3257,
+    "sha256": "4d416be273a5cacbe11a3fb1b4a8e2a4cf7ac751f7838edcafb3f77bd15a3524"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_equip_compound.json",
+    "bytes": 5789,
+    "sha256": "8545751b23b9f1454cec4ec7f58535a973099301ba0d144727d1f94dcb075a88"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_equip_entries_weight.json",
+    "bytes": 23395,
+    "sha256": "71181ce74a25816a64d2bffcd051bf62bfec672bd96fb2238da650c45bcc861e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_equip_extract_grid.json",
+    "bytes": 4363,
+    "sha256": "8b9abf4e446574f10e50ed6cd6647f52f0b6e15272b456df3a2c9b61497fa50c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_equip_fairy_decompose.json",
+    "bytes": 67608,
+    "sha256": "32c99c8de0e109afae0bd8336a0a844fb210628dc2069ad9ffd2ddb0828a5de5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_equip_forge.json",
+    "bytes": 5546,
+    "sha256": "259c00a8942f4c69da72c2011f4e2ae706b8b1e3cf820c4ad84b456e6c8c5061"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_equip_grade.json",
+    "bytes": 736,
+    "sha256": "5ed9b1dc8c2cc2b21e0990bb32ea25a25c5880f91e4d3db0aa51ccf4533189b7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_equip_inheritance.json",
+    "bytes": 21600,
+    "sha256": "c9b72ffc992002d77b5cdc63ff62a30db110d970bf1ff7519e037816fde49f4b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_equip_refining_spectra.json",
+    "bytes": 255195,
+    "sha256": "0598011c5aee839d8d7c608ddf904b00e3b028a7e4a5717200ecfeaf543aa153"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_equip_sideline_privilege.json",
+    "bytes": 3473,
+    "sha256": "6c23a164b345d929e56ded2223471d042e5a3431e055fbe5d0020b8a6cb27ac7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_leviathan_magic.json",
+    "bytes": 15718,
+    "sha256": "28419b59c580cb4fe63be0df2aa03521a981985a73a38bab3ed78bb5b29e85e1"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_leviathan_magic_position.json",
+    "bytes": 550,
+    "sha256": "dade91d4f73ef8ce4e2f3d46d54195adb03519292ce5119ffc5ec0455726c9d0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ancient_leviathan_suppress.json",
+    "bytes": 2024,
+    "sha256": "83d963faed661ba3aa64a9dffca8b9eaf7d2bc6e99281b7d4817921a590f8293"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/arousal_skill.json",
+    "bytes": 19981,
+    "sha256": "b363ff6f50e3dc74f43926d632490a5267c768f043b80a22c1ec560171719c79"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/arousal_stone.json",
+    "bytes": 14416,
+    "sha256": "9adf5e539d3c6e67d5db451f80a489d60717a3dd41223efde3eea0b7525e40fb"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/artifactSkill_effect.json",
+    "bytes": 11511,
+    "sha256": "9cec759d180d1ec4248fcbece1eba0b3f10bc739260cb7053e360e14b245e745"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/artifact_air_combat_bullet.json",
+    "bytes": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/artifact_aircombat_config.json",
+    "bytes": 6396,
+    "sha256": "47bd769167c68dc7a2bf81c575cefa410b8ae8fa7f649156ba35d61611251282"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/artifact_id_2_skill_effect.json",
+    "bytes": 1801,
+    "sha256": "19f8f84561265287b24d2a9b33d8c2ffde4cb321319da676258c2282d76ac646"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/artifact_interrupt_skill_config.json",
+    "bytes": 84104,
+    "sha256": "a46e2c302424ae13d0892b74de24aa69a2dda2e03b9b756be90236deb2c00150"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/artifact_raise_degree.json",
+    "bytes": 18837,
+    "sha256": "ecbcaa09969c884d3dc68ba914d46b0f64142a3231579aee0ee218aaceb565c5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/artifact_spirit_confs.json",
+    "bytes": 172,
+    "sha256": "533b6af02688d522ae57143d6c0fa54e1c5d58fbb95a4b7ce1118b3e8663be65"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/artifactinfo.json",
+    "bytes": 263,
+    "sha256": "dac07a72c1bbb2e8624490ccf3a05ae81e2257b9adcb9f7588a51caa6bb9796e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/asgard_fairy_trick.json",
+    "bytes": 16395,
+    "sha256": "7e8cb679173e26e6c19f290301185761548cc49faffebf5dacb661cbe494bd7e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/attachment_id_2_skill_effect.json",
+    "bytes": 1205,
+    "sha256": "0fe6e6c17af403c8ee6337ff4bfed5c2b815124efdcef6442324bdaf1a5e16c0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/attachmetSkill_effect.json",
+    "bytes": 1203,
+    "sha256": "a847ae8c6ecaf35cba7cb3f3a5e535018da45773e80f9dcc8ae8f0bb223460f0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/aura_ball.json",
+    "bytes": 24012,
+    "sha256": "b5e9510f72516a45c8dd0362a509a4452f87b3afca339eb844b19c171bea5ae3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/avatar.json",
+    "bytes": 24007,
+    "sha256": "e87dbdf97a5d496cc966e3edf059ef17d32aa4a13ede9fe0853a146a421a190e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/avatar_equip.json",
+    "bytes": 41491,
+    "sha256": "a9478efe833eec56ad957db2a65d6470dc96a632fcfd5a4a4f17a823cb8a3446"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/avatar_equip_offering.json",
+    "bytes": 15111,
+    "sha256": "a9df31784b1bfc99894bc5331f8f2c8267c57df1a02be2c7f2300f1d36c78c60"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/avatar_equip_soul.json",
+    "bytes": 175451,
+    "sha256": "2e10837a7aaabb99bdd88529a8591e1e26817d8ffc9e1b83d9861c575b9687e8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/avatar_meta.json",
+    "bytes": 67000,
+    "sha256": "de2f6f59cefa40e6bbe0f66a97922744f1cfa1d14c4dad10c1036b799f187110"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/avatar_skill.json",
+    "bytes": 603529,
+    "sha256": "7c2135a7da39d197ea87331049ec6ef9a1e229912ba86711be6beb0569f7f964"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/avatar_skill_fairy_domain.json",
+    "bytes": 5526,
+    "sha256": "0bf816d4ce1c8c88e0951aa49192f771bcbbfb8fb45a1ccd3f6ed2156dc612f5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/badge_hide_attr.json",
+    "bytes": 5877,
+    "sha256": "72e5d322ab98454b976d0d74c951da9abff9e4fa7020035887c7f5aaf9a33a73"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/bag_size_price.json",
+    "bytes": 396,
+    "sha256": "bf1b5abf575ee6d843ad435da6e3f6bd3727a27e9e9611c0bf20249ade79c39d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/beast_armor_skill_desc.json",
+    "bytes": 111379,
+    "sha256": "f8c813c01d027b952b191ca7b91f805903a0e8f54a05e6c174c63f80b9106b83"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/beast_mix_rule.json",
+    "bytes": 232604,
+    "sha256": "7dd5f518c8d3654e134cd5fe7dd0760896c9f2966bf8c05f2315ba4011023d82"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/blind_box_room.json",
+    "bytes": 758,
+    "sha256": "de552c25a41a3c76808e433a8c8e2a728905edd16d0586cedf5c499eee4c337e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/boss_skill_info.json",
+    "bytes": 3363,
+    "sha256": "1a2584a46d8748f298312a395e3a65a60bc841ccbf628cbd8d65dc75d89e0799"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/buff.json",
+    "bytes": 1808787,
+    "sha256": "71ea876f8afa235335b32f1111f2620087249955909291d1d173b8b7d6bad17a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/buff_exchange_debuff_config.json",
+    "bytes": 2864,
+    "sha256": "84fedfaa9b7095b27214d19fd094ab8d3505668275f28c93cd02b38b95e3742d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/buff_role_skill.json",
+    "bytes": 168041,
+    "sha256": "14fbe40151bf4b20dde6a3537be1c11534b78521c3179d9127a221a5f4b43371"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/bullet.json",
+    "bytes": 8132758,
+    "sha256": "bb902ecfccb673772a7e23c647fba3bbfabc386d59f480274fb4f71d2c1f30b7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/bullet_effect.json",
+    "bytes": 112,
+    "sha256": "57687b8939c4454c346fc7f42e3b20873f1ac9b814307addb7a12fc63641aec4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/chaos_force_job.json",
+    "bytes": 78456,
+    "sha256": "b967680c04137f2c9a3efd8c879dc0ef4117ef093c213fbba2478d16c8f0081e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/chaos_level_config.json",
+    "bytes": 11080,
+    "sha256": "507783c503f50c047ce633f2e4cf89d17c8bd9263baa3a01e1d5b43051b25542"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ck_number.json",
+    "bytes": 387,
+    "sha256": "169ae524715e082954518e0eb90a820ae448a0755e81f13d392b8de75ac878c4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/compose.json",
+    "bytes": 106308,
+    "sha256": "ae4c45a9d7623a17fd134b05641e2227a0023ee84d96b0b8da7af14a5d4df9ba"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/cooking_food.json",
+    "bytes": 4380,
+    "sha256": "088b35a701f9fc6b53fc29d60d9e6b0335776b201041e05700106772d283b2bb"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/cooking_level_drop.json",
+    "bytes": 5519,
+    "sha256": "838acbb03966aa63790854373efd0c65b829a2b7d6049c97a3e2e3a46e28470e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/cooking_material.json",
+    "bytes": 7456,
+    "sha256": "c989fca6391331cc59d2688abe1af3faaa00f53322e3ee8ab3620d336820d848"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/decompose_keeper_config.json",
+    "bytes": 2999,
+    "sha256": "803bf13659ba6dc7cf6dbae5a8b09e1d6386342ca0e02c9be114253db901b2b4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/dream_wulin_escort.json",
+    "bytes": 8276,
+    "sha256": "df73b257a286e7ea850c22ada5bacb5794590257e47a22ac85d5f65ec304348b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/dream_wulin_sect_ranking.json",
+    "bytes": 2870,
+    "sha256": "ec1d9adb0fea193e54590ec54273b9448b3416c716ed0ec399c883d6a7228078"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/dream_wulin_wanderer_befriend.json",
+    "bytes": 5700,
+    "sha256": "e995b379492700ca4d85bc38b649ab50819eb45453bfe595378d61d91c694ca0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/dream_wulin_wanderer_bond.json",
+    "bytes": 13738,
+    "sha256": "7f39cf9f7b3ff0cdaee37b9ed488065e49e7b7f95596162fa4f3b4b8cbd82d53"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/dream_wulin_wanderer_present.json",
+    "bytes": 721,
+    "sha256": "8d72b0b0601e0417c2c405da89fff193db3c24c410d398b18379c422cb8267aa"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/dream_wulin_wanderer_reward.json",
+    "bytes": 13416,
+    "sha256": "629ea0f1e83c5ce2990ad15fde023ae1f1e83d3d2a6887c2ea33e1b8cbb74eb5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/drop.json",
+    "bytes": 4464,
+    "sha256": "866ee1223b936dd8e5cf9e4e753b79d6c82f3940f25072abc5a36e39940b466e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/endless_mission.json",
+    "bytes": 2314,
+    "sha256": "7c4d37b63bd05dd51817db9312c3b44aa6ed16540809cb16bbc69a3162838fff"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/enemy.json",
+    "bytes": 10850495,
+    "sha256": "b1f8c601c450d8ce3e05d452ffb73f20415ee5572c59f565ac908c6ad7d07943"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/enemy_skill_desc.json",
+    "bytes": 177097,
+    "sha256": "543e07153e85e1c131d9be4165392c69f78d9869453a65aaa4cda0512c7e8fbc"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/equip.json",
+    "bytes": 3323491,
+    "sha256": "3280c1ed7184c7c7a40ab2e48fa0c93a49ee7db28ddf73ba77fe619b6ecffd52"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/equip_raise_degree_tip.json",
+    "bytes": 815,
+    "sha256": "5245d231011c8e8089f9de6b1648ef39ebd355050815f85e958cffa7c173f36a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/exam_question.json",
+    "bytes": 93640,
+    "sha256": "14425a398a2b08eb00d230ba0795b2009bb856a96796d2574b7838b13db2e621"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/experimental_suppress.json",
+    "bytes": 4417,
+    "sha256": "068410a6671ecbf008e6678727df4ab9164dbf3b62e306dde297d77145980224"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/extra_tip.json",
+    "bytes": 4480,
+    "sha256": "3217d84f5e0b229b4ebada0b3d9b1fc4977fe16e810af0f5a4952203931025ab"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_device_ascension_grade_config.json",
+    "bytes": 3511,
+    "sha256": "27b9ed70db00c918be2378e3108bb4ea6f899cf4e9ba5f1e7194669a09ae9995"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_device_ascension_quality_config.json",
+    "bytes": 24857,
+    "sha256": "ca129db38ae51ce3ee59d505626522328397a635a5c4bba49b6532dfb11563ee"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_device_composite_config.json",
+    "bytes": 30236,
+    "sha256": "949d9c9cb7901dfedbc328b153d5df29d9c2afd3603dfdd2d22c01a021adfedc"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_device_enchant_attr_config.json",
+    "bytes": 275110,
+    "sha256": "104c0843c53e10b5694aba6e301e79a1e8f059a7ead43dcd77e9f97fd563f8ba"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_device_enchant_basic_config.json",
+    "bytes": 193423,
+    "sha256": "929c250c1046b63f9eb3f33028ea204fa665ec773521a3d899bcc78bd7954b73"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_device_enchant_config.json",
+    "bytes": 11545,
+    "sha256": "1032bcfba7ea17e589b80ad36576346293199ad9c6082847c328da72f6299bb4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_device_enlivener_wit_config.json",
+    "bytes": 3187,
+    "sha256": "58df5b718fe07153f57820cde63cb75e90d73f50d43f9b4862294b63d66953a5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_device_entries_weight.json",
+    "bytes": 97397,
+    "sha256": "ae23d347c4bc6b7b8749af99a9a976133a1dac86f3fde2ccbbf53cf4b63c989c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_device_secondary_profession_task.json",
+    "bytes": 4886,
+    "sha256": "f688f24646c60c413841c0381558f5a4667d92f2461a4fd2fa4102e447e364ec"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_device_stunt_fixed.json",
+    "bytes": 162276,
+    "sha256": "2a0a5079ba2911b322e2e28552607ed6c53b5b3b23b12e2939bb107f7599b9d2"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_composite.json",
+    "bytes": 2630,
+    "sha256": "edf878b7376f26e8b24c3be089a16a92cc8a56d5b766abecd78ef5eba0cc19e0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_grade.json",
+    "bytes": 22891,
+    "sha256": "e4f0f3c332a7c690c6c880bee187274f021464d6d8cc8e86a788b5d92da3b5b0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_identify.json",
+    "bytes": 1375,
+    "sha256": "12ab3c4eaadbf63a75fb0e9ec90d341eb66c261c6f618dcffe73d60a4c8b9106"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_level.json",
+    "bytes": 29170,
+    "sha256": "7cdeac1f8ef6f863a38e663dc6030a8948c46f381a53fd654e65747720f3e9cd"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_mirror_drop.json",
+    "bytes": 5766,
+    "sha256": "b651bb61711af0fe48d069d907738087204caba2c1787de8b46869cf956ae5d5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_mirror_offline.json",
+    "bytes": 7328,
+    "sha256": "09e9bd34628a0895c6bf2ecd6d9e2370ebf7dbba8f792cc9988c8a2e6ffe002d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_mirror_offline_output.json",
+    "bytes": 16406,
+    "sha256": "edc16382a7a6d681cefb784a91de59d9479fac3d5de639ae0ca15ac9fd15b111"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_monster.json",
+    "bytes": 7241,
+    "sha256": "499af8606d42c6f6c5603bf6c004ad5c8c7b77baf2e3d8e2e482a9cde58ababc"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_monster_revive.json",
+    "bytes": 564,
+    "sha256": "8a4b669ba6c5503e5c8253243d35f3989f7439282576d6b360ad1fb2f2993ef3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_monster_talent.json",
+    "bytes": 4086,
+    "sha256": "d866fcee3064aa3929327cade25188087c19c9da9f3f8d7eaa043c8fc18b8793"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_produce_basic.json",
+    "bytes": 3187,
+    "sha256": "497268da6a73ba5536af80a3ddd3b534b7a87e329d8e67343e06f085501f7a2c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_produce_special.json",
+    "bytes": 4199,
+    "sha256": "c5186d577cc2e2a7d76fa0fbcc19842ecf90604c3d8c6d80629f5b3ef8f7cb12"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_domain_tip.json",
+    "bytes": 7871,
+    "sha256": "b543a58e2faeee2669646ac1173e13393ca279a924e825282f644be1d0a8fea6"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_equip_spirit.json",
+    "bytes": 13243,
+    "sha256": "5d8bf3071b879729ac0f4b297098256fa24b9c80d7c27d264791426396e606ad"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_equip_spirit_config.json",
+    "bytes": 7650,
+    "sha256": "364d74e9374c27e127edeec9126151c6a82135b41ae3e569dc83659030813984"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_equip_spirit_enhance_config.json",
+    "bytes": 61048,
+    "sha256": "983909c69c03d4a3d879a64bab717d84d7ccccd04eedae0c04f3fd2b3a31cde7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_equip_spirit_skill.json",
+    "bytes": 51700,
+    "sha256": "0126d4c207670b6c43c94389486b7bb8666cebd2f8289a092acf5e27b8d46f3c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_magic_daohen_config.json",
+    "bytes": 2301,
+    "sha256": "33ac30835371c5039ad7c366944ecf27a3cc0fd4c9b2df4290b0c7baf7d865f8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_magic_degree_config.json",
+    "bytes": 144056,
+    "sha256": "50fa609fb0f69d6596d36deeb8fbc61d36a004646a35474334ddce22f37dd360"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_magic_grade_config.json",
+    "bytes": 1045,
+    "sha256": "829aa65fefb93f7f11d5d1363a3c08db91e174a0bd3e963b8fd06842f0960672"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_magic_jinglian_config.json",
+    "bytes": 6836,
+    "sha256": "db1cbd826a5f36b4a8a1def117f736345a54a55f8ffe3392f34a7f9c1e3182ac"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_magic_jinglian_consume_config.json",
+    "bytes": 129360,
+    "sha256": "dd89d87e5a9ca91ee584f83319c64945d8ee95f3c818814117720b3e59dd177b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_magic_skill_config.json",
+    "bytes": 204439,
+    "sha256": "ae70b94f46d7f22a8672d839e88d847344d5c43807b0acfba14dc8b562b15623"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_magic_star_config.json",
+    "bytes": 11968,
+    "sha256": "eb7028416b588f571d421366fbdf7b2600c4a09fb8cfda22e16639eb31ee75de"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_skill_enlightenment_realm.json",
+    "bytes": 169958,
+    "sha256": "300cc5611240c569517357be23b9e9ad2db9dfb9411635da3bdc937b2f17ae9f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_skill_enlightenment_realm_add.json",
+    "bytes": 167034,
+    "sha256": "0cac71f75696de453478eee2dc875cf7297e006cbfb2ce40f717301a118672a7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_skill_illustrated_catalogue.json",
+    "bytes": 84140,
+    "sha256": "0489d79e87c61d1d9498359bd6e2c915a5c2ba7a2613814a66070abb845a473e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_skill_ingenious_change.json",
+    "bytes": 321802,
+    "sha256": "caadba3928e69a0506fd8d3251222b3cb7c180f5de8b9c03b734987ddacb6e45"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fairy_skill_practice_divinity.json",
+    "bytes": 6816,
+    "sha256": "6ccbc7d6c38ccc42c50b46795237453c9a3b1c4900c9959dd5a61b912de68b69"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fashion_slot.json",
+    "bytes": 7847,
+    "sha256": "858d67d4d269c3902b8ee4f96c3819589b3cc99a4863493a0c5e41198d6d32c4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fashion_stripe_config.json",
+    "bytes": 71439,
+    "sha256": "5fff48f3c5a7e097961180df01831d9c0a209f743fe20e624b1783b219e69333"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fategod_extra_skill_effect.json",
+    "bytes": 15757,
+    "sha256": "731a16e811390c843936fd4ac52da755229dbbc162cc13c0a258c0291ba867fe"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fategod_raise_degree.json",
+    "bytes": 64301,
+    "sha256": "0fe2c24dd887a744b24b2d994331b53e821502a84091952e83181a94491bed3e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/festival_skill.json",
+    "bytes": 1706,
+    "sha256": "45c8c3c2373da87f58e962d3add499c112867b1580c1fa85fdcac5d6c57ca139"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fish.json",
+    "bytes": 30101,
+    "sha256": "ecfa18f7913fb57004847a5e479c1709dafd4c83d57dd1d0f07c7721ce34b90a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fish_illustrated.json",
+    "bytes": 989,
+    "sha256": "52482b93f39f4878b2eda46f9234e15134d0027ae6540e69676a6239f9df2bba"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/fishing_rod.json",
+    "bytes": 8040,
+    "sha256": "a4c07fc95b774f81bc81d16a132b3a005c0c272c0fbcf6dae87e0de4a50bfd11"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/forge.json",
+    "bytes": 89098,
+    "sha256": "c2a921c267f9538f499b76a7847ccb107a5810d0962eaf5a67f5afe9d23a5596"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/gameobj_common_skill.json",
+    "bytes": 222,
+    "sha256": "3bce96281be32328d48918674c087e3f587a8b90157432fd2c49408ed7250336"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/gdroop_limit.json",
+    "bytes": 5194,
+    "sha256": "12a5acd5b15d6113cc2b4ab376c3b3702e3db5c1d037bcf3ade14d56af2571b8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ghost_cave_ice_round_rewards.json",
+    "bytes": 1781,
+    "sha256": "4ed6f46981c3d07174029779691e7f25f6b3fe47dc376a99e0dc38d10a1ad4b6"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/ghost_cave_ice_wave_rewards.json",
+    "bytes": 34092,
+    "sha256": "40af0e60145d268054ee71cbc70c9d690d8896fccabff4c69620007aa6993ebb"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/gift_pack_for_client.json",
+    "bytes": 1311,
+    "sha256": "a32cbb566a970356b574f90ab14ffdf66a2350e56b2c66bbccd24632a8eabf1e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/goddess_passive.json",
+    "bytes": 12570,
+    "sha256": "3c33fad5a38923b88cf619688f8033c809ae790c428bbc622f6a74c42bab8735"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/guide_prince_sequence.json",
+    "bytes": 748,
+    "sha256": "4f82ff915442ef09c775c1328a0184fb1fcd26461248784eed0d7ba84d79269a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/guide_prince_step.json",
+    "bytes": 21955,
+    "sha256": "0819759f94c0fdb296a38ffd3899f41de394930852219e88d13faaa28d59ea73"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/guide_sequence.json",
+    "bytes": 18195,
+    "sha256": "ac92cff3f273510b7687ec7749a11873e349d6b7ae9d196875dcbd6f046cdab2"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/guide_step.json",
+    "bytes": 304157,
+    "sha256": "e4eb300faa29f35ce04a023b7d2e34466530867f9fc217e3b1649ecb4a0628bf"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/guild_battle_map.json",
+    "bytes": 1867635,
+    "sha256": "e86051207a33c55bdcd07ab6899abcaee5cb14f0c7724e6c33fc40ab9f0747fc"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/guild_island.json",
+    "bytes": 8097,
+    "sha256": "5ee2b10002281e6ccd9cff8c83078935db3540782395fb8000053db5b45e55e5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/guildtown_building.json",
+    "bytes": 31763,
+    "sha256": "4ca596ecb2281d87bf650b13ed05bdfac0017235117ee88e1c6994b5dfbbc3e6"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/holding_sword_config.json",
+    "bytes": 1425,
+    "sha256": "005933a78d7da4fa21bda95d6108d0529832685223e2a6318f42c558545bd1ca"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/holding_sword_enemy.json",
+    "bytes": 19988,
+    "sha256": "8293c4a30a3747ee6264e4ad3b2a99fe1bb3a1d84323ccd3e4295f0e2c433941"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/holding_sword_parameter.json",
+    "bytes": 20035,
+    "sha256": "a400d45c740634f6bcd0e2692df67ad2aed5e15d463f05f455fca47bb3a9b0c2"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/honor_privilege.json",
+    "bytes": 104420,
+    "sha256": "3c8b1852d1b0ef066396e9ef668f3d23cb971f1bc0c6b81715362a4767fe9fa5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/hyperborea_material_composite_config.json",
+    "bytes": 63716,
+    "sha256": "7dd0fde4ec64d8569705b5d6299a2b2cfd7b82cec622e296760373155af95af0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/hyperborea_task_chain.json",
+    "bytes": 78904,
+    "sha256": "277c065f79eef35ceb543ab2d55573a00947c893d219bc3810b59db14222e5e3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/hyperborea_task_text.json",
+    "bytes": 62200,
+    "sha256": "eb796ca7eb108707406b8dd78433c74bf05795989c4507bf7995936e765d797b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/illustrated_book.json",
+    "bytes": 298699,
+    "sha256": "d305e0023d7191fbc24ff712719931eaeda6545961e18498faf2ac111f9f8560"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/initiative_skill.json",
+    "bytes": 99749,
+    "sha256": "02dd8c29f0f87dec2d32deea2ab58738d2ccdf8ea0bc8933edbd91ca70f65466"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/insect_collect_book.json",
+    "bytes": 5566,
+    "sha256": "ec616cd6db276ee6512b4602f6d8998ee300c0b695e80f5b06dd0e69e6ac5c36"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/interruptable_skills_config.json",
+    "bytes": 220,
+    "sha256": "0ecb6cd493495f61f2f2cd2b90265f60506fe2aaa6279687b69c97205da9f5be"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/item.json",
+    "bytes": 5485941,
+    "sha256": "e0236623e78d373158942052907da96d746c1f86861f2b7a163c243065e965cd"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/item_illustrated.json",
+    "bytes": 90360,
+    "sha256": "069c90d2ac025742bf7e84c0af002b6d25f5843a6b683a0b8d0082a6eb0c3307"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/karma.json",
+    "bytes": 148744,
+    "sha256": "acb409e0eaea1388abbd5a3cb253e31d2b1503cc4f53163fe3c087e3ca88cd07"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/killimmortal_effect.json",
+    "bytes": 3339,
+    "sha256": "94b22664df607eece0c734e1a604701ef2339b956d06a607da69430958685d45"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/league_offer_hidden_tasks_npc.json",
+    "bytes": 87180,
+    "sha256": "eef42d0966b927a36a31ddcfa6a5859d0602579a82841f8ca33f7c8df4faad44"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/league_offer_hunter_ex.json",
+    "bytes": 21368,
+    "sha256": "fd3ea49e9ee45e9d3cfdd7a8a8ece7861cd9ccdfe13185761099e82d3ae3a041"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/league_offer_reward.json",
+    "bytes": 24370,
+    "sha256": "5c62ccb51bf7c85383b63f26d45ec3b57e3ba3f2a3e26e4de6cf6b00f0086f31"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/league_skill.json",
+    "bytes": 5489,
+    "sha256": "edb6733ba637a01e9435cf88e8331116d4eabe7b7ead44c3ff5b8af4f139bf36"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/league_war_buff.json",
+    "bytes": 18650,
+    "sha256": "17a8a530eae565d38d793dfa4bb5a00ea4d3612aa507f7242627a40601429d54"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/level.json",
+    "bytes": 145876,
+    "sha256": "d5b79413b58b1d08c7a3c74ad5e5ecdf8710db56e4fb02c21193aa824880f0d4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/level_restriction.json",
+    "bytes": 2248,
+    "sha256": "1c4adf2d2249dc0c2b934b077968f3a30bb741a7e513bf4920915ecb976d1ae0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/level_suppress_config.json",
+    "bytes": 2566,
+    "sha256": "91e7ab46617cbb128ce4bfb83640e49044d97309fdfefa500e83de100972fb19"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/levelnoacc.json",
+    "bytes": 190,
+    "sha256": "88279808901dd80167bd920842cd3791da06be114f6cec6e4943c0b0a4bab3d2"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/lion_camel_ridge_enemy.json",
+    "bytes": 86,
+    "sha256": "523944b2f0b0276419eb5baa1c47e2bdc419650dc7888c0e42191d7e82c71d17"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/lion_camel_ridge_mechanism.json",
+    "bytes": 4650,
+    "sha256": "524864d2816f64613bf7fb110d81e6377fdd757912dc7ab56a3d8ca897224d46"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/loot.json",
+    "bytes": 261120,
+    "sha256": "891cb8a68cf8a16d92b1427d2f19423aeb96e26cb07dd748d37a9529dab19c17"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/lottery.json",
+    "bytes": 544,
+    "sha256": "4fd7cc7a3af339900cf878e26f56675fb4cf76a6a54e9d70b52b08198d13162f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic.json",
+    "bytes": 184820,
+    "sha256": "e4fe3b7037b1a7fd4fc6b09bea1bf052589797b31949190c68b9be1771c5cfb4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_refiner_experience.json",
+    "bytes": 1979,
+    "sha256": "36f9d419538525c79452b3409d7caab671b1c0c4b7b129a82cc06660d326d329"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_refiner_peel.json",
+    "bytes": 3735,
+    "sha256": "fbecb7632b24a73cb9d68b44123789fbac62ba25d5890b17191b9c79c0c84976"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_refiner_perfusion_consume.json",
+    "bytes": 3187,
+    "sha256": "43f119651518adba00cc0d7fa5f710694a979cfb9b2638875932dea77c8c7878"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_refiner_refining_show.json",
+    "bytes": 10536,
+    "sha256": "806b36e5645ee05202e24e8b1a329327ed238bb0023ec54a33815264335476dd"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_tower_debuff.json",
+    "bytes": 4599,
+    "sha256": "208ab8c77076eb5747e5698bf87f2ac4c2a4a8979f208ccb1ae065a11b4ba141"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_upgrade_config.json",
+    "bytes": 7137,
+    "sha256": "81c763a716330687e98cd4811572ed1689e8a20a5ab6c392ce7c06fe82369b04"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_upquality_config.json",
+    "bytes": 738,
+    "sha256": "d2595f0170b6a405e703af90d916bdb9a6713e92bd8f84192a0f002c5f7c2a0e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_weapon_degree.json",
+    "bytes": 121286,
+    "sha256": "4d52aef2d9ecb21b961d75d081a31b59c2aa21c829ba8e1fe7f07b25789f2e5d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_weapon_position.json",
+    "bytes": 472,
+    "sha256": "c95efd2580532ebe7a68182f333251e1b7b06cbf4a78d836d40c86224fa006d9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_weapon_relic_vip.json",
+    "bytes": 18465,
+    "sha256": "5fb5cebf128195e9fc08d81e7056f838c88d8dbcd24f47b6e9d1dac4041dfc70"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_weapon_update_cost.json",
+    "bytes": 8970,
+    "sha256": "a956e9ab2678f80b35f10ab1da734c8d73bdd0cefd93800fac1a38da36fd329e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/magic_weapon_war_enemy_skill.json",
+    "bytes": 9966,
+    "sha256": "d80de19edb9531e6c0f7a8b9705e70390e8a9d3cbff7bcc5dbf11f905c4d6d8c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/map_element.json",
+    "bytes": 32533,
+    "sha256": "b2fdd693b0ce46eb8a5542c18eba5417f64342d5d84b7031d4762669f61a0f68"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/map_element_conf.json",
+    "bytes": 26622,
+    "sha256": "e117baa3c4f62890f3a26e83397f889463bc4bd69e52d48226b5159e4e941776"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/map_explore.json",
+    "bytes": 3411,
+    "sha256": "3f38bb15145c0b0ff64ac527c31061a198fbd5a029bd39451b3061e1fc41f227"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/method_level.json",
+    "bytes": 12529,
+    "sha256": "65e51a003babe0273028d54c560de9e106adec50d149bf316816ae9f1272cc6c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/method_personality.json",
+    "bytes": 17210,
+    "sha256": "4d92b4fe2aa9b140e1f869caf9dddf85de17bd62e242a3edc268f8ec42ed9094"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/mission.json",
+    "bytes": 30870,
+    "sha256": "6aec038b06e27390de2f04847805cd6e8d91c68fb90c00b8fb4ed8f848fc7b78"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/module_open_guide.json",
+    "bytes": 13129,
+    "sha256": "a179ffaa6b2822b66f3a66e8d81e5da085d53d51c6a487724da2ca79ec7d2d2e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/mohist_organ.json",
+    "bytes": 1615,
+    "sha256": "685fd076169d47baa439ae6e5e8fa2927b724db46cf555c66db1a24699f26167"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/mountain_jump_event_config.json",
+    "bytes": 443,
+    "sha256": "37ceebd9e4c8acffd4cc6b0a45030286011ad6ed6382c0fdd122b55c020b2982"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/mystical_painting_npc_chat.json",
+    "bytes": 22239,
+    "sha256": "ed812b0e84ea6671cd7e2edf6e1e16633f59f66798c18e02f7f6381d1427ebd1"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/need_check_actions.json",
+    "bytes": 4731,
+    "sha256": "6c233cf8c0482dd0b4788d7382f49a45cf6a03b2eb8607fe54e043127474b990"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/noblest_enhance.json",
+    "bytes": 79233,
+    "sha256": "cebcf162e30845ff731c7532a57ae679a9be20aece54d1c5adccdb49fc5bbbb8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/noblest_equip.json",
+    "bytes": 165827,
+    "sha256": "24ee75e79ead5211ca0b5d06ec679befdd60f82ce37b093feba96a82016d1ea9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/noblest_skill.json",
+    "bytes": 2339,
+    "sha256": "92ec2cf3f5aeb243e151b466377b161cf6a7df181496e1566beb33628c7ced2b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/novice_boot_task.json",
+    "bytes": 78848,
+    "sha256": "a6e3070a984ee768d1e16f15549733047cd6da07eda2cbee613a7ee118eb1cc8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/passive_skill.json",
+    "bytes": 3388,
+    "sha256": "e01cdfd25250fb3ce60b7d7029681c8d7320ecdcad40c8a0d6790b8b87a7b88e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/pet.json",
+    "bytes": 394129,
+    "sha256": "2450fd41e4b2e6276ac97c5ee8b898688624267172b04dc7fbf8fba3c7f37813"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/pet_direct_mix_config.json",
+    "bytes": 2668,
+    "sha256": "38e03e745fa26c4f3ee1265afd49574e7b6bbf40a14b81ce762ace29c30ca9eb"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/pet_equip.json",
+    "bytes": 36312,
+    "sha256": "6571d14334b5acfc0d05b8d15d6a20fc01ff6f38f81b45515db2cfd4f1e7970c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/pet_lineage.json",
+    "bytes": 3057,
+    "sha256": "654c3cc001ef907e91986ca2fd7f6377fc8e2ea03efe8df8dc4c9b5f9832988e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/pet_passive_skill.json",
+    "bytes": 107317,
+    "sha256": "29b3a68052a63c51e7566b9b85a3ec66406cbfa8e2ee2bf74047ca39276623c9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/pet_pill.json",
+    "bytes": 36846,
+    "sha256": "459bd05c3188580569f5502a860cc55123f5333055a6511f592b6027efbc8107"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/pet_skill.json",
+    "bytes": 365697,
+    "sha256": "5f14d9d0f511210369b272a34cc98dc37993a2cba9fd8f3a3a829e61af6a253c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/pet_suit_effect.json",
+    "bytes": 2290,
+    "sha256": "6701f4b7438f651b66cbc760556fe3ef4c682738d68d9b62f3b1711cc0868886"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/portal.json",
+    "bytes": 3888,
+    "sha256": "edc6e9aa587f4d5312b56ada5d6bf7ec87ef5036442df7912c5a108fe4195824"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/potion_effect.json",
+    "bytes": 51791,
+    "sha256": "948ef164187e809cfce7d1f808755119671e5bd4fff1325988409cc67823c535"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/potion_field.json",
+    "bytes": 837,
+    "sha256": "cafd542b2c53327a903db1c51734c5bcb648547e1fc4cced2395d091b10874d6"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/potion_seed.json",
+    "bytes": 98097,
+    "sha256": "69f64a14aff34714852fe619a16e210336e039925182310ab80405a3877d7c97"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/potion_shop.json",
+    "bytes": 88645,
+    "sha256": "14e9f5dea74d90ef9e4867b743c536281f952dfc7dbd7ba235861bdfc93a0064"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/power_war_level.json",
+    "bytes": 4122,
+    "sha256": "14674e9de2f666790fb04ed01dcdebfffe7084d196133a4e6bb41693c6353dbd"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/practice_break_stone.json",
+    "bytes": 113784,
+    "sha256": "0ea90e79b2281b3b9ac74595bea4ed7134ba94ac46e0530ca214225fb3c2fa21"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/primordial_spirit.json",
+    "bytes": 26496,
+    "sha256": "c43a0c21ae66e84e2b19d8d9a4df0ab11f1eb83603e8774d8f8b2d8354ba31a3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/primordial_spirit_cast.json",
+    "bytes": 1415,
+    "sha256": "f39b48d66dc8999376b693e27baaa4e08db7fe745ea513bd2504da2cd51aa9eb"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/primordial_spirit_character.json",
+    "bytes": 1922,
+    "sha256": "526c7b5149d7d2c3c7ce69d0f1d886239decc763b06646219de60795b435fee2"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/primordial_spirit_dialog.json",
+    "bytes": 52936,
+    "sha256": "a48c182b295bb98891e2fa54df1b6fa57d0023bfc209cf2e747d416d471afbf3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/primordial_spirit_divine_power.json",
+    "bytes": 6542,
+    "sha256": "3d04a4e1f986303fabfa85b74cbf930b1f1ad86c6e428fb237885446941567b3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/primordial_spirit_form.json",
+    "bytes": 1143,
+    "sha256": "ed262e66c7f10ff6a459c057497dd738339fb0034cf1cb0a4f3302623b3bc0e4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/primordial_spirit_insight.json",
+    "bytes": 11758,
+    "sha256": "2d2ae75ef9eaab85fa60ab4e8bad2ee3abb7baf3993d4789f87e5b7f33fefbc1"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/primordial_spirit_skill.json",
+    "bytes": 208716,
+    "sha256": "41d52a77bda355c706166fff45cd67de4c51e64b940fd52cb130196ac315a435"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/primordial_spirit_talent.json",
+    "bytes": 6462,
+    "sha256": "b795e21cdc45db34ab00140b1577af9c5d41f836c2f57eac55e26714f2b51cd0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/primordial_spirit_temple.json",
+    "bytes": 21097,
+    "sha256": "4fd19923ea93d42f3eee63c356e4b1ddf05e52952902f2eab916d7b823516c72"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/proficient_skill.json",
+    "bytes": 34581,
+    "sha256": "e2e936f28f4adfaafda140672dc79d23f7d0ef9435bbcdad2aed6674f8c78db1"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/proficient_skill_effect.json",
+    "bytes": 712802,
+    "sha256": "54a2cc46b901089bd5b7e32108f7c5d5bb729a3abfd0cd64874d0c545432c3e6"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/proficient_skill_upgrade_config.json",
+    "bytes": 657100,
+    "sha256": "6fcef4e4a75a991dcc565f736733bb78c4f1a2a7b313ed13edb4d5ae5e19dba5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/purgatory_card.json",
+    "bytes": 1416,
+    "sha256": "9bf3622e34212ead86054744942cb731acf750920df7098f6cc19fd72c1c9721"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/purgatory_card_deck.json",
+    "bytes": 2155,
+    "sha256": "c35f7d9aa2df2ed190c4a0daf7e75c21bdb88bb8781ca1c49af5055e420ec9c0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/purgatory_debuff.json",
+    "bytes": 1074,
+    "sha256": "c599deed90e089d5b5ad8a09b3bc0524f886454a752ae1312ca5cd4a589d9570"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/purgatory_item.json",
+    "bytes": 1203,
+    "sha256": "583688833886dc779d184ad01c968b798e5ca1de2d175b84bbf12fc6bfdb516b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/purgatory_level.json",
+    "bytes": 3187,
+    "sha256": "e0308a558379211aae03f4303d0d767a251038046af0666e5914e57b7744c3bb"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/purgatory_score.json",
+    "bytes": 3060,
+    "sha256": "bdce6bf9bb66d016e2e0d1d22414247baa4ae680ba934f4b3c4bc76219da914f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role.json",
+    "bytes": 67478,
+    "sha256": "a822ee0e91afd0ea1c465a5a313046236923d379cf819b44ce260504bdb984d5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_blood_examine_rank.json",
+    "bytes": 5645,
+    "sha256": "d399bba99ecfd1997abaf87c30cdc9eb13984207b618815f2ac52770cad675b3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_blood_grade.json",
+    "bytes": 1413,
+    "sha256": "fcc4c4be6b62901c3eb5b142e6b83d2feb1e4a0e44c1c1e037690fa41afe6ab1"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_blood_level.json",
+    "bytes": 5907,
+    "sha256": "e1b8a941dd7cd6873d7a5af359b12d86c1e1af6ab7d96a6e7bb218f2a1ea5359"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_fairy_skill.json",
+    "bytes": 520230,
+    "sha256": "f77495797d5b16b082865d1e71d2aef642ec17e7e4522e5aa21e3c7e0b13fe3a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_fairy_skill_exchange.json",
+    "bytes": 41986,
+    "sha256": "8d507b299a0f39d62691c2a377135ce458818993d2e6bf8666b2f919f9b4163c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_fairy_skill_fair_conf.json",
+    "bytes": 14591,
+    "sha256": "c71e5fcda347915ae7897646989ea3bab2b29d8fd5343ba9a95182190c4423e5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_grow_up_config.json",
+    "bytes": 9640,
+    "sha256": "7c2ad6c10b562c502222744fd2ae5bff21ca2c92be486c319c0df88b4f2df21b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_practice_config.json",
+    "bytes": 10978,
+    "sha256": "8bb72634b530dfc15e99b430365de68ec3f9353b26e5a6c57bdbc09f42ba9dd3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_skill_confs.json",
+    "bytes": 25693,
+    "sha256": "ffd51d8cea3c07a09e4865551bd24cb87de36781eadefc1a79b9306b3788e897"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_skill_desc.json",
+    "bytes": 64246,
+    "sha256": "c473aad01dc72f8ef4035ad864c75fcaad42f390b350dcf3a011d2b68c92f70f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_stunt_confs.json",
+    "bytes": 123428,
+    "sha256": "728e7109962bf5437e353b2344003787ae4db2c3c79deebf54e3be166721b5ad"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/role_suit.json",
+    "bytes": 27561,
+    "sha256": "16a732eb7a9158bd999f649bfad0eec61e6cfd7820096e0bad10c8ccac27428c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/rule.json",
+    "bytes": 648251,
+    "sha256": "e2e4fefbb09bd55bdf5db76fd1407db7d24cd30a3931a9c29e05584a8b6d9bd4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/rune_composite_config.json",
+    "bytes": 28027,
+    "sha256": "32211accb938ac9ff93de17c75d44c9251dad5237947fb742e5fd486cca75d95"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/section.json",
+    "bytes": 26836,
+    "sha256": "9b5bf159c4cd157570eefe91db5c82c254bcb2a14099fc6b7481499d5d5199fc"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/skill_style.json",
+    "bytes": 49224,
+    "sha256": "6d7074ca140efdea9531aea80f108fddf5aaebd5118a8d2497f3d310caccceaf"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/sky_piea_template_config.json",
+    "bytes": 4683,
+    "sha256": "58c8b9b7caf9416df422e67c2a8e6f2d6cac57721f89ddad0711e150177bf205"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/skyfire_celebration_crafted_item.json",
+    "bytes": 10961,
+    "sha256": "eae5e321038f4cd7fcdbead959095380fe8021c1dd14fb43dec889fdda823810"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/skyfire_celebration_gala.json",
+    "bytes": 12418,
+    "sha256": "ee912edec2343295b7d08a3cd042ec3dbe6dfc1e7cfb01ff557e7c790b8d3fa1"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/skyfire_celebration_inspiration.json",
+    "bytes": 768,
+    "sha256": "cfbbf385d85370206113b27745bcd5d18f589e1150a5cd3596414434be898a51"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/skyfire_celebration_store_area.json",
+    "bytes": 3182,
+    "sha256": "c7b769dba60b852760cfea47ea6af670c952ad061d5eed969a39831ef6de0b5c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/skyfire_celebration_store_level.json",
+    "bytes": 2534,
+    "sha256": "4487d12e9002362aca7c8fbb7e21e87a23154715c09c09c1cb283f0f98f12844"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/special_artifact_confs.json",
+    "bytes": 37009,
+    "sha256": "68a2ed7439215ce06d831250b677173c5ee9517e4099b225da9b65f3fb18f48e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/spiritual_body.json",
+    "bytes": 51290,
+    "sha256": "168edc4b84a9ec154aface6f6b2348b2afe4ea11c7a4552f5696fbf3ed27b3c2"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/spiritual_element.json",
+    "bytes": 2449,
+    "sha256": "8cbd6f5ad34ab2dbbabd7a96a0eb7377a1ef87dd7178614b933ed0ac59146cad"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/spiritual_fairy_skill.json",
+    "bytes": 68301,
+    "sha256": "a91a609bb35fade2d56457c2d59f6d87e1732e4ad47d28e9fa5aaf577461f13b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/spiritual_role_skill_effect.json",
+    "bytes": 102187,
+    "sha256": "b8d0086e80bb85303b539b64d5b8ca65bfcda962eafb30bd0bcbc38396a8ef3c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/spiritual_role_skill_index.json",
+    "bytes": 17700,
+    "sha256": "52f268312904b2204a2884a04cd2cedeadb85896447806bdee2950378b6cfc45"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/spiritual_role_skill_slot.json",
+    "bytes": 9395,
+    "sha256": "6a1c030078348a9561b9a9efadb0841dea992932adf4eae564e87300dd84bfb3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/spiritual_root.json",
+    "bytes": 207810,
+    "sha256": "0f5a0ec680152a5b8fc4ccd2c8eb69d46d633bc9fa3466ba5d6fa686e6ae4686"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/spiritual_stone.json",
+    "bytes": 215010,
+    "sha256": "d12f383322bada3bd5a64504738b788455defa0e9b76d60ef444bccbd55fa92a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/stone.json",
+    "bytes": 48846,
+    "sha256": "9953700acd38e56fee56a9cf35e74ddecd217074fd43c9fd9a3a330b4623f225"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/sublevel.json",
+    "bytes": 449149,
+    "sha256": "48482a51a85c355d7a0f48f898fa52760b5590fec4ee7e272fb0df6f7278cbf5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/suit_effect.json",
+    "bytes": 61032,
+    "sha256": "b763b0ae52cc0f85e6624c8486a8453f7d979537761c464b85619f6a563b5855"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/suit_skill.json",
+    "bytes": 30675,
+    "sha256": "15405dbfd27110ceecc36324d905fe0aa43b5a8e6fc3e5275ddbeede802860b3"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/summon.json",
+    "bytes": 10824,
+    "sha256": "255fa510f7470bdcefedc77eb84a9c14fe83ddcbd48147021f2736caf0138e3e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/suppress_condition.json",
+    "bytes": 54250,
+    "sha256": "e7275fbfb51bb7a16bfdb36c52f5f473b9a9973d5c4b1890af8220aea1821e3a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/suppress_effect.json",
+    "bytes": 32557,
+    "sha256": "83f328e5478c96a28931222e0632ebba56ee115b384776eb1f926c6edbee82a7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/suppresses.json",
+    "bytes": 107835,
+    "sha256": "13130a604730603f0164ba2dae2fc7e0e7af0ee2ca2caf93705bf71685989451"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/taoism.json",
+    "bytes": 8220,
+    "sha256": "f2ca8a73dc4c800def9ae57dc72d39cd6dd33227fb3565b9c7bab371cdeed278"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/title.json",
+    "bytes": 247827,
+    "sha256": "c514c7d60439793dadc8b110c95e3d97aabf73362a7f4a6643ed44054a9f2449"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/tower_of_brahma_break_evil.json",
+    "bytes": 5845,
+    "sha256": "9be8c7d3b8ff5f0b95ce19e9b56013ffaa787820831466af9a052e37acd8a975"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/tower_of_brahma_law.json",
+    "bytes": 24092,
+    "sha256": "a05089c4b5b5f024812bff606819a0fcfe9071cd8bcf1f258fc6df23b85289d6"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/tower_of_brahma_level.json",
+    "bytes": 3108089,
+    "sha256": "35e58153f39fc1332061f3c5c75f3f93a4acf5efe10d8177be11f25d8db567a0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/tower_of_brahma_relic_stage.json",
+    "bytes": 291256,
+    "sha256": "c53d5c7981818feb64bde7663374270a76f5965f484da0feb2ef87e007188069"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/tower_of_brahma_spiritual_root.json",
+    "bytes": 1098,
+    "sha256": "47d81192ff9c264bdf344ad2e9f8aee563cbcd300ebf9d0f4eaf7885bec29792"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/transaction_bank_goods.json",
+    "bytes": 201006,
+    "sha256": "d0bbeff5c6f42582ab3683277360fec109c95cfc3d7dbd81681b321429ff76fe"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/trap.json",
+    "bytes": 1850,
+    "sha256": "df4fbedfa737c4ccd04a271f1789559b5436648c42a46254097286473988d62e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/true_spirit_auxiliary_config.json",
+    "bytes": 16071,
+    "sha256": "014b4d951c91cedadb4a2ee3b5ddd918d75193d77693eeff48e453cf8e887960"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/true_spirit_blood_config.json",
+    "bytes": 13568,
+    "sha256": "a589929b667b06b39d531d5d743d68e83219c5015afdd5a1490af9a679335301"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/true_spirit_main_config.json",
+    "bytes": 8542,
+    "sha256": "7905af84ef0ef65ec1d702078ac78ec2272357f5099af46cb93d3acf19f5db0f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/update_resource.json",
+    "bytes": 27291,
+    "sha256": "695ed56bdb0964ec8daf185202445f7998021fcd32446099edbfec1422055821"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/update_resource_category.json",
+    "bytes": 4149,
+    "sha256": "7db66567162029007b4887eb6e86907ecb1b53813ea64913dde29e50e223dbc0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/verification_config.json",
+    "bytes": 3591,
+    "sha256": "a29319865e93c578cdab9b1d2d3d23eba2d740ad41ae12526f44c61e8d8c55e7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/vice_occupation_blood_potion.json",
+    "bytes": 107498,
+    "sha256": "a35c36443c4f661aa5c8d0c34143b439125f18b823137a8dedf953b71dcf067e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/vice_occupation_blood_potion_effect.json",
+    "bytes": 42282,
+    "sha256": "d5d9725aa9abe91ae14a56ba64aaa54053ef4cfe0253bfb9a69e6b869a64645a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/vice_occupation_decompose_config.json",
+    "bytes": 713574,
+    "sha256": "ffe56d07af1425e35dadbb5195f6d93a8cdd32a826824798d88757966ad207c5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/vice_occupation_decompose_spirit_stones_config.json",
+    "bytes": 2223,
+    "sha256": "a9faac0f17bf271c69efcee3a46f8fd7438d970ed33cf1da3ccd7fc0a405fcd4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/vice_occupation_fairy_device_remove_skills.json",
+    "bytes": 2100,
+    "sha256": "f55b46364a25033247f72fb7a1a310c5341a6187710db88946fdd555618aebb0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/vice_occupation_forge_energy_consumption.json",
+    "bytes": 4960,
+    "sha256": "43e905fb18c74751cce3bc1b604de1ee084332c4e1ab7228b44f806e35c84f91"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/vice_occupation_forger_level_config.json",
+    "bytes": 2175,
+    "sha256": "67cb37f728d752889c6937657ec022c4600edcbc1636400eae39fbfd7d0384c6"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/vice_occupation_furnace_refine_config.json",
+    "bytes": 491,
+    "sha256": "5f2e9b1d8b3aad565fec7b69ce6e6c48faafc4f4f0f5fb3d1a25f1ca24937e85"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/vice_occupation_level_config.json",
+    "bytes": 9523,
+    "sha256": "20451287301357aab1a47ab473a7541811f03ef19b1b45d9098301b68c6af0d7"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/vice_occupation_potion_compose.json",
+    "bytes": 77705,
+    "sha256": "ba80841a6d3753e2e4532d99cf0eb3c99a4a0c6d649260546ed55b5e85aafce5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/vice_occupation_potion_effect.json",
+    "bytes": 59390,
+    "sha256": "e6c13fc6491c3bdecaf5f9b720a10876a5edc25149f3d429e5f7ac8421607c8f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/war_fantasy_enhance.json",
+    "bytes": 126094,
+    "sha256": "17ebdc378176e253695347551ba6f04c554f247d13ba6e923760abd82e1bfd40"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/warorder_giftpackage_config.json",
+    "bytes": 10887,
+    "sha256": "248169b5069a3b8a37268b683da2a521a8462137b98b21375457ce9ba291380e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/warteam_building.json",
+    "bytes": 2519,
+    "sha256": "3317f8ff3d173cef4fe7814b6d0a1435a17fdb7bf360fc8b9284e7b37eac0ddf"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/weapon_fashion_effect.json",
+    "bytes": 7127,
+    "sha256": "f16d3d49df56c4f8f2e80760e87d7ae33887a72eb0bc44661302ae50d31af9c9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/weapon_fashion_id_2_skill_effect.json",
+    "bytes": 5869,
+    "sha256": "ef1e347c866dcb97690ad34f9f75f9d5c0034e4f2475b14f01496b0eb4dfada9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/weapon_soul_evolution_star.json",
+    "bytes": 66835,
+    "sha256": "92b9bca6ed7c7969c9a817432444e96c4301bca3ee03a75bde079ff934aa0402"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/weapon_soul_evolution_summon.json",
+    "bytes": 18108,
+    "sha256": "888a39803e67e186e6a3da9e076dd1208f0adc68055246678577a86e0dae9839"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/weapon_soul_power.json",
+    "bytes": 1578,
+    "sha256": "f1e3ab9a3b72b1e8c0ad93d5850bb95f11abdf5fd6bfaa66924360cf0e58b04f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/welfare_advertise.json",
+    "bytes": 8543,
+    "sha256": "902f3cf74df12ac6bc175b46911a6754869609d62a12f725141b225da2bce448"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/west_journey_level_config.json",
+    "bytes": 4203,
+    "sha256": "e92c39a1d0b5f88d21a37df55799cba07fb20daa250b026849c4c29d2e4c2195"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/west_journey_map_mode_config.json",
+    "bytes": 6121,
+    "sha256": "919949d8f6a40676c74b8a0727564d5d2fab90689be50efc0e549780e0bf6e50"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/wild_boss_rate_config.json",
+    "bytes": 54527,
+    "sha256": "33d44da44c6a04f0383756312e2b77092c82ffb835f03c459843c1d41ad04b91"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/wine.json",
+    "bytes": 5308,
+    "sha256": "57d199087d899ecfede70f7dfbe14ebb1c1f57765cb9703cf2038b113cf5d5c8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/wine_map_explore.json",
+    "bytes": 3411,
+    "sha256": "90fa8808b697f9e09eb3f4be0201af76df49bf09bce2c15c1bf3883467b7b8fd"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/wine_reward.json",
+    "bytes": 144,
+    "sha256": "48cd9dc5724377ee9a0c5c1779e373a10329f740dd0e22c6a292196f068a77f0"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/world_boss_rewards.json",
+    "bytes": 8181,
+    "sha256": "80dbaea8032da21993b2f6e6c934c2de6ed3618809e614a0afb987f3c0e340d4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/zmxyx_enemy_edit.json",
+    "bytes": 940,
+    "sha256": "e1625f820f1ba745c5906b2aaa756b00694d3317f50a438e54a3a5cc5e2d7a5a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/database/zmxyx_pet_edit.json",
+    "bytes": 15,
+    "sha256": "e3568562afa9366d8121c497146a6a350d48f47d6ed8be0ca5981fc05aa5b0ee"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/level.sdb.decoded",
+    "bytes": 145876,
+    "sha256": "d5b79413b58b1d08c7a3c74ad5e5ecdf8710db56e4fb02c21193aa824880f0d4"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/role.sdb.decoded",
+    "bytes": 67478,
+    "sha256": "a822ee0e91afd0ea1c465a5a313046236923d379cf819b44ce260504bdb984d5"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/rver.dat.decoded",
+    "bytes": 6,
+    "sha256": "a63f6ed50f9ff3941dceae4af5c7e5f72217e58dc4da0fe9dfdf53d967b5a7c8"
+  },
+  {
+    "path": "artifacts/zmxol-offline/15.7.2/decoded/tables-index.json",
+    "bytes": 53290,
+    "sha256": "a55843546c6dedefc07229a148452d0fc2a3ecaebcf1ec858892e7d67e77d51c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/evidence.json",
+    "bytes": 2682,
+    "sha256": "4af4f9873ad6ec561f2ba2c9d0ebdca52cfd9c32baef16728a808e80bc14ad69"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/221.atlas",
+    "bytes": 1505,
+    "sha256": "899096e7627f58c97742b61fe9e35fa67689dd2dbabe19f899cc954be5f38412"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/221.json",
+    "bytes": 101249,
+    "sha256": "f5512dfb5400ef74d28eb972ccf08ad88c6ea25a7135a7d7f86b10955466c936"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/221.png",
+    "bytes": 22531,
+    "sha256": "31319e5afc7dc6a4d06c5be41b45a7a7e734f54e65d2a5d4f2d06df96e4bda1b"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/229.atlas",
+    "bytes": 4337,
+    "sha256": "b3671060f6225abe671d691bd1a34e7b573db960eb14b98fd95a66226e69487e"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/229.json",
+    "bytes": 318518,
+    "sha256": "0c2a5a8b030e6c2adea31e0ab20f2b9b04634a7731c0c8af5373e5cd443ba0e2"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/229.png",
+    "bytes": 65088,
+    "sha256": "dedc47a20f002fe33804375f4abb87d3ef0b2f1cc5bb948028bbd7751e57c6ff"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/9001.atlas",
+    "bytes": 2580,
+    "sha256": "b9a3e080d8c87d2b9b71c1a703c0a50252ee38c235a6e6012185524e4cbf82dd"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/9001.json",
+    "bytes": 399684,
+    "sha256": "c877cfa9aae1a9e9394ca5986c16fa9c50d478fbe62bb5c0ecbba3520547a06c"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/9001.png",
+    "bytes": 114850,
+    "sha256": "fea925fa91e2e8a399e3ca6c078d0dbb794ad0e89ee79650cd6d52adf321bb11"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/9003.atlas",
+    "bytes": 3577,
+    "sha256": "8eaed05d4ee67b3b807a84d3dae01b09cc413f90a3e73c9bce3e339bb2217227"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/9003.json",
+    "bytes": 673706,
+    "sha256": "3572d4d1f81d94898f857fd81c69a1c03c7e4dbc730501b3df72fa39b5354be9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v51-20261014/resource-tool-verification/skeleton/pet/9003.png",
+    "bytes": 125414,
+    "sha256": "ecc383e9835274f99fefacb24cd19a51d2234ebf7f4e4dd2230482bf321c8677"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v53-20261015/armor-assets/evidence.json",
+    "bytes": 803,
+    "sha256": "ea85814ea083eba01774eedba1442a913f85faade4c8a0be28c174a86199cc91"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v53-20261015/armor-assets/skeleton/beast_armor/9501/95011.atlas",
+    "bytes": 2513,
+    "sha256": "7c13f4ab4ac118a5f47ee162096e2df314775fb4ff341460c9f89d6c03434812"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v53-20261015/armor-assets/skeleton/beast_armor/9501/95011.json",
+    "bytes": 540932,
+    "sha256": "3e922b02741e694d13dff937d4db9e6ad6e64f9d8b37cdfca0890bccea1a4e17"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v53-20261015/armor-assets/skeleton/beast_armor/9501/95011.png",
+    "bytes": 109959,
+    "sha256": "7cd26f314e65cfa6d0cd6be286e6f83904dfa522a57d0cf3f3950cdebb4b17b9"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v6-20261015/starter-profile.json",
+    "bytes": 11810,
+    "sha256": "a5821859832ba064aaf13fe047b85183d62938cbdbe53ce0771bde9d75bd6627"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v61-20261016/r3-after-cold.json",
+    "bytes": 12490,
+    "sha256": "553a747866a85b31fb18805e34e285d6664d6ce2254de48381df28561ab0834a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v61-20261016/verification-final.json",
+    "bytes": 1779,
+    "sha256": "09d328f16d49774da229baffc7dc4832dd4c318f58badc48c6da091e973600c6"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v62-20261016/bag-serializer-fields.txt",
+    "bytes": 1657,
+    "sha256": "7ef2973dcc123736dcace89aa95cb9daf1f6b753b721e87dbf6cd25980e91856"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v62-20261016/bag-serializer.txt",
+    "bytes": 58342,
+    "sha256": "41fddd8954b94bcaa7a62ee53c31faed7aba8bfeaefe454a7a34b66b62c6415d"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v62-20261016/ring-open-request.txt",
+    "bytes": 10707,
+    "sha256": "9b3f11af5cf6b6105510a827e6e84e6e7294979809b1eb6d3eff14bdf6465818"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v62-20261016/ring-open-response.txt",
+    "bytes": 8622,
+    "sha256": "1eaf516a093f6863f05c2409c910268956be1e8f4de117648f9ba87bbaef0af2"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v62-20261016/ring-parser.txt",
+    "bytes": 11632,
+    "sha256": "314801d857bb7cfe0e3a8c0b1ab7126b09727773e686f071f04f301676755d4f"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v62-20261016/save-after.json",
+    "bytes": 12490,
+    "sha256": "553a747866a85b31fb18805e34e285d6664d6ce2254de48381df28561ab0834a"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v62-20261016/targeted.txt",
+    "bytes": 202,
+    "sha256": "554f786d90692b2b1fc5710c0853b39af300b39f798c5ca5d4cf906e2ce18367"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v62-20261016/targeted.xml",
+    "bytes": 3035,
+    "sha256": "8a22a3755e1ad94d9f49652e72c618951fef40cc3e5e01070629d61fc68cad58"
+  },
+  {
+    "path": "artifacts/zmxol-offline/v62-20261016/verification.json",
+    "bytes": 540,
+    "sha256": "7d5466fb1aee8e0319e90038d59102419f001de1d64a70bdcbe7f8c415a23e99"
+  },
+  {
+    "path": "docs/ai-context.md",
+    "bytes": 21621,
+    "sha256": "66eefb9c0caece4df036185d5cb6391d081389f10391dcfa90bed3c7fb7b4f7a"
+  },
+  {
+    "path": "docs/zmxol-codex-checkpoint.md",
+    "bytes": 16545,
+    "sha256": "d8d97f592231f571a704a46d7210e5351ca5ffb0530ec0d1ba50348a58e2a22c"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/README.md",
+    "bytes": 812,
+    "sha256": "4cb24bb6a1bf918b19a09377a7abcd032ebee55150ab7268773a15205790ea42"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/conflicts.md",
+    "bytes": 737,
+    "sha256": "80e3509274532f16231dadf960529a1adf00e5ab5032a822e9b40931db85e412"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/equipment.md",
+    "bytes": 474,
+    "sha256": "dd18f919fc72e187de085dd17611ae7baec18eb19a1170d9e776bcebd2073b85"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/historical-events.md",
+    "bytes": 640,
+    "sha256": "18c15ee5425143a5a0746493ee072b9cb66a4086b76193dafabb36b0b60ac251"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/immortal-equipment.md",
+    "bytes": 508,
+    "sha256": "563da8f22384e911a51dc756f9b8de396ffcf0b6a6fdb2e90caaa6216797b7bc"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/magic-weapons.md",
+    "bytes": 479,
+    "sha256": "070406d411b4577468b8356c0961d3589dfde9e4bf1256d80b7daa132808dd2c"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/pets.md",
+    "bytes": 677,
+    "sha256": "dba0e0ae572ed40f559871f25123fc9f6ce80a2672189181da66ffb1aa3211af"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/sources.md",
+    "bytes": 1216,
+    "sha256": "77f0fa978c566e5c444e8c2d154a752b2078756c251f5ddd1f8e19aa2055e30d"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/spirit-items.md",
+    "bytes": 512,
+    "sha256": "6707237d6c318c691aa2662574039dc249148a3af82cb026c6dba45367f397c1"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/stages.md",
+    "bytes": 475,
+    "sha256": "4936e9a236e290cf505f3ac3bfb8dac3e183ca1d920f07e4cd46f87bd6e4cb81"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/transformations.md",
+    "bytes": 680,
+    "sha256": "1b02efb37b8ba1f47787d3390cfce0d44482a2c27dea239579523a666877b08d"
+  },
+  {
+    "path": "docs/zmxol-guide-knowledge/true-spirit.md",
+    "bytes": 1169,
+    "sha256": "fdead0a64362d1358767d5759c1e520557954d52cf17f59bfaff4f1e89a72951"
+  },
+  {
+    "path": "docs/zmxol-knowledge/4399-digest.tsv",
+    "bytes": 9858,
+    "sha256": "190c318a8ec72814c09ee94f1d7ac3050189c1666ffd568ce2193ca3cc0d03a1"
+  },
+  {
+    "path": "docs/zmxol-knowledge/README.md",
+    "bytes": 3790,
+    "sha256": "4fa08f92e85d973f46122119b8505f048cd1ba65f97ec1831eb17eebb1c7c61a"
+  },
+  {
+    "path": "docs/zmxol-offline-architecture-review.md",
+    "bytes": 24938,
+    "sha256": "afbc0c13fb6bcb3d55a3b1c47f4841ab03694ac7ec6487cbfee165ca29076d7e"
+  },
+  {
+    "path": "docs/zmxol-offline-asset-mechanisms.md",
+    "bytes": 12076,
+    "sha256": "a45966db1f075fc7f59aa25d371d3cd37d1ca361832171092d955c6148e94130"
+  },
+  {
+    "path": "docs/zmxol-offline-awakening-contract.md",
+    "bytes": 3776,
+    "sha256": "ec3e3a2753b86efb940b7183431a8a4aa6c90c590f04845441b4ee270c114f16"
+  },
+  {
+    "path": "docs/zmxol-offline-feature-matrix.md",
+    "bytes": 95915,
+    "sha256": "212f23e4a72e926b1d1047b2a0c8308a378852bb130e6f6b5021b891d84ebc15"
+  },
+  {
+    "path": "docs/zmxol-offline-historical-content.md",
+    "bytes": 18384,
+    "sha256": "8e4ddd92871ae479ce6617f16ff4cfa73584930fe3836b90d978b2c0f5d33822"
+  },
+  {
+    "path": "docs/zmxol-offline-immortal-equipment-analysis.md",
+    "bytes": 14437,
+    "sha256": "a8c6187da7e2b7b1e0738dc78f8de8f250940f9cf52874fbf2dd7a02aa3c1355"
+  },
+  {
+    "path": "docs/zmxol-offline-lua-debug-mail.md",
+    "bytes": 9251,
+    "sha256": "39c46a4954a0516752fb220d46604aab2879d06fcf7c1bedc40e14e338600d14"
+  },
+  {
+    "path": "docs/zmxol-offline-next-system-plan.md",
+    "bytes": 11286,
+    "sha256": "c4c803430bb8355da204dd2e5d14ac1413bfe07e29f8340203fbf19ec3bff984"
+  },
+  {
+    "path": "docs/zmxol-offline-pet-advanced-test-plan.md",
+    "bytes": 26540,
+    "sha256": "e6d7bbe5bcf3f57d4f3a0fd2beeec729b47037eb1ba3fa102d3b6f2c4580ca4c"
+  },
+  {
+    "path": "docs/zmxol-offline-revival.md",
+    "bytes": 35677,
+    "sha256": "9cbeff693694c487ba84433543542639be7ea616df850fe96aec2b5b2f1d77c6"
+  },
+  {
+    "path": "docs/zmxol-offline-true-spirit-analysis.md",
+    "bytes": 17026,
+    "sha256": "4e2ff43e07ca19dc4872207208196e08dad0e2f5b2bb506ef1a05e7efe98855c"
+  },
+  {
+    "path": "docs/zmxol-offline-true-spirit-resource-map.md",
+    "bytes": 5528,
+    "sha256": "3f50b87ec3061bd3d49627ab2e61077664a3976d68e86115cdbc1fad6e2952f9"
+  },
+  {
+    "path": "docs/zmxol-offline-true-spirit-selection.md",
+    "bytes": 5906,
+    "sha256": "593dd8e677d8343e29cddaabd4da837bdfefbe7e9beaa5b03eb90d96c02968a6"
+  },
+  {
+    "path": "docs/zmxol-offline-v3-baseline.md",
+    "bytes": 4395,
+    "sha256": "7cb4f5e8fd1e21abfef89d423bbf5ce9ed492005b268d45c6054f0078060ebe1"
+  },
+  {
+    "path": "docs/zmxol-offline-v3-report.md",
+    "bytes": 8966,
+    "sha256": "7dad9ed9448fbf00191e4200db0ea3ccca86f125f3ece46b162a98dd9772ddca"
+  },
+  {
+    "path": "docs/zmxol-offline-v51-lua-reference.md",
+    "bytes": 2064,
+    "sha256": "4cf01cdb533e3cb6f8459d2b4909489e734188b2d4a163f9a4e16e6755c3ad72"
+  },
+  {
+    "path": "docs/zmxol-offline-v51-report.md",
+    "bytes": 8211,
+    "sha256": "32be1a9cf7ecb844d652c4aad9ef5591faa961fe010218c3710cd7333071fdf6"
+  },
+  {
+    "path": "docs/zmxol-offline-v52-report.md",
+    "bytes": 12582,
+    "sha256": "327b1597ec6cf0fd0d445725be8f6eab4c42b951b33049b108276f694a904440"
+  },
+  {
+    "path": "docs/zmxol-offline-v53-report.md",
+    "bytes": 10048,
+    "sha256": "7499f58749df2483d98f9f726ee3373d0735a79a57958dc44cf374267894c565"
+  },
+  {
+    "path": "docs/zmxol-offline-v6-report.md",
+    "bytes": 8108,
+    "sha256": "7be543db2e7fbcd305e7cab5bfbc82a77cfd13a76830449402629283a24e00a0"
+  },
+  {
+    "path": "docs/zmxol-offline-v61-report.md",
+    "bytes": 9434,
+    "sha256": "c7f963bdfea4160304600f8b16f7f5e6614e9312a671f3f043c19d68c3036792"
+  },
+  {
+    "path": "docs/zmxol-offline-v62-report.md",
+    "bytes": 4649,
+    "sha256": "6f09402b1622b303ab779fd0036e35422ca306f6c09319342afdc90fe4a0494d"
+  },
+  {
+    "path": "tools/zmxol/PatchAce.java",
+    "bytes": 4010,
+    "sha256": "bc3ae89352a21311d9fbe672b7735a035b49cd5703562ca6c75c3f36980332fa"
+  },
+  {
+    "path": "tools/zmxol/PatchGadget.java",
+    "bytes": 7069,
+    "sha256": "21a6a304fa5396739b567f8e7d5e1dce1fbcf09c2123fb2e073e52e13b0cc87b"
+  },
+  {
+    "path": "tools/zmxol/README.md",
+    "bytes": 19009,
+    "sha256": "09f6f7935bdf83dda4564a4dfffbda20680bb5d572319b5f2b51d5ecc7f7c369"
+  },
+  {
+    "path": "tools/zmxol/SignApk.java",
+    "bytes": 1990,
+    "sha256": "45a0f747a182249ca8a6aa52b7d0bd5e5591bc472034ec2c8586bc55186c31ca"
+  },
+  {
+    "path": "tools/zmxol/apk_patch.py",
+    "bytes": 18413,
+    "sha256": "c03284501d5e834bb2835bec036d4beaf3d5c6e896e09ae332e0d76105840db1"
+  },
+  {
+    "path": "tools/zmxol/build_playable_apk.py",
+    "bytes": 4966,
+    "sha256": "2225db2228480ee85e56f81b4fb9c516e00de66e663f8040e95401cd507c1819"
+  },
+  {
+    "path": "tools/zmxol/debug_fusion_response.js",
+    "bytes": 14654,
+    "sha256": "a3b7de0b91100fc0bfbaee7b7700549999b1ac12fa35dc70aa527260305553cd"
+  },
+  {
+    "path": "tools/zmxol/debug_fusion_response.py",
+    "bytes": 7176,
+    "sha256": "30a3b95352ae090f3ceda8cde68f000eb0fcf91a2bf7771a724da9eafc3b169d"
+  },
+  {
+    "path": "tools/zmxol/debug_mock_mail.lua",
+    "bytes": 818,
+    "sha256": "bb5eeb19b73e93e9c3fe545fdc900b7885fb1888b78a090a394ca6fca2ce059f"
+  },
+  {
+    "path": "tools/zmxol/debug_mock_mail.py",
+    "bytes": 7488,
+    "sha256": "b2a2b00e1ef4ad67ead2722d5deb51499f59f258e4ce1c56086b6ed8f9f6ed4a"
+  },
+  {
+    "path": "tools/zmxol/debug_spirit_state.js",
+    "bytes": 3491,
+    "sha256": "66eb34e397365509f4e7f203a31d94d14315b2f6c03d567eb7404f72c089f6db"
+  },
+  {
+    "path": "tools/zmxol/debug_spirit_state.py",
+    "bytes": 1806,
+    "sha256": "d429b6d7a7e27a63273cb60833650021fc32d5cb8728628d9b4fc4c943133af0"
+  },
+  {
+    "path": "tools/zmxol/debug_true_spirit_entry.py",
+    "bytes": 7571,
+    "sha256": "3c6ff16b02ea16ceba71d5a22fb9eb5d618b126ee187776f5617851a76d29369"
+  },
+  {
+    "path": "tools/zmxol/fusion_config_evidence.py",
+    "bytes": 7517,
+    "sha256": "378f81c83375f5465980b74f9a105d3a2d853446186d549977e688d11e556ead"
+  },
+  {
+    "path": "tools/zmxol/legacy_resources.py",
+    "bytes": 9811,
+    "sha256": "755dfcb56cb8e75f22ad8b06abcdcc54104e21d792748834265a9c0f965b6b2b"
+  },
+  {
+    "path": "tools/zmxol/native_restore.py",
+    "bytes": 5573,
+    "sha256": "d19c46891b778fd82e5bb8831f20a62f1c5bd11f5e229e1b1f61c6acc5665dae"
+  },
+  {
+    "path": "tools/zmxol/offline_bridge.js",
+    "bytes": 82307,
+    "sha256": "50bf21c36cf0ac6bce7a30297ec35d9df981c1aeafcfa4d7e012bad6dda8d95c"
+  },
+  {
+    "path": "tools/zmxol/offline_manifest.py",
+    "bytes": 9987,
+    "sha256": "4fddb56e04928bfa731535c7fe93877e8fbfbf60f95e8931077fabc66886145e"
+  },
+  {
+    "path": "tools/zmxol/offline_shop.js",
+    "bytes": 9664,
+    "sha256": "45161c3f6ff1b0181cbcf3c0fd8049137263b0cce93ac04228445ab096630701"
+  },
+  {
+    "path": "tools/zmxol/offline_shop_catalog.py",
+    "bytes": 5704,
+    "sha256": "d3828e5c5cb94fae660b8b86bdf3c485df015ce6b2c32b0edbcaabc9cc870ff9"
+  },
+  {
+    "path": "tools/zmxol/offline_shop_prices.json",
+    "bytes": 1712,
+    "sha256": "9ea7e46e19893d4a864ef0c15d5e3e9ee575a5b17a29f4e0766acd8cc25ae7fe"
+  },
+  {
+    "path": "tools/zmxol/playable_bridge.js",
+    "bytes": 3374,
+    "sha256": "2b2acaa96d2dc919533da7894d452427adbbebee3cc582a35b8a948f47174c74"
+  },
+  {
+    "path": "tools/zmxol/playable_bridge.py",
+    "bytes": 4611,
+    "sha256": "f4e47aa273556bb914de2cf56d831ce4960096ef5074906abbdd8b1e17b2feaa"
+  },
+  {
+    "path": "tools/zmxol/prepare_fusion_materials.py",
+    "bytes": 3784,
+    "sha256": "8bb6e659e62d34d42ec4ef1e331531a74ac16ef8747163592b8a05dda00511d5"
+  },
+  {
+    "path": "tools/zmxol/prepare_fusion_resources.py",
+    "bytes": 2311,
+    "sha256": "9d3229b8fa26be49b00832c5281b29dada782a622b89e40ad0646d2599b34877"
+  },
+  {
+    "path": "tools/zmxol/prepare_spirit_armor.py",
+    "bytes": 2457,
+    "sha256": "b8cacf2b75f888f0a3b730d2c3a4cc0bb9dbfa0f59dd6be3f00947be8edf6a5e"
+  },
+  {
+    "path": "tools/zmxol/sdb_codec.py",
+    "bytes": 1407,
+    "sha256": "dec2fb0ae3539a986bd5e1590c69971cbf0c30955ea9dc310bdb8ff0ae0407c4"
+  },
+  {
+    "path": "tools/zmxol/search_forum.py",
+    "bytes": 1609,
+    "sha256": "a118c5f4237a692cf27edb60b2ef6001d5416dee6489d7975d343921ae8bea9b"
+  },
+  {
+    "path": "tools/zmxol/test_apk_patch.py",
+    "bytes": 30642,
+    "sha256": "4d6925ec89b700d5695140cbef3bacd24b210262898929b493e69fd82005054e"
+  },
+  {
+    "path": "tools/zmxol/test_build_playable_apk.py",
+    "bytes": 2385,
+    "sha256": "f088fd829ac418135355ce82e20f99c87a08fe0ac8d8e02a46399c8c160c17b4"
+  },
+  {
+    "path": "tools/zmxol/test_debug_fusion_response.py",
+    "bytes": 13924,
+    "sha256": "4f1490abb0f7b48cdac423291f4e6e732d5af8310261f33dc64272745db9e5ad"
+  },
+  {
+    "path": "tools/zmxol/test_debug_mock_mail.py",
+    "bytes": 4054,
+    "sha256": "123298a81cfb35fa40ab7956fa1143f8b466d0135ebd03c5720d870aba745eff"
+  },
+  {
+    "path": "tools/zmxol/test_debug_spirit_state.py",
+    "bytes": 5464,
+    "sha256": "da05aa2b2f6ace2cc4726a569a6134460b081a0c885fce183d59b4a99d6bedc3"
+  },
+  {
+    "path": "tools/zmxol/test_debug_true_spirit_entry.py",
+    "bytes": 1884,
+    "sha256": "cb59caf8ae82e1265666a287d0098765a28ed1e56a5c6fe3cccac383e0c1a085"
+  },
+  {
+    "path": "tools/zmxol/test_fusion_config_evidence.py",
+    "bytes": 3187,
+    "sha256": "12bdddb6b5d33b3c09c986d3cca3ea6722f0a57777265ae96ff4a209eb366231"
+  },
+  {
+    "path": "tools/zmxol/test_gadget_patch.py",
+    "bytes": 6168,
+    "sha256": "f24a0ea4b2da08b004ded9978e302c54e41a54484d28b23c21ddc6cd4a0aa6dd"
+  },
+  {
+    "path": "tools/zmxol/test_legacy_resources.py",
+    "bytes": 21444,
+    "sha256": "3663aa0d99ad9a3a894661080c9d1bb1ddff2ba36109122ae9ff93bfec385694"
+  },
+  {
+    "path": "tools/zmxol/test_native_restore.py",
+    "bytes": 3606,
+    "sha256": "a00ce29cffd30b2151babd4f52f9f280fd09397c47be8ca7d0e9a142e9dba0b8"
+  },
+  {
+    "path": "tools/zmxol/test_offline_artifact_preview.py",
+    "bytes": 4127,
+    "sha256": "15aa422ba5e511345ca47c975f0b1518fc67ef857085c865553ae0f2dc2fedc8"
+  },
+  {
+    "path": "tools/zmxol/test_offline_bridge.py",
+    "bytes": 66441,
+    "sha256": "980af1d5e02a36c571e7deb3ac00b9a439881202432a2f8111b83c9f1c442b24"
+  },
+  {
+    "path": "tools/zmxol/test_offline_debug_mail.py",
+    "bytes": 6779,
+    "sha256": "b756d4d3d25ab22e6f6037ea0ca3f6517e75d3fc3f0ae299c77b731d4552e100"
+  },
+  {
+    "path": "tools/zmxol/test_offline_manifest.py",
+    "bytes": 13257,
+    "sha256": "904a8a04df9ba616be94208cbca6caf57f04fdcea3ee2b4c5106ce867a3c9e01"
+  },
+  {
+    "path": "tools/zmxol/test_offline_mission.py",
+    "bytes": 4588,
+    "sha256": "7687863e8a7cb66b45fe9b80a4c035938f8633f6e36fc90df3f486cc7470f197"
+  },
+  {
+    "path": "tools/zmxol/test_offline_mock_bagua.py",
+    "bytes": 6229,
+    "sha256": "fe67f804454ab92fbdab105462553a68d99f2571dd3c3c643d404eaed56c1c67"
+  },
+  {
+    "path": "tools/zmxol/test_offline_mock_mail.py",
+    "bytes": 27432,
+    "sha256": "d4f429767559ab4dd4ea97805f2c89f75f2889b85a9d59f9836d3c3f179845cf"
+  },
+  {
+    "path": "tools/zmxol/test_offline_mock_pet_mail.py",
+    "bytes": 14898,
+    "sha256": "b265a4f886a91cfe662f758192d69edd1fa394a688b313e9bb88630427b53250"
+  },
+  {
+    "path": "tools/zmxol/test_offline_pet_state.py",
+    "bytes": 10168,
+    "sha256": "d3ab6230c328a847e5921a52a800c72c406cf311d6536592259172479b401d3d"
+  },
+  {
+    "path": "tools/zmxol/test_offline_sdk_network.py",
+    "bytes": 4248,
+    "sha256": "39af809cf33e2eb6930c67c673c88f5b507d197868ece200cf2c44966c36a5fd"
+  },
+  {
+    "path": "tools/zmxol/test_offline_shop.py",
+    "bytes": 11874,
+    "sha256": "87eb28f3e4fe16bc8edb5558708d4cc1455b93bd7445e71591690ae0f296d833"
+  },
+  {
+    "path": "tools/zmxol/test_offline_void_intro.py",
+    "bytes": 8703,
+    "sha256": "2c9f940070cddf272ba84576f29594d04d42c5edbb2db365f74d240b9873cbf6"
+  },
+  {
+    "path": "tools/zmxol/test_playable_bridge.py",
+    "bytes": 4698,
+    "sha256": "808db16e85b278da491ece564fb8ae2cbf6258f4cd067687cf62df68482338d7"
+  },
+  {
+    "path": "tools/zmxol/test_prepare_fusion_materials.py",
+    "bytes": 2114,
+    "sha256": "f1b367c3e18cf6a0f247cd3186fe9fc502769034a936f250895f430f201c94fa"
+  },
+  {
+    "path": "tools/zmxol/test_prepare_fusion_resources.py",
+    "bytes": 1522,
+    "sha256": "abc0fffe84db2e248aa062b351bc2c5af0382ae33fdd4037e37dd1a26e57d338"
+  },
+  {
+    "path": "tools/zmxol/test_prepare_spirit_armor.py",
+    "bytes": 1540,
+    "sha256": "4fc1550feb6fbb104889d776cb8f1b7ab83c15255bcce6101d43d56c39385c5f"
+  },
+  {
+    "path": "tools/zmxol/test_sdb_codec.py",
+    "bytes": 1690,
+    "sha256": "f2aca2315ae4f6aa5ae0735c849a825e9a55a4ecfd43b18a9d34094073c38b74"
+  },
+  {
+    "path": "tools/zmxol/test_search_forum.py",
+    "bytes": 1564,
+    "sha256": "640cc83485b4f3d6693549dc648e37bafe3ad5d04d4164135270fdf3a38fe7a6"
+  },
+  {
+    "path": "tools/zmxol/test_sign_apk.py",
+    "bytes": 5435,
+    "sha256": "e2a4cced1c5b84f57b9906f0eca0dbe97d39fbbecce2a1288fe8732dc03cbd0a"
+  },
+  {
+    "path": "tools/zmxol/test_true_spirit_inventory.py",
+    "bytes": 2919,
+    "sha256": "2285302d23a0f74a9f991e56013e4d043aaf1bcc5cafd70addd3ab7a15493669"
+  },
+  {
+    "path": "tools/zmxol/true_spirit_inventory.py",
+    "bytes": 6214,
+    "sha256": "e06de5d46c97c82da5920fdc52574c9ed038148db2551cc3b8e50114fde4c4d8"
+  },
+  {
+    "path": "迁移说明.md",
+    "bytes": 3081,
+    "sha256": "5d1c8fbf7f85f17eecb75fbd32c5ecee7787923ab5138f87653c2112c1073b86"
+  },
+  {
+    "path": ".gitignore",
+    "bytes": 96,
+    "sha256": "bd70a0a7259fdefbf7bbadf63d64816f46a58637721cd809cb150fb6b11f691e"
+  }
+]

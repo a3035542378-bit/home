@@ -1,0 +1,18 @@
+{
+  "status": "BLOCKED_CONTAINER_PERSISTENCE_NOT_RESTORED",
+  "apk_created": false,
+  "save_bytes": 12490,
+  "save_sha256": "553a747866a85b31fb18805e34e285d6664d6ce2254de48381df28561ab0834a",
+  "save_unchanged": true,
+  "point": 1959998,
+  "receipt_count": 4,
+  "credit_amount": 2000000,
+  "catalog_candidates": 7893,
+  "targeted_tests": 22,
+  "targeted_seconds": 0.91,
+  "full_regression": "NOT_RUN",
+  "new_special_purchase": "NOT_RUN",
+  "model_wait_seconds": "UNKNOWN",
+  "tool_total_seconds": "UNKNOWN",
+  "total_seconds": "UNKNOWN"
+}

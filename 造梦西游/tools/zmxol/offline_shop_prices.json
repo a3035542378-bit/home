@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "currency": 503037,
+  "categories": [
+    "时装",
+    "宠物",
+    "其他商品",
+    "真灵与宠物养成材料",
+    "启灵珠与装备材料",
+    "礼盒"
+  ],
+  "initial_credit": {
+    "amount": 2000000,
+    "source": "OFFLINE_COMPAT",
+    "rule": "每个本地存档首次进入商城赠200万测试点券；旧198赠券仅补差额一次，保留消费记录；不涉及官方充值"
+  },
+  "prices": {
+    "503345": {
+      "name": "虚天灵元丹",
+      "price": 198,
+      "source": "USER_DEFINED"
+    },
+    "503346": {
+      "name": "极地灵元丹",
+      "price": 88,
+      "source": "USER_DEFINED"
+    },
+    "530002": {
+      "name": "绝品融灵丹",
+      "price": 20000,
+      "source": "USER_DEFINED"
+    },
+    "532420": {
+      "name": "洗髓甘露",
+      "price": 3000,
+      "source": "USER_DEFINED"
+    },
+    "532202": {
+      "name": "史诗妖魂",
+      "price": 600,
+      "source": "USER_DEFINED"
+    },
+    "502000": {
+      "name": "玄铁",
+      "price": 1,
+      "source": "OFFLINE_COMPAT"
+    },
+    "502001": {
+      "name": "檀木",
+      "price": 1,
+      "source": "OFFLINE_COMPAT"
+    }
+  },
+  "default_prices": {
+    "时装": 198,
+    "宠物": 198,
+    "其他商品": 10,
+    "真灵与宠物养成材料": 88,
+    "启灵珠与装备材料": 10,
+    "礼盒": 88
+  },
+  "enabled_material_ids": [
+    502000,
+    502001,
+    530002
+  ],
+  "pending_material_ids": {
+    "503345": "bag_type=1，原生购买前容量检查拒绝，待恢复对应背包",
+    "503346": "bag_type=1，对应背包容量待恢复",
+    "532420": "bag_type=1，对应背包容量待恢复",
+    "532202": "bag_type=4，对应背包容量待恢复"
+  }
+}
