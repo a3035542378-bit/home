@@ -1,0 +1,26 @@
+[Unit]
+Description=Ergou operations console and message processors
+After=network-online.target
+
+[Service]
+User=ergou
+Group=ergou
+WorkingDirectory=/opt/ergou/current
+Environment=HOME=/var/lib/ergou
+Environment=ERGOU_CREDENTIAL_DIR=/var/lib/ergou/credentials
+Environment=ERGOU_WECHAT_PRIVATE_DIR=/var/lib/ergou/login
+Environment=ERGOU_SESSION_COOKIE=ergou_cloud_session
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 -m ergou --db /var/lib/ergou/ergou.sqlite serve --port 8766
+Restart=on-failure
+RestartSec=4
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/ergou
+InaccessiblePaths=/var/lib/ergou/wechat
+
+[Install]
+WantedBy=multi-user.target

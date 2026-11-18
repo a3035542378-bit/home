@@ -1,0 +1,22 @@
+[Unit]
+Description=Ergou group message listener
+After=ergou-wechat.service ergou-web.service
+Wants=ergou-wechat.service ergou-web.service
+
+[Service]
+User=ergou
+WorkingDirectory=/opt/ergou/current
+ExecStart=/usr/bin/python3 -m deploy.group_workers listen
+Environment=ERGOU_CREDENTIAL_DIR=/var/lib/ergou/credentials
+Environment=PYTHONDONTWRITEBYTECODE=1
+Restart=on-failure
+RestartSec=8s
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/ergou
+
+[Install]
+WantedBy=multi-user.target

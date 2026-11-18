@@ -1,0 +1,145 @@
+{
+  "adapter": "simulation",
+  "python": "3.12.14",
+  "sqlite": "3.53.1",
+  "system": "Windows-11-10.0.22631-SP0",
+  "rate": 0,
+  "profiles": [
+    {
+      "groups": 200,
+      "hot": false,
+      "parallel_games": 3,
+      "command_pct": 5,
+      "events": 1000,
+      "seconds": 1.0,
+      "throughput": 1000.0,
+      "ingest_to_commit_p95_ms": 493.66,
+      "ingest_to_commit_p99_ms": 496.38,
+      "peak_sampled_queue": 906,
+      "ingress": {
+        "CHAT": 950,
+        "DONE": 50
+      },
+      "outbox_at_end": {
+        "ACKNOWLEDGED": 10,
+        "PENDING": 40
+      },
+      "delivery_from_ingress_p95_ms": 444.31,
+      "errors": [],
+      "completed_samples": 1000
+    },
+    {
+      "groups": 200,
+      "hot": false,
+      "parallel_games": 3,
+      "command_pct": 30,
+      "events": 1000,
+      "seconds": 1.078,
+      "throughput": 927.64,
+      "ingest_to_commit_p95_ms": 675.62,
+      "ingest_to_commit_p99_ms": 684.83,
+      "peak_sampled_queue": 999,
+      "ingress": {
+        "CHAT": 700,
+        "DONE": 300
+      },
+      "outbox_at_end": {
+        "ACKNOWLEDGED": 10,
+        "PENDING": 290
+      },
+      "delivery_from_ingress_p95_ms": 455.67,
+      "errors": [],
+      "completed_samples": 1000
+    },
+    {
+      "groups": 200,
+      "hot": false,
+      "parallel_games": 3,
+      "command_pct": 100,
+      "events": 1000,
+      "seconds": 1.547,
+      "throughput": 646.41,
+      "ingest_to_commit_p95_ms": 999.03,
+      "ingest_to_commit_p99_ms": 1022.04,
+      "peak_sampled_queue": 909,
+      "ingress": {
+        "DONE": 1000
+      },
+      "outbox_at_end": {
+        "ACKNOWLEDGED": 20,
+        "PENDING": 980
+      },
+      "delivery_from_ingress_p95_ms": 725.15,
+      "errors": [],
+      "completed_samples": 1000
+    },
+    {
+      "groups": 200,
+      "hot": true,
+      "parallel_games": 3,
+      "command_pct": 5,
+      "events": 1000,
+      "seconds": 0.954,
+      "throughput": 1048.22,
+      "ingest_to_commit_p95_ms": 544.93,
+      "ingest_to_commit_p99_ms": 547.41,
+      "peak_sampled_queue": 1000,
+      "ingress": {
+        "CHAT": 950,
+        "DONE": 50
+      },
+      "outbox_at_end": {
+        "ACKNOWLEDGED": 10,
+        "PENDING": 40
+      },
+      "delivery_from_ingress_p95_ms": 476.4,
+      "errors": [],
+      "completed_samples": 1000
+    },
+    {
+      "groups": 200,
+      "hot": true,
+      "parallel_games": 3,
+      "command_pct": 30,
+      "events": 1000,
+      "seconds": 1.063,
+      "throughput": 940.73,
+      "ingest_to_commit_p95_ms": 684.35,
+      "ingest_to_commit_p99_ms": 693.16,
+      "peak_sampled_queue": 999,
+      "ingress": {
+        "CHAT": 700,
+        "DONE": 300
+      },
+      "outbox_at_end": {
+        "ACKNOWLEDGED": 10,
+        "PENDING": 290
+      },
+      "delivery_from_ingress_p95_ms": 451.62,
+      "errors": [],
+      "completed_samples": 1000
+    },
+    {
+      "groups": 200,
+      "hot": true,
+      "parallel_games": 3,
+      "command_pct": 100,
+      "events": 1000,
+      "seconds": 1.485,
+      "throughput": 673.4,
+      "ingest_to_commit_p95_ms": 1085.53,
+      "ingest_to_commit_p99_ms": 1109.2,
+      "peak_sampled_queue": 999,
+      "ingress": {
+        "DONE": 1000
+      },
+      "outbox_at_end": {
+        "ACKNOWLEDGED": 20,
+        "PENDING": 980
+      },
+      "delivery_from_ingress_p95_ms": 1100.64,
+      "errors": [],
+      "completed_samples": 1000
+    }
+  ]
+}
