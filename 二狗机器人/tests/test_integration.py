@@ -140,9 +140,14 @@ class Integration(unittest.TestCase):
             self.assertIn(b"app.js",req("/"))
             with self.assertRaises(urllib.error.HTTPError) as err:req("/api/me")
             self.assertEqual(401,err.exception.code)
+            with self.assertRaises(urllib.error.HTTPError) as err:req("/api/reply-diagnostics?group=one")
+            self.assertEqual(401,err.exception.code)
             req("/api/login",dict(name="group-admin",password="password-fixture-123"))
             self.assertEqual(["one"],json.loads(req("/api/me"))["groups"])
-            for route in ("/api/status?group=two","/api/export?group=two","/api/view?group=two"):
+            diagnostics=json.loads(req("/api/reply-diagnostics?group=one"))
+            self.assertEqual(diagnostics["health"]["mode"],"simulation")
+            self.assertEqual(diagnostics["records"],[])
+            for route in ("/api/status?group=two","/api/export?group=two","/api/view?group=two","/api/reply-diagnostics?group=two"):
                 with self.assertRaises(urllib.error.HTTPError) as err:req(route)
                 self.assertEqual(403,err.exception.code)
             req("/api/config",dict(group="one",version=1,patch={"prefix":"小狗"}))

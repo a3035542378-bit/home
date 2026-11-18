@@ -19,12 +19,13 @@
 |GET、POST /api/voice-policy|读取群语音开关、授权、凭据来源和验证状态。提交当前 version，action 为 switch、activate（须附上成功测试的 ticket）或 clear|按群授权。运营或系统管理员可写。实际群语音还须取得本机 confirm-voice 授权|
 |POST /api/voice-policy/test|提交 group、version、kind（key 或 token）、secret 和 base64 编码的 PCM WAV 录音。secret 留空可复测当前凭据。返回 transcript、reply、试听用 audio 和 mime，双唤醒及合成成功后返回十分钟有效的 ticket|仅本群运营或系统管理员。测试只向百度提交所选录音和测试回复，不产生群消息|
 |GET /api/overview|configured 和 serviceable 分别为授权范围内配置群数及可服务群数|已登录，按群授权范围聚合|
+|GET /api/reply-diagnostics?group=…|health 返回当前绑定的心跳、授权和服务状态。records 返回最近十条已登记的点名文字或语音事件的时间、类型、处理状态、发送尝试和回执时间|本群读权限。仅返回状态摘要，不含正文或成员身份|
 |GET /api/status?group=…|群、账号、接入模式、状态、绑定版本、配置版本和计数|授权范围内可读|
 |GET /api/view、/api/export|group、name；返回表格行或 UTF-8 CSV|读权限；权限和撤回记录限系统管理员|
 |POST /api/config|group、version、patch；返回新版本|本群写权限，乐观锁；冲突后取最新版本|
-|GET /api/chat-model?group=…|供应商、建议模型 ID、本群当前模型、版本和最近验证时间|系统管理员或该群运营管理员|
+|GET /api/chat-model?group=…|供应商、本群当前模型、版本和最近验证时间。另用模型列表接口读取可选 ID|系统管理员或该群运营管理员|
 |POST /api/chat-model|group、version、action。verify 另带 provider、model、key。disable 停用并移除密钥|同上。verify 以固定问候测试所选官方接口，通过后原子替换。相同供应商可留空沿用原密钥。并发冲突返回 409|
-|POST /api/chat-model/models|group、provider（openai）、key。返回 models 数组，内容来自 OpenAI 官方 GET /v1/models|限本群运营或系统管理员。key 留空使用本群已验证的 OpenAI 密钥。读取模型列表不会保存候选密钥或更改本群模型。|
+|POST /api/chat-model/models|group、provider（deepseek、glm、qwen 或 openai）、key。返回模型 ID 数组 models。百炼按页读取，智谱从公开 OpenAPI 的文字对话模型枚举读取|限本群运营或系统管理员。key 留空可沿用本群同一供应商已验证的密钥。智谱公开目录请求不携带 Key，模型权限由聊天测试验证。读取列表不保存设置|
 |POST /api/schedule|group、body、period（一次/每日/每周）、time（北京时间 ISO）、catchup|群写权限；一次请求新建一项，响应不明时先查列表|
 |POST /api/operation|group、action、target、key、reason；调分加 points，核对发送加 resolution|群写权限；同键重放返回原结果，包括冲正、停用通知和时效内重试入站|
 |POST /api/switch|group、target（账号）、key|系统管理员；校验在线和群归属，未决任务阻止切换|

@@ -10,7 +10,7 @@ const { createInterface } = require("node:readline");
 const { chromium } = require("playwright");
 
 const fixture = `
-import io,json,sys,tempfile,threading,wave
+import io,json,os,sys,tempfile,threading,wave
 from pathlib import Path
 from ergou import admin,db,models,speech,web
 from ergou.__main__ import worker
@@ -24,6 +24,7 @@ def mounted_route(self, connection):
 web.Handler.route=mounted_route
 with tempfile.TemporaryDirectory(prefix="ergou-ui-") as folder:
     path=Path(folder)/"ui.sqlite"
+    os.environ["ERGOU_CREDENTIAL_DIR"]=str(Path(folder)/"credentials")
     db.initialize(path)
     rooms=("ui-room","ui-room-z")
     db.demo(path,rooms)
@@ -33,17 +34,23 @@ with tempfile.TemporaryDirectory(prefix="ergou-ui-") as folder:
         admin.user(connection,"ui-reader",password,"只读人员",rooms)
         admin.user(connection,"ui-owner",password,"系统管理员",[])
         # A previously verified model is the UI fixture. This server only runs local command handling.
-        connection.execute("INSERT INTO chat_models VALUES('ui-room',1,'deepseek','deepseek-flash',?,1)",(b'fixture',))
+        connection.execute("INSERT INTO chat_models VALUES('ui-room',1,'deepseek','deepseek-flash',?,1)",(models.protect(b"ui-deepseek-key"),))
     def model_fixture(provider,model,key,messages):
         if provider=="openai" and model=="gpt-ui-found" and key=="ui-openai-key" and len(messages)==1:
             return "OK"
+        if provider=="glm" and model=="glm-ui-found" and key=="ui-glm-key" and len(messages)==1:
+            return "OK"
         raise ValueError("测试供应商配置不匹配")
     models.complete=model_fixture
-    def openai_model_fixture(key):
+    def model_ids_fixture(provider,key):
+        if provider=="glm":
+            assert not key
+            return ["glm-ui-found"]
         if key=="ui-empty":return []
-        if key=="ui-openai-key":return ["gpt-ui-found"]
+        if key=="ui-"+provider+"-key":
+            return {"openai":["gpt-ui-found"],"deepseek":["deepseek-flash"],"qwen":["qwen-ui-found"]}[provider]
         raise ValueError("测试密钥验证失败")
-    models.openai_model_ids=openai_model_fixture
+    models.provider_model_ids=model_ids_fixture
     def baidu_fixture(host,route,body,key,limit):
         if key=="ui-failure":
             raise ValueError("百度语音识别鉴权失败")
@@ -72,6 +79,52 @@ with tempfile.TemporaryDirectory(prefix="ergou-ui-") as folder:
     stop.set()
     business.join()
 `;
+
+async function verifyReplyDiagnostics(page, mount) {
+  const panel=page.locator("#replyDiagnostics");
+  const refresh=panel.getByRole("button",{name:"刷新诊断"});
+  const real=await page.request.get(new URL("api/reply-diagnostics?group=ui-room",page.url()).href);
+  assert.equal(real.status(),200);
+  const {health}=await real.json();
+  assert.equal(health.mode,"simulation");
+  await panel.getByText(health.title,{exact:true}).waitFor();
+  let release;
+  const pending=new Promise(resolve=>{release=resolve;});
+  const pattern="**/api/reply-diagnostics?*";
+  const handler=async route=>{
+    const url=new URL(route.request().url());
+    assert.equal(url.pathname,mount+"api/reply-diagnostics");
+    if(url.searchParams.get("group")==="ui-room"){
+      await pending;
+      return route.fulfill({json:{health:{mode:"native",title:"旧群诊断",detail:"旧群回执",last_seen:null},records:[]}});
+    }
+    return route.fulfill({json:{
+      health:{mode:"native",title:"当前测试群可回应点名",detail:"已核实本群心跳",last_seen:1704067200},
+      records:[{received:1704067200,kind:"点名文字",status:"已确认",attempts:1,ack_at:1704067202,detail:"已核对群发件记录"},
+               {received:1704067190,kind:"语音",status:"失败",attempts:0,ack_at:null,detail:"百度识别失败"}]
+    }});
+  };
+  await page.route(pattern,handler);
+  const started=page.waitForRequest(request=>request.url().endsWith("api/reply-diagnostics?group=ui-room"));
+  await refresh.click();await started;
+  await page.locator("#group").selectOption("ui-room-z");
+  await panel.getByText("当前测试群可回应点名",{exact:true}).waitFor();
+  const rows=panel.locator("li");
+  assert.equal(await rows.count(),2);
+  assert.match(await rows.first().innerText(),/点名文字 · 已确认/);
+  assert.match(await rows.first().innerText(),/尝试发送 1 次.*回执 .*08:00:02/);
+  assert.match(await rows.last().innerText(),/百度识别失败/);
+  const viewport=page.viewportSize();
+  await page.setViewportSize({width:360,height:780});
+  assert.equal(await panel.evaluate(card=>card.getBoundingClientRect().right<=window.innerWidth&&card.scrollWidth<=card.clientWidth),true);
+  await page.setViewportSize(viewport);
+  const finished=page.waitForEvent("requestfinished",req=>req.url().endsWith("api/reply-diagnostics?group=ui-room"));
+  release();await finished;
+  assert.equal(await panel.getByText("旧群诊断").count(),0);
+  await page.unroute(pattern,handler);
+  await page.locator("#group").selectOption("ui-room");
+  await panel.getByText(health.title,{exact:true}).waitFor();
+}
 
 async function run(mount) {
   const python = process.env.ERGOU_PYTHON || "python";
@@ -113,6 +166,7 @@ async function run(mount) {
     await page.getByLabel("密码", {exact:true}).fill(password);
     await page.locator("#login button").click();
     await say("二狗积分", false, "本群积分");
+    await verifyReplyDiagnostics(page,mount);
     await nav("成员通知");
     await page.getByRole("button",{name:"关闭新人入群欢迎",exact:true}).click();
     await page.getByRole("button",{name:"开启退群提醒",exact:true}).click();
@@ -125,54 +179,109 @@ async function run(mount) {
     const provider=modelForm.getByLabel("官方供应商"),modelKey=modelForm.getByLabel("官方 API Key");
     const keyLink=modelForm.getByRole("link",{name:"管理 OpenAI API Key"});
     assert.equal(await keyLink.count(),0);
+    const modelList=modelForm.getByLabel("可用模型"),verifyModel=modelForm.getByRole("button",{name:"测试并启用"});
+    await page.waitForFunction(()=>document.querySelector('#modelForm [name="model"]').value==="deepseek-flash");
+    const catalogFor=vendor=>req=>req.url().endsWith("/api/chat-model/models")&&req.postDataJSON().provider===vendor;
+    const glmRequests=[];
+    const trackGlm=req=>{if(catalogFor("glm")(req))glmRequests.push(req.postDataJSON().key);};
+    page.on("request",trackGlm);
+    await provider.selectOption("glm");
+    await modelList.selectOption("glm-ui-found");
+    await modelForm.getByText("智谱官方公布的文字模型，当前密钥的访问权限以测试结果为准。",{exact:true}).waitFor();
+    assert.equal(await verifyModel.isDisabled(),true);
+    await modelKey.fill("ui-glm-key");await modelKey.press("Tab");
+    assert.equal(await verifyModel.isEnabled(),true);
+    await modelKey.fill("");await modelKey.press("Tab");
+    assert.equal(await verifyModel.isDisabled(),true);
+    assert.equal(await modelList.inputValue(),"glm-ui-found");
+    assert.deepEqual(glmRequests,[""]);
+    page.off("request",trackGlm);
+    await provider.selectOption("qwen");
+    assert.equal(await modelKey.inputValue(),"");
+    assert.equal(await modelList.isDisabled(),true);
+    assert.equal(await verifyModel.isDisabled(),true);
+    const qwenCatalog=page.waitForRequest(catalogFor("qwen"));
+    await modelKey.fill("ui-qwen-key");
+    assert.equal((await qwenCatalog).postDataJSON().key,"ui-qwen-key");
+    await modelList.selectOption("qwen-ui-found");
+    assert.equal(await verifyModel.isEnabled(),true);
+    await provider.selectOption("deepseek");
     await modelKey.fill("ui-unused-deepseek-key");
     await provider.selectOption("openai");
     await keyLink.waitFor();
     assert.equal(await keyLink.getAttribute("href"),"https://platform.openai.com/api-keys");
     assert.equal(await modelKey.inputValue(),"");
     assert.equal(await modelKey.evaluate(input=>input.required),true);
-    const verifyModel=modelForm.getByRole("button",{name:"测试并启用"});
-    const modelList=modelForm.getByLabel("可用模型");
-    assert.equal(await modelForm.getByLabel("模型 ID").isVisible(),false);
+    assert.equal(await modelForm.getByLabel("模型 ID").count(),0);
     assert.equal(await verifyModel.isDisabled(),true);
     await modelKey.fill("ui-bad-key");await modelKey.press("Tab");
-    await waitText("#openaiModelsStatus","测试密钥验证失败");
+    await waitText("#modelListStatus","测试密钥验证失败");
     assert.equal(await verifyModel.isDisabled(),true);
     await modelKey.fill("ui-empty");await modelKey.press("Tab");
-    await waitText("#openaiModelsStatus","未返回模型");
+    await waitText("#modelListStatus","未返回模型");
     await modelKey.fill("ui-openai-key");
     await modelKey.press("Tab");
     await modelList.selectOption("gpt-ui-found");
     assert.equal(await verifyModel.isEnabled(),true);
-    await modelKey.fill("ui-other");
-    assert.equal(await verifyModel.isDisabled(),true);
-    assert.equal(await modelList.locator("option").count(),1);
-    let received,release,responded;
-    const pending=new Promise(resolve=>{received=resolve});
-    const resume=new Promise(resolve=>{release=resolve});
-    const completed=new Promise(resolve=>{responded=resolve});
-    const delayed=async route=>{
-      received();await resume;
-      await route.fulfill({json:{models:["gpt-stale"]}});responded();
-    };
-    await page.route("**/api/chat-model/models",delayed);
-    await modelKey.press("Tab");await pending;
-    await provider.selectOption("deepseek");
-    release();await completed;
-    await page.unroute("**/api/chat-model/models",delayed);
-    assert.equal(await modelList.isVisible(),false);
-    assert.equal(await modelList.locator('option[value="gpt-stale"]').count(),0);
+    async function changeWhilePending(change){
+      let release;
+      const resume=new Promise(resolve=>{release=resolve;});
+      const pattern="**/api/chat-model/models";
+      const isDelayed=req=>req.url().endsWith("/api/chat-model/models")&&req.postDataJSON().key==="ui-other";
+      const delayed=async route=>{
+        if(!isDelayed(route.request()))return route.continue();
+        await resume;await route.fulfill({json:{models:["gpt-stale"]}});
+      };
+      await page.route(pattern,delayed);
+      const started=page.waitForRequest(isDelayed);
+      await modelKey.fill("ui-other");await modelKey.press("Tab");await started;
+      assert.equal(await verifyModel.isDisabled(),true);
+      assert.equal(await modelList.locator("option").count(),1);
+      await change();
+      const finished=page.waitForEvent("requestfinished",isDelayed);
+      release();await finished;
+      await page.unroute(pattern,delayed);
+      assert.equal(await modelList.locator('option[value="gpt-stale"]').count(),0);
+    }
+    await changeWhilePending(async()=>{
+      await modelKey.fill("ui-openai-key");await modelList.selectOption("gpt-ui-found");
+    });
+    await changeWhilePending(async()=>{
+      await page.locator("#group").selectOption("ui-room-z");
+      await waitText("#activeModel","本群尚未验证大模型");
+      assert.equal(await modelKey.inputValue(),"");
+    });
+    await provider.selectOption("glm");
+    await modelList.selectOption("glm-ui-found");
+    await modelKey.fill("ui-glm-key");
+    const publicRefresh=page.waitForRequest(catalogFor("glm"));
+    await modelForm.getByRole("button",{name:"刷新模型列表"}).click();
+    assert.equal((await publicRefresh).postDataJSON().key,"");
+    const glmTest=page.waitForRequest(req=>req.url().endsWith("/api/chat-model")&&req.method()==="POST");
+    await verifyModel.click();
+    assert.equal((await glmTest).postDataJSON().key,"ui-glm-key");
+    await waitText("#modelResult","测试通过");
+    await page.waitForFunction(()=>document.querySelector('#modelForm [name="model"]').value==="glm-ui-found");
+    assert.equal(await modelKey.inputValue(),"");
+    assert.equal(await modelKey.evaluate(input=>input.required),false);
+    assert.equal(await verifyModel.isEnabled(),true);
+    await page.locator("#group").selectOption("ui-room");
+    await page.waitForFunction(()=>document.querySelector('#modelForm [name="model"]').value==="deepseek-flash");
+    await changeWhilePending(async()=>{
+      await provider.selectOption("glm");
+      assert.equal(await modelKey.inputValue(),"");
+    });
     await provider.selectOption("openai");
     await modelKey.fill("ui-openai-key");await modelKey.press("Tab");
     await modelList.selectOption("gpt-ui-found");
     await verifyModel.click();
     await waitText("#modelResult","测试通过");
     await waitText("#activeModel","OpenAI");
-    await page.waitForFunction(()=>document.querySelector('[name="openaiModel"]').value==="gpt-ui-found");
+    await page.waitForFunction(()=>document.querySelector('#modelForm [name="model"]').value==="gpt-ui-found");
     const refreshed=page.waitForResponse(response=>response.url().endsWith("/api/chat-model/models")&&response.status()===200);
     await modelForm.getByRole("button",{name:"刷新模型列表"}).click();
     await refreshed;
-    await page.waitForFunction(()=>document.querySelector('[name="openaiModel"]').value==="gpt-ui-found");
+    await page.waitForFunction(()=>document.querySelector('#modelForm [name="model"]').value==="gpt-ui-found");
     assert.equal(await modelKey.inputValue(),"");
     assert.equal(await modelKey.evaluate(input=>input.required),false);
     await provider.selectOption("deepseek");
@@ -298,8 +407,9 @@ async function run(mount) {
     assert.deepEqual(await page.locator("#group option").allTextContents(),["ui-room-z"]);
     assert.deepEqual(jsErrors,[]);
     console.log("PASS Chromium: console mount "+mount+", CSV export and WeChat QR");
+    console.log("PASS Chromium: group reply diagnostics, Beijing receipt times, narrow viewport and delayed group refresh");
     console.log("PASS Chromium: system administrator created a scoped read-only login through the account form");
-    console.log("PASS Chromium: OpenAI key link, model discovery, empty/error responses, credential isolation and verified activation");
+    console.log("PASS Chromium: four-provider model discovery, saved keys, stale responses and verified activation");
     console.log("PASS Chromium: sample/uploaded voice, audio playback, two-step activation, failed replacement, scope and read-only role");
     console.log("PASS Chromium: independent membership switches, scoped admin selection, @ switch, local rules, group alias, redemptions and keyword stats");
   } finally {

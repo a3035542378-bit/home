@@ -112,6 +112,15 @@ class Handler(BaseHTTPRequestHandler):
         g=db.execute("SELECT g.*,a.mode,a.state FROM groups g JOIN account a ON a.id=g.account WHERE g.id=?",(group,)).fetchone()
         if not g:
             return self.respond(404,{"error":"群不存在"})
+        if path=="/api/reply-diagnostics" and not post:
+            from . import monitor, reply_diagnostics
+            with db:
+                db.execute("BEGIN")
+                diagnostics = {
+                    "health": monitor.group_health(db, group),
+                    "records": reply_diagnostics.recent(db, group),
+                }
+            return self.respond(200, diagnostics)
         if post and path in ("/api/speech/detect","/api/speech/reply"):
             from . import speech
             result=speech.detect(db,u,group,data) if path.endswith("/detect") else speech.audio_reply(db,u,group,data)

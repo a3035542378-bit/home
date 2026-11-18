@@ -8,6 +8,14 @@ details{margin-top:16px} summary{cursor:pointer}
 .voice-preview{border-top:1px solid #d8e0d9;padding-top:12px}
 .voice-preview dl{margin:0 0 10px;overflow-wrap:anywhere}
 .voice-preview audio{display:block;width:min(100%,360px);margin-bottom:12px}
+.diagnostic-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.diagnostic-heading h2{margin:0}
+#diagnosticBody{overflow-wrap:anywhere}
+#diagnosticBody p{margin:5px 0}
+#diagnosticBody h3{font-size:1rem;margin:18px 0 0}
+#diagnosticBody ul{list-style:none;margin:0;padding:0}
+#diagnosticBody li{border-top:1px solid #e1e7e0;padding:8px 0}
+#diagnosticBody li small{display:block}
 :root{font:15px/1.55 "Source Sans 3","Microsoft YaHei",sans-serif;color:#1d302b;background:#f5f6f2}
 body{margin:0} button,input,select,textarea{font:inherit}button,a{cursor:pointer}button{background:#19644e;color:white;border:0;border-radius:7px;padding:9px 18px;font-weight:600}
 button:hover{filter:brightness(.93)}button:disabled{opacity:.5}input,textarea,select{width:100%;padding:9px 11px;border:1px solid #bcc9c1;border-radius:6px;background:white;color:inherit}textarea{min-height:74px;resize:vertical}label{display:grid;gap:5px;font-size:.88rem;font-weight:600}

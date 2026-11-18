@@ -8,13 +8,14 @@ let user,status,page=pages[0],revision=0,modelSettings,dialogSettings;
 let speechSequence=null, objectUrl=null, speechTicket=0;
 function el(tag,text){const n=document.createElement(tag);n.textContent=text;return n;}
 async function api(path,data){
+  const requestRevision=revision;
   const options=data?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)}:{};
   const response=await fetch(path,options);
   const result=await response.json();
-  if(!response.ok){if(response.status===401)loginView();throw Error(result.error);}
+  if(!response.ok){if(response.status===401&&requestRevision===revision)loginView();throw Error(result.error);}
   return result;
 }
-function loginView(){++revision;clearVoiceTest();$("modelForm").reset();$("voicePanel").replaceChildren();$("adminAccounts").replaceChildren();$("wechatLogin").replaceChildren();page=pages[0];modelSettings=null;$("desk").hidden=true;$("gate").hidden=false;}
+function loginView(){++revision;clearVoiceTest();$("modelForm").reset();$("voicePanel").replaceChildren();$("adminAccounts").replaceChildren();$("wechatLogin").replaceChildren();$("diagnosticBody").replaceChildren();page=pages[0];modelSettings=null;$("desk").hidden=true;$("gate").hidden=false;}
 function error(e){$("message").textContent=e.message;}
 function table(rows){
   const wrap=$("tableWrap");wrap.replaceChildren();
@@ -26,12 +27,48 @@ function table(rows){
     tr.insertCell().textContent=date?new Date(v*1000).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai"}):v??"—";
   });});wrap.append(t);
 }
+const diagnosticTime=new Intl.DateTimeFormat("zh-CN",{timeZone:"Asia/Shanghai",dateStyle:"short",timeStyle:"medium",hour12:false});
+async function loadReplyDiagnostics(group,ticket){
+  const body=$("diagnosticBody"), refresh=$("refreshDiagnostics");
+  refresh.disabled=true;
+  try{
+    const {health,records}=await api("api/reply-diagnostics?"+new URLSearchParams({group}));
+    if(ticket!==revision)return;
+    body.replaceChildren(el("strong",health.title),el("p",health.detail));
+    if(health.mode!=="simulation"){
+      const heartbeat=health.last_seen==null?"暂无":diagnosticTime.format(health.last_seen*1000);
+      body.append(el("p","最近心跳（北京时间）　"+heartbeat));
+    }
+    if(!records.length){
+      body.append(el("p",health.mode==="simulation"?"模拟发送结果可在「发送任务」中查看。":"本群暂无点名文字或群语音记录。"));
+      return;
+    }
+    body.append(el("h3","最近点名和语音（北京时间）"));
+    const list=document.createElement("ul");
+    for(const record of records){
+      const item=document.createElement("li");
+      const times=["收到 "+diagnosticTime.format(record.received*1000),"尝试发送 "+record.attempts+" 次"];
+      if(record.ack_at!=null)times.push("回执 "+diagnosticTime.format(record.ack_at*1000));
+      item.append(el("strong",record.kind+" · "+record.status),el("small",times.join("　")));
+      if(record.detail)item.append(el("p",record.detail));
+      list.append(item);
+    }
+    body.append(list);
+  }catch(err){
+    if(ticket===revision)body.textContent="无法读取回复诊断。"+err.message;
+  }finally{
+    if(ticket===revision)refresh.disabled=false;
+  }
+}
+$("refreshDiagnostics").onclick=()=>loadReplyDiagnostics($("group").value,revision);
 async function render(){
   const ticket=++revision,group=$("group").value,query=new URLSearchParams({group,name:page});
   $("message").textContent="";$("heading").textContent=page;
   clearSpeech();clearVoiceTest();
   for(const b of $("nav").children)b.classList.toggle("active",b.textContent===page);
   $("overview").hidden=page!=="运行概览";$("settings").hidden=page!=="群配置";$("modelPanel").hidden=page!=="大模型配置";
+  $("diagnosticBody").textContent=page==="运行概览"&&group?"正在读取回复诊断…":"";
+  $("replyDiagnostics").hidden=!group;$("refreshDiagnostics").disabled=true;
   $("records").hidden=["运行概览","群配置","大模型配置","语音唤醒","自定义回复","成员通知","群组运营","我的群组","后台账号","微信扫码登录"].includes(page);
   $("adminAccounts").hidden=page!=="后台账号";$("adminAccounts").replaceChildren();
   $("wechatLogin").hidden=page!=="微信扫码登录";$("wechatLogin").replaceChildren();
@@ -40,8 +77,8 @@ async function render(){
   $("replyRulesPanel").hidden=page!=="自定义回复";$("replyRulesPanel").replaceChildren();
   $("groupTools").hidden=page!=="群组运营";$("groupTools").replaceChildren();
   dialogSettings=null;$("dialogForm").reset();$("memberChoices").replaceChildren();$("dialogState").textContent="";$("dialogResult").textContent="";
-  $("modelForm").reset();modelSettings=null;$("openaiKeyHelp").hidden=$("openaiModelField").hidden=true;
-  $("manualModelField").hidden=false;$("modelResult").textContent="";
+  $("modelForm").reset();modelSettings=null;$("openaiKeyHelp").hidden=true;
+  $("modelForm").elements.model.replaceChildren();$("modelListStatus").textContent="";$("modelResult").textContent="";
   for(const field of $("modelForm").elements)field.disabled=true;
   $("myGroups").hidden=page!=="我的群组";$("myGroups").replaceChildren();
   if(page==="后台账号"){await renderAdminAccounts(ticket);return;}
@@ -82,6 +119,7 @@ async function render(){
     $("account").replaceChildren();
     Object.entries({"接入方式":data.mode==="simulation"?"本地模拟":"微信适配器","账号":data.account,"当前状态":data.state,"群绑定":"v"+data.binding+(data.paused?" · 已暂停":"")}).forEach(([k,v])=>$("account").append(el("dt",k),el("dd",v)));
     $("simCard").hidden=data.mode!=="simulation"||user.role==="只读人员";$("answer").textContent="";
+    await loadReplyDiagnostics(group,ticket);
   }else if(page==="群配置"){
     const games=await api("api/view?"+new URLSearchParams({group,name:"游戏目录"}));
     if(ticket!==revision)return;
@@ -129,76 +167,87 @@ $("dialogForm").onsubmit=async event=>{
     if(ticket===revision){showDialog(result);$("dialogResult").textContent="本群管理员名单已保存。";}
   }catch(e){if(ticket===revision)$("dialogResult").textContent=e.message;}
 };
-let modelListRequest=0;
-function resetOpenaiModels(){
-  ++modelListRequest;
-  const f=$("modelForm").elements;
-  f.openaiModel.replaceChildren(new Option("请选择模型",""));
-  f.openaiModel.disabled=$("verifyModel").disabled=true;
-  const needsKey=f.key.required&&!f.key.value.trim();
-  $("refreshOpenaiModels").disabled=needsKey;
-  $("openaiModelsStatus").textContent=needsKey?"请先填写 OpenAI API Key。":"";
+let modelListRequest=0, modelListTimer=null;
+function modelCatalogKey(fields){
+  return fields.provider.value==="glm"?"":fields.key.value.trim();
 }
-async function loadOpenaiModels(){
+function updateModelVerification(){
   const f=$("modelForm").elements;
-  if(!modelSettings||f.provider.value!=="openai"||f.provider.disabled)return;
-  const selected=f.openaiModel.value;
-  resetOpenaiModels();
-  if($("refreshOpenaiModels").disabled)return;
+  $("verifyModel").disabled=f.model.disabled||!f.model.value||(f.key.required&&!f.key.value.trim());
+}
+function resetModelList(){
+  ++modelListRequest;
+  clearTimeout(modelListTimer);modelListTimer=null;
+  const f=$("modelForm").elements;
+  f.model.replaceChildren(new Option("请选择模型",""));
+  f.model.disabled=$("verifyModel").disabled=true;
+  const needsKey=f.provider.value!=="glm"&&f.key.required&&!f.key.value.trim();
+  $("refreshModels").disabled=needsKey;
+  $("modelListStatus").textContent=needsKey?"请填写所选供应商的官方 API Key。":"";
+}
+async function loadModelList(){
+  const f=$("modelForm").elements;
+  if(!modelSettings||f.provider.disabled)return;
+  const selected=f.model.value,provider=f.provider.value;
+  resetModelList();
+  if($("refreshModels").disabled)return;
   const ticket=revision,request=modelListRequest,group=$("group").value;
-  const key=f.key.value.trim();
-  const current=()=>ticket===revision&&request===modelListRequest&&f.provider.value==="openai"&&f.key.value.trim()===key;
-  $("refreshOpenaiModels").disabled=true;$("openaiModelsStatus").textContent="正在从 OpenAI 获取模型…";
+  const key=modelCatalogKey(f);
+  const current=()=>ticket===revision&&request===modelListRequest&&f.provider.value===provider&&modelCatalogKey(f)===key;
+  $("refreshModels").disabled=true;$("modelListStatus").textContent="正在从"+f.provider.selectedOptions[0].text+"获取模型…";
   try{
-    const result=await api("api/chat-model/models",{group,provider:"openai",key});
+    const result=await api("api/chat-model/models",{group,provider,key});
     if(!current())return;
-    for(const id of result.models)f.openaiModel.add(new Option(id,id));
-    const saved=!key&&modelSettings.active.provider==="openai"?modelSettings.active.model:"";
+    for(const id of result.models)f.model.add(new Option(id,id));
+    const saved=!key&&modelSettings.active.provider===provider?modelSettings.active.model:"";
     const preferred=selected||saved;
-    if(result.models.includes(preferred))f.openaiModel.value=preferred;
-    f.openaiModel.disabled=!result.models.length;
-    $("verifyModel").disabled=!f.openaiModel.value;
-    $("openaiModelsStatus").textContent=result.models.length?"请选择支持文字对话的模型。":"此密钥未返回模型。";
+    if(result.models.includes(preferred))f.model.value=preferred;
+    f.model.disabled=!result.models.length;
+    updateModelVerification();
+    let hint="请选择支持文字对话的模型。";
+    if(provider==="glm")hint="智谱官方公布的文字模型，当前密钥的访问权限以测试结果为准。";
+    $("modelListStatus").textContent=result.models.length?hint:"供应商未返回模型。";
   }catch(err){
-    if(current())$("openaiModelsStatus").textContent=err.message;
+    if(current())$("modelListStatus").textContent=err.message;
   }finally{
-    if(current())$("refreshOpenaiModels").disabled=false;
+    if(current())$("refreshModels").disabled=false;
   }
 }
 function modelChoices(){
-  const f=$("modelForm").elements,p=modelSettings.providers.find(x=>x.id===f.provider.value);
-  const openai=p.id==="openai";
-  $("openaiKeyHelp").hidden=$("openaiModelField").hidden=!openai;
-  $("manualModelField").hidden=f.model.disabled=openai;
-  $("modelOptions").replaceChildren(...p.models.map(m=>new Option(m,m)));
-  const reuse=modelSettings.active.provider===p.id&&Boolean(modelSettings.active.verified);
-  f.model.value=openai?"":reuse?modelSettings.active.model:p.models[0];
+  const f=$("modelForm").elements;
+  $("openaiKeyHelp").hidden=f.provider.value!=="openai";
+  const reuse=modelSettings.active.provider===f.provider.value&&Boolean(modelSettings.active.verified);
   f.key.value="";f.key.required=!reuse;f.key.placeholder=reuse?"已保存，留空可沿用本供应商密钥":"填写该供应商的官方 API Key";
-  resetOpenaiModels();
-  if(openai&&reuse)loadOpenaiModels();
-  if(!openai)$("verifyModel").disabled=false;
+  f.model.value="";
+  $("modelResult").textContent="";
+  if(reuse||f.provider.value==="glm")loadModelList();else resetModelList();
 }
 function showModel(data){
   modelSettings=data;const f=$("modelForm").elements,active=data.active;
   for(const field of f)field.disabled=false;
   f.provider.replaceChildren(...data.providers.map(p=>new Option(p.name,p.id)));
-  if(active.verified)f.provider.value=active.provider;
+  if(data.providers.some(p=>p.id===active.provider))f.provider.value=active.provider;
   modelChoices();$("disableModel").disabled=!active.verified;
   $("activeModel").textContent=active.verified?"已验证 "+f.provider.selectedOptions[0].text+" · "+active.model+"，验证时间 "+new Date(active.verified*1000).toLocaleString("zh-CN"):"本群尚未验证大模型";
 }
 $("modelForm").elements.provider.onchange=modelChoices;
-$("modelForm").elements.key.oninput=()=>{if($("modelForm").elements.provider.value==="openai")resetOpenaiModels();};
-$("modelForm").elements.key.onchange=loadOpenaiModels;
-$("modelForm").elements.openaiModel.onchange=e=>{$("verifyModel").disabled=!e.target.value;};
-$("refreshOpenaiModels").onclick=loadOpenaiModels;
+$("modelForm").elements.key.oninput=()=>{
+  if($("modelForm").elements.provider.value==="glm"){updateModelVerification();return;}
+  resetModelList();
+  if($("refreshModels").disabled)return;
+  const ticket=revision;
+  modelListTimer=setTimeout(()=>{if(ticket===revision)loadModelList();},650);
+};
+$("modelForm").elements.key.onchange=()=>{if(modelListTimer!==null)loadModelList();};
+$("modelForm").elements.model.onchange=updateModelVerification;
+$("refreshModels").onclick=loadModelList;
 async function saveModel(action){
   if(!modelSettings)return;
   const ticket=revision,f=$("modelForm").elements;
   const data={group:$("group").value,version:modelSettings.active.version,action};
   if(action==="verify"){
-    const openai=f.provider.value==="openai";
-    if(openai&&(f.openaiModel.disabled||!f.openaiModel.value))return;
-    Object.assign(data,{provider:f.provider.value,model:openai?f.openaiModel.value:f.model.value.trim(),key:f.key.value.trim()});
+    if($("verifyModel").disabled)return;
+    Object.assign(data,{provider:f.provider.value,model:f.model.value,key:f.key.value.trim()});
   }
   ++modelListRequest;
   f.key.value="";for(const field of f)field.disabled=true;
@@ -213,10 +262,9 @@ async function saveModel(action){
   }catch(err){
     if(ticket!==revision||!modelSettings)return;
     for(const field of f)field.disabled=false;
-    if(f.provider.value==="openai"){
-      f.model.disabled=true;resetOpenaiModels();
-      if(!f.key.required)loadOpenaiModels();
-    }else f.openaiModel.disabled=true;
+    if(f.provider.value==="glm")updateModelVerification();
+    else if(f.key.required)resetModelList();
+    else loadModelList();
     $("disableModel").disabled=!modelSettings.active.verified;
     $("modelResult").textContent=err.message;
   }

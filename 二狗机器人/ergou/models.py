@@ -14,10 +14,10 @@ from .db import allowed, audit, dump, record_failure, transaction
 
 
 PROVIDERS = {
-    "deepseek": ("DeepSeek", "api.deepseek.com", "/chat/completions", ["deepseek-flash", "deepseek-v4-pro"]),
-    "glm": ("智谱 GLM", "open.bigmodel.cn", "/api/paas/v4/chat/completions", ["glm-5.3", "glm-5.3-flash"]),
-    "qwen": ("通义千问（百炼北京）", "dashscope.aliyuncs.com", "/compatible-mode/v1/chat/completions", ["qwen-plus", "qwen-max"]),
-    "openai": ("ChatGPT（OpenAI API）", "api.openai.com", "/v1/chat/completions", []),
+    "deepseek": ("DeepSeek", "api.deepseek.com", "/chat/completions", "/models"),
+    "glm": ("智谱 GLM", "open.bigmodel.cn", "/api/paas/v4/chat/completions", "/openapi/openapi.json"),
+    "qwen": ("通义千问（百炼北京）", "dashscope.aliyuncs.com", "/compatible-mode/v1/chat/completions", "/api/v1/models"),
+    "openai": ("ChatGPT（OpenAI API）", "api.openai.com", "/v1/chat/completions", "/v1/models"),
 }
 MODEL_ID = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.:/-]{0,255}")
 PERSONA = "你是微信群里的柴犬机器人二狗。用简短自然的中文回答，可以幽默。如果不知道就直说。"
@@ -59,7 +59,9 @@ def protect(value, decrypt=False):
 def _provider_json(host, path, key, payload=None, limit=262144):
     conn = http.client.HTTPSConnection(host, timeout=18)
     try:
-        headers = {"Authorization": "Bearer " + key, "Accept": "application/json"}
+        headers = {"Accept": "application/json"}
+        if key is not None:
+            headers["Authorization"] = "Bearer " + key
         if payload is None:
             conn.request("GET", path, headers=headers)
         else:
@@ -97,17 +99,56 @@ def complete(provider, model, key, messages):
     raise ModelError("模型响应格式异常","供应商未返回有效的文字回答，请检查所选模型")
 
 
-def openai_model_ids(key):
-    result = _provider_json(PROVIDERS["openai"][1],"/v1/models",key,limit=1024*1024)
-    if not isinstance(result,dict) or not isinstance(result.get("data"),list):
+def _catalog_ids(items, field):
+    if not isinstance(items, list):
         raise ModelError("模型列表格式异常")
     ids = set()
-    for item in result["data"]:
-        model = item.get("id") if isinstance(item,dict) else None
-        if not isinstance(model,str) or not MODEL_ID.fullmatch(model):
+    for item in items:
+        model = item.get(field) if isinstance(item, dict) else None
+        if not isinstance(model, str) or not MODEL_ID.fullmatch(model):
             raise ModelError("模型列表包含无效 ID")
         ids.add(model)
-    return sorted(ids)
+    return ids
+
+
+def provider_model_ids(provider, key):
+    _, host, _, path = PROVIDERS[provider]
+    if provider == "glm":
+        spec = _provider_json("docs.bigmodel.cn", path, None, limit=4*1024*1024)
+        try:
+            values = spec["components"]["schemas"]["ChatCompletionTextRequest"]["properties"]["model"]["enum"]
+        except (KeyError, TypeError):
+            raise ModelError("智谱官方文字模型列表格式异常") from None
+        if not isinstance(values, list) or any(not isinstance(value, str) or not MODEL_ID.fullmatch(value)
+                                               for value in values):
+            raise ModelError("智谱官方文字模型列表格式异常")
+        return sorted(set(values))
+    if provider != "qwen":
+        result = _provider_json(host, path, key, limit=1024*1024)
+        return sorted(_catalog_ids(result.get("data") if isinstance(result, dict) else None, "id"))
+
+    ids = set()
+    received = 0
+    deadline = time.monotonic() + 45
+    for page in range(1, 101):
+        if time.monotonic() > deadline:
+            raise ModelError("获取完整模型列表超时，请稍后刷新")
+        result = _provider_json(host, f"{path}?page_no={page}&page_size=100", key, limit=2*1024*1024)
+        output = result.get("output") if isinstance(result, dict) and result.get("success", True) is True else None
+        if not isinstance(output, dict) or output.get("page_no", page) != page:
+            raise ModelError("模型列表格式异常")
+        total = output.get("total")
+        items = output.get("models")
+        page_ids = _catalog_ids(items, "model")
+        if type(total) is not int or total < 0:
+            raise ModelError("模型列表格式异常")
+        if (not items and received < total) or (items and not page_ids.difference(ids)):
+            raise ModelError("供应商未返回完整模型列表，请刷新重试")
+        ids.update(page_ids)
+        received += len(items)
+        if received >= total:
+            return sorted(ids)
+    raise ModelError("模型列表页数超出支持范围")
 
 
 def _request_key(old,provider,key):
@@ -120,14 +161,17 @@ def _request_key(old,provider,key):
 
 def list_models(db,user,group,fields):
     permit(user,group)
-    if fields.get("provider")!="openai":
-        raise ValueError("请选择 OpenAI 获取模型列表")
-    old=db.execute("SELECT provider,credential,verified FROM chat_models WHERE grp=?",(group,)).fetchone()
-    key=_request_key(old,"openai",fields.get("key",""))
+    provider = fields.get("provider")
+    if not isinstance(provider, str) or provider not in PROVIDERS:
+        raise ValueError("请选择有效的官方供应商")
+    key = None
+    if provider != "glm":
+        old=db.execute("SELECT provider,credential,verified FROM chat_models WHERE grp=?",(group,)).fetchone()
+        key=_request_key(old,provider,fields.get("key",""))
     with transaction(db):
-        if not allowed(db,"openai-model-list/"+group,12,60,time.time()):
+        if not allowed(db,"model-list/"+provider+"/"+group,12,60,time.time()):
             raise ValueError("RATE_LIMITED 获取模型列表过于频繁，请稍后再试")
-    return {"models":openai_model_ids(key)}
+    return {"models":provider_model_ids(provider, key)}
 
 
 def permit(user, group):
@@ -140,7 +184,7 @@ def settings(db, user, group):
     permit(user, group)
     row = db.execute("SELECT version,provider,model,verified FROM chat_models WHERE grp=?", (group,)).fetchone()
     return dict(active=dict(row) if row else dict(version=0,provider="",model="",verified=None),
-                providers=[dict(id=k,name=v[0],models=v[3]) for k,v in PROVIDERS.items()])
+                providers=[dict(id=k,name=v[0],models=[]) for k,v in PROVIDERS.items()])
 
 
 def control_settings(db, user, group):
@@ -223,7 +267,7 @@ def configure(db, user, group, fields):
     if not disable:
         provider, model, key = (fields.get(k) for k in ("provider","model","key"))
         if (not isinstance(provider,str) or provider not in PROVIDERS or not isinstance(model,str)
-                or not MODEL_ID.fullmatch(model) or (provider!="openai" and len(model)>100)):
+                or not MODEL_ID.fullmatch(model)):
             raise ValueError("请选择官方供应商并填写有效的模型 ID")
         key=_request_key(old,provider,key)
         sealed=old["credential"] if fields.get("key")=="" else protect(key.encode("ascii"))

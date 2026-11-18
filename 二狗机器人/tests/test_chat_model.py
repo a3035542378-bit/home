@@ -10,6 +10,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlsplit
 
 from ergou import admin, agent_wechat, jobs, models, web
 from ergou.db import backup, closing_db, demo, initialize
@@ -236,6 +237,183 @@ class ModelTests(unittest.TestCase):
                 call(listing,dict(group="room",provider="openai",key="new-fixture-key"))
             self.assertEqual(forbidden_role.exception.code,403)
             tls.assert_not_called()
+
+
+    def test_list_with_saved_key_and_switch_provider(self):
+        with patch.object(models, "protect", side_effect=lambda value, decrypt=False: value[::-1]):
+            self.save()
+            user = dict(self.user, scopes='["room","other"]')
+            models.configure(self.db, user, "other", dict(self.fields, key="other-group-key"))
+            with patch.object(models, "provider_model_ids", return_value=["catalog-model"]) as listing:
+                for group, expected in (("room", self.fields["key"]), ("other", "other-group-key")):
+                    result = models.list_models(self.db, user, group, dict(provider="deepseek"))
+                    self.assertEqual(result["models"], ["catalog-model"])
+                    listing.assert_called_with("deepseek", expected)
+                listing.reset_mock()
+                for provider in ("qwen", "openai"):
+                    with self.subTest(provider=provider), self.assertRaises(ValueError):
+                        models.list_models(self.db, user, "room", dict(provider=provider, key=""))
+                listing.assert_not_called()
+                qwen_fields = dict(provider="qwen", key="qwen-candidate-key")
+                models.list_models(self.db, user, "room", qwen_fields)
+                listing.assert_called_with("qwen", "qwen-candidate-key")
+                self.assertEqual(models.settings(self.db, user, "room")["active"]["provider"], "deepseek")
+                with self.assertRaises(ValueError):
+                    models.list_models(self.db, user, "room", dict(provider="qwen"))
+                self.save(**qwen_fields, model="catalog-model", version=1)
+                models.list_models(self.db, user, "room", dict(provider="qwen"))
+                listing.assert_called_with("qwen", "qwen-candidate-key")
+                with self.assertRaises(ValueError):
+                    models.list_models(self.db, user, "room", dict(provider="deepseek"))
+
+    def test_public_glm_catalog_and_private_chat_verification(self):
+        with patch("ergou.models.http.client.HTTPSConnection") as tls:
+            response = tls.return_value.getresponse.return_value
+            response.status = 200
+            catalog = json.dumps(glm_catalog(["glm-fixture"])).encode()
+            response.read.return_value = catalog
+            for fields in (dict(provider="glm"), dict(provider="glm", key="glm-candidate-key")):
+                result = models.list_models(self.db, self.user, "room", fields)
+                self.assertEqual(result["models"], ["glm-fixture"])
+                self.assertNotIn("Authorization", tls.return_value.request.call_args.kwargs["headers"])
+                self.assertNotIn("glm-candidate-key", str(tls.return_value.request.call_args))
+            self.assertIsNone(self.db.execute("SELECT 1 FROM chat_models").fetchone())
+            with self.assertRaises(ValueError):
+                self.save(provider="glm", model="glm-fixture", key="")
+            self.transport.assert_not_called()
+            self.transport.side_effect = OFFICIAL_COMPLETE
+            response.read.return_value = b'{"choices":[{"message":{"content":"OK"}}]}'
+            with patch.object(models, "protect", side_effect=lambda value, decrypt=False: value[::-1]):
+                self.save(provider="glm", model="glm-fixture", key="glm-candidate-key")
+            self.assertEqual(tls.call_args.args[0], "open.bigmodel.cn")
+            chat = tls.return_value.request.call_args
+            self.assertEqual(chat.args[:2], ("POST", "/api/paas/v4/chat/completions"))
+            self.assertEqual(chat.kwargs["headers"]["Authorization"], "Bearer glm-candidate-key")
+            response.read.return_value = catalog
+            with patch.object(models, "protect") as protect:
+                models.list_models(self.db, self.user, "room", dict(provider="glm", key=""))
+                protect.assert_not_called()
+            self.assertNotIn("glm-candidate-key", str(tls.return_value.request.call_args))
+
+    def test_list_rejects_unknown_provider_and_unverified_saved_key(self):
+        with patch.object(models, "protect", side_effect=lambda value, decrypt=False: value[::-1]):
+            self.save()
+            self.db.execute("UPDATE chat_models SET verified=NULL WHERE grp='room'")
+            with patch("ergou.models.http.client.HTTPSConnection") as tls:
+                with self.assertRaises(ValueError):
+                    models.list_models(self.db, self.user, "room", dict(provider="deepseek"))
+                with self.assertRaises(ValueError):
+                    models.list_models(self.db, self.user, "room",
+                                       dict(provider="example.invalid", key="fixture"))
+                with self.assertRaises(PermissionError):
+                    models.list_models(self.db, self.user, "other", dict(provider="qwen", key="fixture"))
+                tls.assert_not_called()
+
+
+def glm_catalog(enum):
+    text_schema = {"properties": {"model": {"enum": enum}}}
+    other_schema = {"properties": {"model": {"enum": ["unrelated-image-model"]}}}
+    return {"components": {"schemas": {"ChatCompletionTextRequest": text_schema, "ImageRequest": other_schema}}}
+
+
+class ProviderCatalogTests(unittest.TestCase):
+    key = "catalog-fixture-key"
+
+    def setUp(self):
+        self.tls = self.enterContext(patch("ergou.models.http.client.HTTPSConnection"))
+        self.conn = self.tls.return_value
+
+    def queue_responses(self, *responses):
+        values = []
+        for status, body in responses:
+            response = Mock(status=status)
+            response.read.return_value = json.dumps(body).encode()
+            values.append(response)
+        self.conn.getresponse.side_effect = values
+
+    def assert_requests(self, host, path, pages=(), authenticated=True):
+        count = len(pages) or 1
+        self.assertEqual(self.conn.request.call_count, count)
+        for call in self.tls.call_args_list:
+            self.assertEqual(call.args[0], host)
+        for index, call in enumerate(self.conn.request.call_args_list):
+            self.assertEqual(call.args[0], "GET")
+            target = urlsplit(call.args[1])
+            self.assertEqual(target.path, path)
+            self.assertEqual(target.netloc, "")
+            query = {"page_no": [str(pages[index])], "page_size": ["100"]} if pages else {}
+            self.assertEqual(parse_qs(target.query), query)
+            if authenticated:
+                self.assertEqual(call.kwargs["headers"]["Authorization"], "Bearer " + self.key)
+            else:
+                self.assertNotIn("authorization", {name.lower() for name in call.kwargs["headers"]})
+                self.assertNotIn(self.key, str(call))
+            self.assertIsNone(call.kwargs.get("body"))
+
+    def test_deepseek_official_catalog(self):
+        self.queue_responses((200, {"data": [{"id": "z-2"}, {"id": "a-1"}, {"id": "z-2"}]}))
+        self.assertEqual(models.provider_model_ids("deepseek", self.key), ["a-1", "z-2"])
+        self.assert_requests("api.deepseek.com", "/models")
+
+    def test_glm_uses_public_text_model_enum(self):
+        self.queue_responses((200, glm_catalog(["glm-b", "glm-a", "glm-b"])))
+        self.assertEqual(models.provider_model_ids("glm", self.key), ["glm-a", "glm-b"])
+        self.assert_requests("docs.bigmodel.cn", "/openapi/openapi.json", authenticated=False)
+
+    def test_glm_empty_and_malformed_enum(self):
+        self.queue_responses((200, glm_catalog([])))
+        self.assertEqual(models.provider_model_ids("glm", ""), [])
+        for body in ({"data": [{"id": "legacy"}]}, {"components": {"schemas": {}}},
+                     glm_catalog("glm-a"), glm_catalog(["glm-a", "bad id"]), glm_catalog([{"id": "glm-a"}])):
+            with self.subTest(body=body):
+                self.queue_responses((200, body))
+                with self.assertRaises(models.ModelError):
+                    models.provider_model_ids("glm", self.key)
+
+    def test_bailian_reads_every_page(self):
+        ids = [f"qwen-{i:03d}" for i in range(101)]
+        first = [{"model": model} for model in ids[:100]]
+        last = [{"model": ids[100]}]
+        self.queue_responses((200, {"output": {"models": first, "total": 101}}),
+                             (200, {"output": {"models": last, "total": 101}}))
+        self.assertEqual(models.provider_model_ids("qwen", self.key), ids)
+        self.assert_requests("dashscope.aliyuncs.com", "/api/v1/models", pages=(1, 2))
+
+    def test_empty_catalog_and_malformed_catalog(self):
+        for provider in ("deepseek", "qwen"):
+            valid = {"output": {"models": [], "total": 0}} if provider == "qwen" else {"data": []}
+            with self.subTest(provider=provider):
+                self.queue_responses((200, valid))
+                self.assertEqual(models.provider_model_ids(provider, self.key), [])
+                invalid = ({"output": {"models": [{"model": "bad id"}], "total": 1}}
+                           if provider == "qwen" else {"data": [{"id": "bad id"}]})
+                for body in ({}, invalid):
+                    self.queue_responses((200, body))
+                    with self.assertRaises(models.ModelError):
+                        models.provider_model_ids(provider, self.key)
+
+    def test_provider_errors_never_expose_key_or_response(self):
+        private_error = "private-catalog-detail"
+        for provider in ("deepseek", "glm", "qwen"):
+            with self.subTest(provider=provider):
+                self.queue_responses((403, {"error": {"message": self.key + private_error}}))
+                with self.assertRaises(models.ModelError) as error:
+                    models.provider_model_ids(provider, self.key)
+                self.assertIn("403", str(error.exception))
+                self.assertNotIn(self.key, str(error.exception))
+                self.assertNotIn(private_error, str(error.exception))
+
+    def test_bailian_incomplete_pagination_fails(self):
+        first = {"output": {"models": [{"model": f"qwen-{i:03d}"} for i in range(100)], "total": 200}}
+        for status, second in ((200, first), (200, {"output": {"models": [], "total": 200}}),
+                               (502, {"message": self.key}), (200, {"unexpected": self.key})):
+            with self.subTest(status=status, returned_models=len(second.get("output", {}).get("models", []))):
+                self.tls.reset_mock()
+                self.queue_responses((200, first), (status, second))
+                with self.assertRaises(models.ModelError) as error:
+                    models.provider_model_ids("qwen", self.key)
+                self.assertNotIn(self.key, str(error.exception))
+                self.assert_requests("dashscope.aliyuncs.com", "/api/v1/models", pages=(1, 2))
 
 
 OFFICIAL_COMPLETE=models.complete

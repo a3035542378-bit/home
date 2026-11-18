@@ -5,6 +5,7 @@
 <div id="desk" hidden><aside><div class="brand"><b class="mark">犬</b><strong>二狗工作台</strong></div><nav id="nav"></nav><button id="logout" class="quiet">退出登录</button></aside>
 <main><header><div><small id="who"></small><h1 id="heading">运行概览</h1></div><label>当前群<select id="group"></select></label></header><div id="message" role="status"></div>
 <section id="overview"><div id="metrics" class="cards"></div><article><h2>账号连接</h2><dl id="account"></dl></article>
+<article id="replyDiagnostics"><div class="diagnostic-heading"><h2>本群回复诊断</h2><button type="button" class="quiet" id="refreshDiagnostics" disabled>刷新诊断</button></div><div id="diagnosticBody" aria-live="polite"></div></article>
 <article id="simCard"><h2>模拟群消息</h2><form id="simulate" class="inline"><input name="text" value="二狗 帮助" aria-label="模拟消息" required><label class="check"><input type="checkbox" name="mention">模拟微信 @</label><button>执行</button></form><p id="answer" aria-live="polite"></p>
 <details><summary>测试语音对话</summary><form id="speechForm"><label>测试录音（16 kHz 单声道、16 位 PCM WAV，最长 60 秒）<input name="wav" type="file" accept=".wav,audio/wav" required></label><p>识别会将所选录音交给百度。录音可用“二狗二狗”开头。</p><button>上传并识别</button></form>
 <p id="speechResult" role="status"></p><button type="button" class="quiet" id="synthesize" hidden>使用百度合成语音回复</button><audio id="voicePlayer" controls hidden></audio></details></article></section>
@@ -13,14 +14,13 @@
 <article><h2>游戏开关</h2><label>本群停用的游戏<select name="disabled_games" multiple size="7"></select></label><small>按住 Ctrl 可选择多款；抽签使用上方独立开关。</small></article>
 <article><h2>群消息规则</h2><label>匹配词（每行一项）<textarea name="words"></textarea></label><label>命中动作<select name="moderation"><option>记录</option><option>提醒</option><option>撤回</option><option>移出群聊</option></select></label><small>撤回和移出可在模拟群验证。当前微信接入仅授权点名文字回复，其他动作会记入后台。</small></article><button>保存配置</button></form></section>
 <section id="modelPanel" hidden><article><h2>本群聊天模型</h2><p id="activeModel"></p>
-<form id="modelForm" autocomplete="off"><div class="grid">
+<form id="modelForm" autocomplete="off">
 <label>官方供应商<select name="provider" required></select></label>
-<label id="manualModelField">模型 ID<input name="model" list="modelOptions" maxlength="100" required><datalist id="modelOptions"></datalist></label></div>
 <label>官方 API Key<input type="password" name="key" maxlength="1024" autocomplete="new-password" spellcheck="false"></label>
 <p id="openaiKeyHelp" hidden>OpenAI API 单独计费。<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">管理 OpenAI API Key</a></p>
-<div id="openaiModelField" hidden><label>可用模型<select name="openaiModel" required disabled></select></label>
-<button type="button" class="quiet" id="refreshOpenaiModels">刷新模型列表</button>
-<p id="openaiModelsStatus" role="status"></p></div>
+<label>可用模型<select name="model" required disabled></select></label>
+<button type="button" class="quiet" id="refreshModels">刷新模型列表</button>
+<p id="modelListStatus" role="status"></p>
 <p>测试会向供应商发送一句固定问候。开启智能对话后，成员可在群里发「二狗，帮我想三个周末活动」并继续点名追问。模型会收到该成员在本群最近 16 轮对话。发「二狗菜单」可查看本群功能和用法。</p>
 <div class="actions"><button type="submit" id="verifyModel">测试并启用</button><button type="button" class="quiet" id="disableModel">停用并移除密钥</button></div></form>
 <p role="status" id="modelResult"></p></article>
