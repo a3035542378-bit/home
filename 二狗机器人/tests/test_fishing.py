@@ -168,7 +168,7 @@ class FishingTests(unittest.TestCase):
     def test_collection_and_weight_board_survive_sale(self):
         self.say("a","钓鱼",100)
         self.assertIn("1/105",self.say("b","全图鉴",101))
-        self.assertIn("个人纪录",self.say("c","鱼类图鉴 1",102)+self.say("d","图鉴 2",103)+self.say("e","图鉴 3",104))
+        self.assertIn("🐾 "+self.db.execute("SELECT fish FROM fishing_species").fetchone()[0]+"（",self.say("c","鱼类图鉴 1",102)+self.say("d","图鉴 2",103)+self.say("e","图鉴 3",104))
         self.assertIn("0/105",self.say("f","全图鉴",105,group="two"))
         self.assertIn("#",self.say("g","鱼包 重量",106))
         board=self.say("h","重量榜",107)
@@ -192,9 +192,36 @@ class FishingTests(unittest.TestCase):
             joined="\n".join(pages)
             for row in pool:
                 self.assertIn(row[0]+"（",joined)
-            self.assertEqual(joined.count("个人纪录"),1)
+            landed=self.db.execute("SELECT fish FROM fishing_species WHERE grp='one' AND member=?",(area,)).fetchone()[0]
+            self.assertEqual(joined.count("🐾 "+landed+"（"),1)
         self.assertIn("未找到",self.say("unknown","图鉴 无名河",104))
         self.assertIn("共 2 页",self.say("past","图鉴 荷花湿地 3",105))
+
+    def test_mobile_catalog_and_giant_records(self):
+        self.db.execute("INSERT INTO chat_models VALUES('one',1,'glm','fixture',?,100)",(b"fixture",))
+        self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('one',1,1)")
+        menu=self.say("menu","全图鉴",100)
+        for kind,count in (("普通",62),("稀有",27),("珍品",16)):
+            cmd=kind+"图鉴"
+            self.assertIn(f"二狗{cmd} · {count} 种",menu)
+            self.assertIn(f"（{kind}）",self.say(cmd,cmd,101))
+        self.assertIn("巨物鲤鱼 · 12～25 公斤",menu)
+        self.say("wallet","我的鱼竿",102)
+        self.db.execute("INSERT INTO fishing_species VALUES('one','player','鲤鱼',12000)")
+        self.db.execute("INSERT INTO fishing_exhibits VALUES('one','player','鲤鱼',21,1286,10)")
+        self.db.execute("""INSERT INTO fishing_pond(id,grp,member,fish,grams,price,storage)
+                           VALUES(25,'one','player','鲤鱼',13000,57,'bag')""")
+        giant=self.say("giant","查看巨物图鉴",103)
+        for snippet in ("🐾 巨物鲤鱼","新手池塘 · 12公斤起","已点亮 0/105","已发现 1/105",
+                        "个人纪录 12公斤 · 巨物","鲤鱼换展　二狗收入图鉴#25","二狗巨物图鉴 2"):
+            self.assertIn(snippet,giant)
+        self.assertNotIn("1.286公斤",giant)
+        self.assertIn("2/18",self.say("next","巨物图鉴第２页",104))
+        self.assertIn("珍品图鉴 2",self.say("rare","全图鉴 珍品",105))
+        self.assertIn("已换入",self.say("store","收入图鉴#25",107))
+        self.assertIn("已点亮 1/105",self.say("done","巨物图鉴",108))
+        self.assertIn("已点亮 0/105",self.say("isolated","巨物图鉴",109,member="other"))
+        self.assertIsNone(self.db.execute("SELECT 1 FROM chat_requests").fetchone())
 
     def test_exhibits_are_manual_scoped_and_display_only(self):
         self.say("cast","抛竿",100)

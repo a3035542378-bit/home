@@ -8,39 +8,84 @@ from . import rod as gear
 
 COMMANDS = {"巨物鱼讯", "钓鱼信息", "钓手等级", "钓鱼等级", "钓鱼", "抛竿", "我的鱼获", "钓鱼玩法", "鱼塘", "鱼市","鱼线","买鱼线","购买鱼线","升级鱼线","水域","切换水域 新手池塘","切换水域 外海","重量榜","重量排行榜","鱼类图鉴","钓鱼图鉴","图鉴", "一键卖鱼", "升级鱼竿", "我的鱼竿","资产榜","资产排行榜"} | gear.COMMANDS
 # 名称、最轻/最重克数、基础价格、每公斤加价、稀有度
-from .fishing_waters import FISH, HABITAT, WATERS, guide, size_grade, weight
-BOOK_PAGE=re.compile(r"(?:全图鉴|图鉴|鱼类图鉴|钓鱼图鉴)(?: (?P<area>[\u4e00-\u9fff]+))?(?: (?P<page>[1-9][0-9]{0,3}))?")
+from .fishing_waters import FISH, HABITAT, WATERS, giant_min, guide, size_grade, weight
+RARITY_ICONS = {"普通": "🐟", "稀有": "💎", "珍品": "👑"}
+BOOK_PAGE = re.compile(r"(?P<kind>全图鉴|图鉴|鱼类图鉴|钓鱼图鉴|普通图鉴|稀有图鉴|珍品图鉴|巨物图鉴)"
+                       r"(?:\s+(?P<area>[\u4e00-\u9fff]+))?(?:\s+(?P<page>[1-9][0-9]{0,3}))?")
 
 
-def book(db,key,page,area,prefix,home=False):
+def directory(best, exhibits, picks, prefix):
+    found = sum(row[0] in best for row in FISH)
+    lit = sum(row[0] in exhibits for row in FISH)
+    lines = [f"📖 全图鉴 · {len(WATERS)} 处钓场",
+             f"✨ 已点亮 {lit}/{len(FISH)} 种　🐾 已发现 {found}/{len(FISH)} 种", ""]
+    for rarity, icon in RARITY_ICONS.items():
+        species = [row for row in FISH if row[-1] == rarity]
+        names = [species[i][0] for i in (0,len(species)//2,-1)]
+        lines.extend([f"{icon} {prefix}{rarity}图鉴 · {len(species)} 种",
+                      "　" + "、".join(names)])
+    lines.extend(["", f"🐋 {prefix}巨物图鉴", "　巨物鲤鱼 · 12～25 公斤",
+                  "　"+ "、".join(row[0] for row in sorted(FISH,key=giant_min,reverse=True)[:2]),
+                  "", f"逐条查看　{prefix}全图鉴 1"])
+    if picks:
+        lines.extend(["", "🎒 手里的鱼"])
+        for fish,item in list(picks.items())[:2]:
+            action="换展" if fish in exhibits else "点亮"
+            lines.append(f"{fish}{action}　{prefix}收入图鉴#{item}")
+    return "\n".join(lines)
+
+
+def book(db,key,match,current_area,prefix):
+    kind=match["kind"]
+    area=match["area"]
+    category=kind.removesuffix("图鉴")
+    local=kind in ("图鉴","鱼类图鉴","钓鱼图鉴")
+    if area in (*RARITY_ICONS,"巨物") and (local or kind=="全图鉴"):
+        category,area,local=area,None,False
+    home=local and not area and not match["page"]
+    area=area or (current_area if local else None)
     if area and area not in WATERS:
-        return "未找到钓场。发「水域」查看名称。"
+        return f"未找到钓场。发「{prefix}水域」查看名称。"
     catalog=WATERS[area] if area else FISH
     best=dict(db.execute("SELECT fish,best_grams FROM fishing_species WHERE grp=? AND member=?",key))
     exhibits=dict(db.execute("SELECT fish,grams FROM fishing_exhibits WHERE grp=? AND member=?",key))
+    giants=category=="巨物"
+    if giants:
+        catalog=sorted(catalog,key=lambda row:(row[0]!="鲤鱼",-giant_min(row)))
+    elif category in RARITY_ICONS:
+        catalog=[row for row in catalog if row[-1]==category]
+    page=int(match["page"] or 1)
     pages=(len(catalog)+5)//6
     if page>pages:
         return f"图鉴共 {pages} 页。"
-    found=sum(row[0] in best for row in catalog)
-    lit=sum(row[0] in exhibits for row in catalog)
-    lines=[f"📖 {area or '鱼类'}图鉴 {page}/{pages}",
-           f"✨ 已点亮 {lit}/{len(catalog)} 种", f"🐾 已发现 {found}/{len(catalog)} 种", ""]
+    thresholds={row[0]:giant_min(row) if giants else 1 for row in catalog}
+    found=sum(best.get(name,0)>=limit for name,limit in thresholds.items())
+    lit=sum(exhibits.get(name,0)>=limit for name,limit in thresholds.items())
+    category_title=category if giants or category in RARITY_ICONS else ""
+    title=(area or "")+category_title or "鱼类"
+    lines=[f"📖 {title}图鉴 {page}/{pages}",
+           f"✨ 已点亮 {lit}/{len(catalog)} 种　🐾 已发现 {found}/{len(catalog)} 种", ""]
     bag_used,bag_limit,_=fish_storage.occupancy(db,key,"bag")
     picks={}
     for row in db.execute("""SELECT fish,id,grams,storage FROM fishing_pond
                              WHERE grp=? AND member=? ORDER BY grams DESC,id""",key):
         fish=row["fish"]
-        if row["grams"]<=exhibits.get(fish,0):
+        if fish not in thresholds or row["grams"]<thresholds[fish] or row["grams"]<=exhibits.get(fish,0):
             continue
         if fish in exhibits and row["storage"]=="pond" and bag_used>=bag_limit:
             continue
         picks.setdefault(fish,row["id"])
+    if kind=="全图鉴" and category=="全" and not area and not match["page"]:
+        return directory(best,exhibits,picks,prefix)
     if home:
         missing=[row[0] for row in catalog if row[0] not in exhibits]
         lines[0]=f"📖 当前钓场 · {area}"
         if missing:
             lines.append(f"◇ 未点亮 {len(missing)} 种")
-            lines.extend("、".join(missing[i:i+3]) for i in range(0,len(missing),3))
+            for rarity in RARITY_ICONS:
+                names=[row[0] for row in catalog if row[-1]==rarity and row[0] not in exhibits]
+                for i in range(0,len(names),3):
+                    lines.append((rarity+"　" if i==0 else "　　　")+"、".join(names[i:i+3]))
         else:
             lines.append("🏅 本钓场已集齐")
         ready=[fish for fish in picks if HABITAT.get(fish)==area][:2]
@@ -48,27 +93,43 @@ def book(db,key,page,area,prefix,home=False):
             action="可换展" if fish in exhibits else "可点亮"
             lines.extend([f"{fish}{action}",f"{prefix}收入图鉴#{picks[fish]}"])
         lines.extend(["",f"查看本场　{prefix}图鉴 {area}",f"全部钓场　{prefix}全图鉴",
-                      f"巨物预告　{prefix}巨物鱼讯"])
+                      f"🐋 {prefix}巨物图鉴　/　{prefix}巨物鱼讯"])
         return "\n".join(lines)
-    for fish,_,_,_,_,rarity in catalog[(page-1)*6:page*6]:
-        lines.append(f"{fish}（{rarity}）")
-        lines.append(f"🎣 个人纪录 {weight(best[fish])}" if fish in best else "🎣 未亲手钓获")
-        if fish in exhibits:
+    visible=catalog[(page-1)*6:page*6]
+    if giants and page==1:
+        lines.append("体型：小型 / 标准 / 大型 / 巨物")
+    lines.append("✨ 已展出　🐾 亲钓纪录　◇ 待发现")
+    actions=[]
+    for row in visible:
+        fish,rarity=row[0],row[-1]
+        caught=best.get(fish,0)>=thresholds[fish]
+        shown=exhibits.get(fish,0)>=thresholds[fish]
+        icon="✨" if shown else "🐾" if caught else "◇"
+        name=f"巨物{fish}" if giants else fish
+        lines.append(f"{icon} {name}（{rarity}）")
+        if giants:
+            lines.append(f"　{HABITAT[fish]} · {weight(thresholds[fish])}起")
+        if shown:
             grams=exhibits[fish]
-            lines.append(f"✨ 已点亮 {weight(grams)} · {size_grade(fish,grams)}")
-        else:
-            lines.append("◇ 未点亮")
+            lines.append(f"　已点亮 {weight(grams)} · {size_grade(fish,grams)}")
+        if caught and not shown and not giants:
+            lines[-1]+=f"　{weight(best[fish])} · {size_grade(fish,best[fish])}"
+        elif caught and (not shown or best[fish]!=exhibits[fish]):
+            lines.append(f"　个人纪录 {weight(best[fish])} · {size_grade(fish,best[fish])}")
+        elif shown:
+            lines.append("　亲钓同重" if caught else "　尚无亲钓纪录")
         if fish in picks:
             action="换展" if fish in exhibits else "点亮"
-            lines.append(f"{action}　{prefix}收入图鉴#{picks[fish]}")
+            actions.append(f"{fish}{action}　{prefix}收入图鉴#{picks[fish]}")
+    if actions:
+        lines.extend(["","🎒 可收藏",*actions])
     lines.append("")
     if page<pages:
-        command=f"图鉴 {area}" if area else "全图鉴"
-        lines.append(f"翻页　{prefix}{command} {page+1}")
-    example=catalog[(page-1)*6][0]
-    lines.append(f"查钓法：{prefix}{example}怎么钓？")
-    if not area and page==1:
-        lines.append(f"按钓场　{prefix}图鉴 荷花湿地")
+        command=category_title+"图鉴" if category_title else "图鉴" if area else "全图鉴"
+        if area:
+            command+=" "+area
+        lines.append(f"下页　{prefix}{command} {page+1}")
+    lines.append(f"巨物出没　{prefix}巨物鱼讯" if giants else f"查钓法　{prefix}{visible[0][0]}怎么钓？")
     return "\n".join(lines)
 
 
@@ -219,9 +280,7 @@ def play(db, event, cmd, prefix, cfg):
         return heavy_board(db,key)
     page=BOOK_PAGE.fullmatch(cmd)
     if page:
-        home=cmd in ("图鉴","鱼类图鉴","钓鱼图鉴")
-        region=page["area"] or (None if cmd.startswith("全图鉴") else area)
-        return book(db,key,int(page["page"] or 1),region,prefix,home)
+        return book(db,key,page,area,prefix)
     name=requested_fish(cmd)
     if name:
         return catch_guide(name,prefix)
