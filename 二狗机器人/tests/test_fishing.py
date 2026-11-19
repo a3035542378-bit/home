@@ -225,9 +225,9 @@ class FishingTests(unittest.TestCase):
         self.assertIn("已点亮 0/114",self.say("isolated","巨物图鉴",109,member="other"))
         self.assertIsNone(self.db.execute("SELECT 1 FROM chat_requests").fetchone())
 
-    def test_trophy_rates_and_event_pool(self):
+    def test_trophy_rates_by_bait_and_rod(self):
         from unittest.mock import Mock
-        from ergou import fishing_bait, giant_fish, rod
+        from ergou import fishing_bait, rod
         from ergou.fishing_waters import SPECIES, WATERS
         rng=Mock()
         rng.choices.return_value=["普通"]
@@ -243,9 +243,7 @@ class FishingTests(unittest.TestCase):
                     for tier,pct in (("史诗",epic),("传说",legend)):
                         if tier in stocked:
                             self.assertAlmostEqual(weights[kinds.index(tier)]*100/sum(weights),pct)
-            for hour in range(12):
-                target=giant_fish.window("test",area,hour*3600).fish
-                self.assertNotIn(SPECIES[target][-1],("史诗","传说"))
+
 
     def test_trophy_cast_through_storage_and_book(self):
         from ergou.fishing_waters import SPECIES

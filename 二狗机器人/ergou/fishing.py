@@ -24,7 +24,7 @@ def directory(best, exhibits, picks, prefix, honors):
         names = [species[i][0] for i in (0,len(species)//2,-1)]
         lines.extend([f"{icon} {prefix}{rarity}图鉴 · {len(species)} 种",
                       "　" + "、".join(names)])
-    lines.extend(["", f"🐋 {prefix}巨物图鉴", "　巨物鲤鱼 · 12～25 公斤",
+    lines.extend(["", f"🐋 {prefix}巨物图鉴", "　本场每种鱼都可能成为活动目标", "　巨物鲤鱼 · 12～25 公斤",
                   "　"+ "、".join(row[0] for row in sorted(FISH,key=giant_min,reverse=True)[:2]),
                   "", f"逐条查看　{prefix}全图鉴 1"])
     if picks:
@@ -155,12 +155,11 @@ FISH_QUESTION=re.compile(r"(?:怎么钓到|怎么钓|在哪(?:里)?(?:能|可以
 def requested_fish(cmd):
     phrase=cmd.rstrip("。！？!?").strip()
     if phrase.startswith("鱼种查询 "):
-        return phrase.removeprefix("鱼种查询 ").strip()
+        return phrase.removeprefix("鱼种查询 ").strip().removeprefix("巨物")
     question=FISH_QUESTION.fullmatch(phrase)
     if question:
         name=(question[1] or question[2]).strip()
-        if name=="巨物鲤鱼":
-            return "鲤鱼"
+        name = name.removeprefix("巨物")
         if name in HABITAT:
             return name
     return None
@@ -170,12 +169,13 @@ def catch_guide(name,prefix):
     area=HABITAT.get(name)
     if area is None:
         return f"图鉴里没找到「{name}」。发「{prefix}图鉴」查看鱼名。"
-    _,low,high,_,_,rarity=next(row for row in WATERS[area] if row[0]==name)
-    extra=(f"\n🌊 巨物鲤鱼 12～25 公斤\n查出没时间　{prefix}巨物鱼讯" if name=="鲤鱼" else "")
+    species=next(row for row in WATERS[area] if row[0]==name)
+    _,low,high,_,_,rarity=species
+    extra=(f"\n🌊 巨物鲤鱼 12～25 公斤" if name=="鲤鱼" else f"\n🌊 巨物门槛　{weight(giant_min(species))}")
     if rarity in TROPHY_PERCENT:
-        extra=f"\n免费饵常规咬钩率 {TROPHY_PERCENT[rarity]:g}%\n⚠️ 重鱼可能断线或折竿。"
+        extra+=f"\n免费饵常规咬钩率 {TROPHY_PERCENT[rarity]:g}%\n⚠️ 重鱼可能断线或折竿。"
     return (f"🐟 {name}（{rarity}）\n⚖️ 重量　{weight(low)}～{weight(high)}\n"
-            f"📍 在{area}随机上钩{extra}\n\n前往　{prefix}切换水域 {area}\n开钓　{prefix}抛竿\n"
+            f"📍 在{area}随机上钩{extra}\n本场可刷到它的巨物　{prefix}巨物鱼讯\n\n前往　{prefix}切换水域 {area}\n开钓　{prefix}抛竿\n"
             f"🎒 钓到后选鱼点亮　{prefix}查看鱼包")
 
 
@@ -287,7 +287,7 @@ def play(db, event, cmd, prefix, cfg):
         sighting=giant_fish.current(db,key[0],area,now)
         if sighting.taken:
             return giant_fish.departure(key[0],area,sighting)
-        return f"📍 {area}\n{sighting.notice(now)}\n下竿　{prefix}抛竿"
+        return f"📍 {area} · 本场每种鱼都可能出没\n{sighting.notice(now)}\n下竿　{prefix}抛竿"
     if cmd in ("水域","海域","水域列表","海域列表"):
         names=list(WATERS)
         rows=["、".join(names[i:i+3]) for i in range(0,len(names),3)]

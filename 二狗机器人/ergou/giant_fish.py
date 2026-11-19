@@ -4,8 +4,9 @@ from datetime import datetime
 from random import Random
 from typing import NamedTuple
 
+from . import fishing_bait, rod
 from .db import BJ
-from .fishing_waters import SPECIES, TROPHY_PERCENT, WATERS, giant_min
+from .fishing_waters import SPECIES, WATERS, giant_min
 
 LEAD = 600
 DURATION = 180
@@ -39,9 +40,10 @@ def window(group, area, now):
         rng = Random(f"giants/v1:{group}:{area}:{slot}")
         start = slot * 3600 + rng.randint(10, 50) * 60
         if now < start + DURATION:
-            regular = (row for row in WATERS[area] if row[-1] not in TROPHY_PERCENT)
-            candidates = sorted(regular, key=lambda row: row[2], reverse=True)[:2]
-            fish = "鲤鱼" if area == "新手池塘" else rng.choice(candidates)[0]
+            school = WATERS[area]
+            # 群共享目标按基础竿、免费饵的稀有度分布选种，同档鱼种机会相同。
+            tier = fishing_bait.choose_rarity(rng, school, rod.weights(1, ()), fishing_bait.BAITS["免费鱼饵"])
+            fish = rng.choice([row[0] for row in school if row[-1] == tier])
             return Sighting(fish, start)
 
 
@@ -68,7 +70,8 @@ def encounter(sighting, area, now, event_id):
     rng = Random("giant-bite:" + event_id)
     if rng.randrange(1000) >= chance:
         return None
-    species = SPECIES[sighting.fish]
-    high = 25000 if sighting.fish == "鲤鱼" else species[2]
+    fish = sighting.fish if active else "鲤鱼"
+    species = SPECIES[fish]
+    high = 25000 if fish == "鲤鱼" else species[2]
     low = giant_min(species)
     return species, round(rng.triangular(low, high, low))
