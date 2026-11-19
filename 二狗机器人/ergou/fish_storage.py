@@ -1,6 +1,7 @@
 """鱼包和鱼塘共用鱼获编号，所有变更随入站消息一起提交。"""
 import re
 
+from . import fish_grades
 from .fishing_waters import HABITAT, size_grade, weight
 
 
@@ -43,13 +44,16 @@ def inventory(db, key, storage, page, by_weight, prefix):
     lines = [f"{icon} 我的{name}　{level} 级", f"容量 {count}/{capacity} 条", ""]
     if count:
         order = "grams DESC,id DESC" if by_weight else "id DESC"
-        rows = db.execute(f"""SELECT id,fish,grams,price FROM fishing_pond
+        rows = db.execute(f"""SELECT id,fish,grams,price,grade,grade_upgraded FROM fishing_pond
                               WHERE grp=? AND member=? AND storage=? ORDER BY {order} LIMIT 6 OFFSET ?""",
                           (*key, storage, (page-1)*6)).fetchall()
         for row in rows:
             grade=size_grade(row["fish"],row["grams"])
             label=f" · {grade}" if grade else ""
+            quality = fish_grades.label(row["grade"], row["grade_upgraded"])
             lines.append(f"#{row['id']} {row['fish']}　{weight(row['grams'])}{label}　{row['price']} 鱼币")
+            if quality:
+                lines.append("　🏷️ " + quality)
         if page < pages:
             lines.append(f"翻页　{prefix}{name}{' 重量' if by_weight else ''} {page+1}")
         sample = rows[0]["id"]
@@ -117,7 +121,7 @@ def sell(db, key, column, value, prefix):
 
 
 def exhibit(db, key, item, prefix):
-    catch = db.execute("""SELECT fish,grams,price,storage FROM fishing_pond
+    catch = db.execute("""SELECT fish,grams,price,storage,grade,grade_upgraded FROM fishing_pond
                           WHERE grp=? AND member=? AND id=?""", (*key, item)).fetchone()
     if not catch:
         return "你的鱼包和鱼塘里没有这条鱼。"
@@ -125,7 +129,7 @@ def exhibit(db, key, item, prefix):
     if fish not in HABITAT:
         return "当前图鉴还没有这个鱼种，鱼仍在原处。"
     slot = (*key, fish)
-    old = db.execute("SELECT item_id,grams,price FROM fishing_exhibits WHERE grp=? AND member=? AND fish=?",
+    old = db.execute("SELECT item_id,grams,price,grade,grade_upgraded FROM fishing_exhibits WHERE grp=? AND member=? AND fish=?",
                      slot).fetchone()
     if old and catch["grams"] <= old["grams"]:
         return f"📖 图鉴已有{fish}　{weight(old['grams'])}\n只接受更重的同种鱼。\n#{item} 仍在{NAMES[catch['storage']]}。"
@@ -136,14 +140,15 @@ def exhibit(db, key, item, prefix):
 
     # 入站事务中转移实物，替换时保留旧鱼的编号、重量和售价。
     db.execute("DELETE FROM fishing_pond WHERE grp=? AND member=? AND id=?", (*key, item))
-    db.execute("""INSERT INTO fishing_exhibits(grp,member,fish,item_id,grams,price) VALUES(?,?,?,?,?,?)
+    db.execute("""INSERT INTO fishing_exhibits(grp,member,fish,item_id,grams,price,grade,grade_upgraded) VALUES(?,?,?,?,?,?,?,?)
                   ON CONFLICT(grp,member,fish) DO UPDATE SET
-                  item_id=excluded.item_id,grams=excluded.grams,price=excluded.price""",
-               (*slot, item, catch["grams"], catch["price"]))
+                  item_id=excluded.item_id,grams=excluded.grams,price=excluded.price,
+                  grade=excluded.grade,grade_upgraded=excluded.grade_upgraded""",
+               (*slot, item, catch["grams"], catch["price"], catch["grade"], catch["grade_upgraded"]))
     if not old:
         return f"✨ 已点亮　{fish}\n展品 #{item}　{weight(catch['grams'])}\n\n展出期间受保护。\n可用更重的同种鱼替换。"
-    db.execute("""INSERT INTO fishing_pond(grp,member,fish,id,grams,price,storage)
-                  VALUES(?,?,?,?,?,?,'bag')""", (*slot, old["item_id"], old["grams"], old["price"]))
+    db.execute("""INSERT INTO fishing_pond(grp,member,fish,id,grams,price,grade,grade_upgraded,storage)
+                  VALUES(?,?,?,?,?,?,?,?,'bag')""", (*slot, old["item_id"], old["grams"], old["price"], old["grade"], old["grade_upgraded"]))
     return (f"✨ 已换入 #{item} {fish} · {weight(catch['grams'])}。\n"
             f"原展品 #{old['item_id']} · {weight(old['grams'])} 已放回鱼包。")
 

@@ -246,6 +246,7 @@ CREATE TABLE IF NOT EXISTS fishing_wallets (
 CREATE TABLE IF NOT EXISTS fishing_pond (
  id INTEGER PRIMARY KEY AUTOINCREMENT, grp TEXT NOT NULL, member TEXT NOT NULL,
  fish TEXT NOT NULL, grams INTEGER NOT NULL CHECK(grams>0), price INTEGER NOT NULL CHECK(price>0),
+ grade INTEGER CHECK(grade BETWEEN 0 AND 5), grade_upgraded INTEGER NOT NULL DEFAULT 0,
  storage TEXT NOT NULL DEFAULT 'pond' CHECK(storage IN ('pond','bag')),
  FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
 );
@@ -259,6 +260,7 @@ CREATE INDEX IF NOT EXISTS fishing_pond_owner ON fishing_pond(grp,member,id);
 
 CREATE TABLE IF NOT EXISTS fishing_exhibits (
  grp TEXT NOT NULL, member TEXT NOT NULL, fish TEXT NOT NULL,
+ grade INTEGER CHECK(grade BETWEEN 0 AND 5), grade_upgraded INTEGER NOT NULL DEFAULT 0,
  item_id INTEGER NOT NULL UNIQUE, grams INTEGER NOT NULL CHECK(grams>0),
  price INTEGER NOT NULL CHECK(price>0), PRIMARY KEY(grp,member,fish),
  FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
@@ -279,6 +281,7 @@ CREATE TABLE IF NOT EXISTS asset_display_names(
 
 CREATE TABLE IF NOT EXISTS fishing_species (
  grp TEXT NOT NULL, member TEXT NOT NULL, fish TEXT NOT NULL, best_grams INTEGER NOT NULL,
+ best_grade INTEGER CHECK(best_grade BETWEEN 0 AND 5), best_grade_upgraded INTEGER NOT NULL DEFAULT 0,
  PRIMARY KEY(grp,member,fish)
 );
 CREATE TABLE IF NOT EXISTS fishing_tackle (
@@ -311,4 +314,10 @@ CREATE TABLE IF NOT EXISTS fishing_raids (
 CREATE TABLE IF NOT EXISTS fishing_giant_claims (
  grp TEXT NOT NULL REFERENCES groups(id), area TEXT NOT NULL, start INTEGER NOT NULL,
  PRIMARY KEY(grp,area)
+);
+
+CREATE TABLE IF NOT EXISTS fishing_grade_news (
+ grp TEXT PRIMARY KEY REFERENCES groups(id), member TEXT NOT NULL, fish TEXT NOT NULL,
+ grams INTEGER NOT NULL, grade INTEGER NOT NULL CHECK(grade IN (4,5)),
+ upgraded INTEGER NOT NULL, legends INTEGER NOT NULL
 );

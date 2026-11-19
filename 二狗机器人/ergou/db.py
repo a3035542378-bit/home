@@ -58,11 +58,21 @@ def initialize(path):
         if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='fishing_species'").fetchone():
             # 只补录升级前的鱼获，之后转手的鱼不计入新主人的垂钓纪录。
             backfill+="""
-INSERT OR IGNORE INTO fishing_species
+INSERT OR IGNORE INTO fishing_species(grp,member,fish,best_grams)
  SELECT grp,member,fish,max(grams) FROM (
  SELECT grp,member,fish,grams FROM fishing_pond
  UNION ALL SELECT grp,member,best_name,best_grams FROM fishing_records
  ) GROUP BY grp,member,fish;"""
+        from .fish_grades import base_grade
+        db.create_function("fish_base_grade", 2, base_grade)
+        for table, field, grams in (("fishing_pond", "grade", "grams"), ("fishing_exhibits", "grade", "grams"),
+                                    ("fishing_species", "best_grade", "best_grams")):
+            fields = {r[1] for r in db.execute(f"PRAGMA table_info({table})")}
+            if fields and field not in fields:
+                migrate += f"ALTER TABLE {table} ADD COLUMN {field} INTEGER CHECK({field} BETWEEN 0 AND 5);\n"
+                migrate += f"ALTER TABLE {table} ADD COLUMN {field}_upgraded INTEGER NOT NULL DEFAULT 0;\n"
+            if field not in fields:
+                backfill += f"UPDATE {table} SET {field}=fish_base_grade(fish,{grams}) WHERE {field} IS NULL;\n"
         db.executescript("\n".join(("BEGIN IMMEDIATE;",migrate,SCHEMA.read_text(encoding="utf-8"),
                                     group_tools_schema,moderation_schema,bulletin_schema,policy_schema,roster_schema,
                                     deliveries_schema,voice_policy_schema,voice_events_schema,backfill,"COMMIT;")))

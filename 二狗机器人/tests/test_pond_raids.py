@@ -19,7 +19,7 @@ class PondRaids(unittest.TestCase):
                             [("one","victim"),("one","player"),("two","victim")])
         self.db.executemany("""INSERT INTO fishing_pond(grp,member,fish,grams,price,storage)
                                VALUES(?,'victim','鲫鱼',205,4,?)""",[("one","pond"),("one","bag"),("two","pond")])
-        self.db.execute("INSERT INTO fishing_exhibits VALUES('one','victim','白条',90,30,5)")
+        self.db.execute("INSERT INTO fishing_exhibits(grp,member,fish,item_id,grams,price) VALUES('one','victim','白条',90,30,5)")
         self.db.execute("""INSERT INTO asset_display_names SELECT id,binding,'victim','穿过暮光的帷幕',0
                            FROM groups WHERE id='one'""")
         self.db.execute("INSERT INTO chat_models VALUES('one',1,'glm','fixture',?,100)",(b"fixture",))

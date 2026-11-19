@@ -2,23 +2,23 @@
 import math
 import random
 import re
-from . import angler, fish_storage, fishing_bait, giant_fish, pond_raids
+from . import angler, fish_grades, fish_storage, fishing_bait, giant_fish, pond_raids
 from .db import DEFAULT
 from . import rod as gear
 
-COMMANDS = {"巨物鱼讯", "钓鱼信息", "钓手等级", "钓鱼等级", "钓鱼", "抛竿", "我的鱼获", "钓鱼玩法", "鱼塘", "鱼市","鱼线","买鱼线","购买鱼线","升级鱼线","水域","切换水域 新手池塘","切换水域 外海","重量榜","重量排行榜","鱼类图鉴","钓鱼图鉴","图鉴", "一键卖鱼", "升级鱼竿", "我的鱼竿","资产榜","资产排行榜"} | gear.COMMANDS
+COMMANDS = {"鱼获品级", "巨物鱼讯", "钓鱼信息", "钓手等级", "钓鱼等级", "钓鱼", "抛竿", "我的鱼获", "钓鱼玩法", "鱼塘", "鱼市","鱼线","买鱼线","购买鱼线","升级鱼线","水域","切换水域 新手池塘","切换水域 外海","重量榜","重量排行榜","鱼类图鉴","钓鱼图鉴","图鉴", "一键卖鱼", "升级鱼竿", "我的鱼竿","资产榜","资产排行榜"} | gear.COMMANDS
 # 名称、最轻/最重克数、基础价格、每公斤加价、稀有度
-from .fishing_waters import FISH, HABITAT, WATERS, giant_min, guide, size_grade, weight
-RARITY_ICONS = {"普通": "🐟", "稀有": "💎", "珍品": "👑"}
-BOOK_PAGE = re.compile(r"(?P<kind>全图鉴|图鉴|鱼类图鉴|钓鱼图鉴|普通图鉴|稀有图鉴|珍品图鉴|巨物图鉴)"
+from .fishing_waters import FISH, HABITAT, TROPHY_PERCENT, WATERS, giant_min, guide, size_grade, weight
+RARITY_ICONS = {"普通": "🐟", "稀有": "💎", "珍品": "👑", "史诗": "🔮", "传说": "🌟"}
+BOOK_PAGE = re.compile(r"(?P<kind>全图鉴|图鉴|鱼类图鉴|钓鱼图鉴|普通图鉴|稀有图鉴|珍品图鉴|史诗图鉴|传说图鉴|巨物图鉴)"
                        r"(?:\s+(?P<area>[\u4e00-\u9fff]+))?(?:\s+(?P<page>[1-9][0-9]{0,3}))?")
 
 
-def directory(best, exhibits, picks, prefix):
+def directory(best, exhibits, picks, prefix, honors):
     found = sum(row[0] in best for row in FISH)
     lit = sum(row[0] in exhibits for row in FISH)
     lines = [f"📖 全图鉴 · {len(WATERS)} 处钓场",
-             f"✨ 已点亮 {lit}/{len(FISH)} 种　🐾 已发现 {found}/{len(FISH)} 种", ""]
+             f"✨ 已点亮 {lit}/{len(FISH)} 种　🐾 已发现 {found}/{len(FISH)} 种", honors, ""]
     for rarity, icon in RARITY_ICONS.items():
         species = [row for row in FISH if row[-1] == rarity]
         names = [species[i][0] for i in (0,len(species)//2,-1)]
@@ -47,13 +47,19 @@ def book(db,key,match,current_area,prefix):
     if area and area not in WATERS:
         return f"未找到钓场。发「{prefix}水域」查看名称。"
     catalog=WATERS[area] if area else FISH
-    best=dict(db.execute("SELECT fish,best_grams FROM fishing_species WHERE grp=? AND member=?",key))
-    exhibits=dict(db.execute("SELECT fish,grams FROM fishing_exhibits WHERE grp=? AND member=?",key))
+    records = {r["fish"]: r for r in db.execute(
+        "SELECT fish,best_grams,best_grade,best_grade_upgraded FROM fishing_species WHERE grp=? AND member=?", key)}
+    displays = {r["fish"]: r for r in db.execute(
+        "SELECT fish,grams,grade,grade_upgraded FROM fishing_exhibits WHERE grp=? AND member=?", key)}
+    best = {fish: r["best_grams"] for fish, r in records.items()}
+    exhibits = {fish: r["grams"] for fish, r in displays.items()}
     giants=category=="巨物"
     if giants:
         catalog=sorted(catalog,key=lambda row:(row[0]!="鲤鱼",-giant_min(row)))
     elif category in RARITY_ICONS:
         catalog=[row for row in catalog if row[-1]==category]
+    if not catalog:
+        return f"{area}没有{category}鱼。发「{prefix}{category}图鉴」查看出没钓场。"
     page=int(match["page"] or 1)
     pages=(len(catalog)+5)//6
     if page>pages:
@@ -76,10 +82,11 @@ def book(db,key,match,current_area,prefix):
             continue
         picks.setdefault(fish,row["id"])
     if kind=="全图鉴" and category=="全" and not area and not match["page"]:
-        return directory(best,exhibits,picks,prefix)
+        return directory(best, exhibits, picks, prefix, fish_grades.honors(db, key[0]))
     if home:
         missing=[row[0] for row in catalog if row[0] not in exhibits]
         lines[0]=f"📖 当前钓场 · {area}"
+        lines.insert(2, fish_grades.honors(db,key[0]))
         if missing:
             lines.append(f"◇ 未点亮 {len(missing)} 种")
             for rarity in RARITY_ICONS:
@@ -109,15 +116,24 @@ def book(db,key,match,current_area,prefix):
         lines.append(f"{icon} {name}（{rarity}）")
         if giants:
             lines.append(f"　{HABITAT[fish]} · {weight(thresholds[fish])}起")
+        elif category in TROPHY_PERCENT:
+            lines.append(f"　{HABITAT[fish]} · {weight(row[1])}～{weight(row[2])}")
         if shown:
             grams=exhibits[fish]
-            lines.append(f"　已点亮 {weight(grams)} · {size_grade(fish,grams)}")
-        if caught and not shown and not giants:
+            display = displays[fish]
+            quality = fish_grades.label(display["grade"], display["grade_upgraded"])
+            lines.append(f"　已点亮 {weight(grams)} · {size_grade(fish,grams)}" + (" · " + quality if quality else ""))
+        if caught and not shown and not giants and category not in TROPHY_PERCENT:
             lines[-1]+=f"　{weight(best[fish])} · {size_grade(fish,best[fish])}"
         elif caught and (not shown or best[fish]!=exhibits[fish]):
             lines.append(f"　个人纪录 {weight(best[fish])} · {size_grade(fish,best[fish])}")
         elif shown:
             lines.append("　亲钓同重" if caught else "　尚无亲钓纪录")
+        if caught:
+            record = records[fish]
+            quality = fish_grades.label(record["best_grade"], record["best_grade_upgraded"])
+            if quality:
+                lines.append("　最高品级 " + quality)
         if fish in picks:
             action="换展" if fish in exhibits else "点亮"
             actions.append(f"{fish}{action}　{prefix}收入图鉴#{picks[fish]}")
@@ -156,6 +172,8 @@ def catch_guide(name,prefix):
         return f"图鉴里没找到「{name}」。发「{prefix}图鉴」查看鱼名。"
     _,low,high,_,_,rarity=next(row for row in WATERS[area] if row[0]==name)
     extra=(f"\n🌊 巨物鲤鱼 12～25 公斤\n查出没时间　{prefix}巨物鱼讯" if name=="鲤鱼" else "")
+    if rarity in TROPHY_PERCENT:
+        extra=f"\n免费饵常规咬钩率 {TROPHY_PERCENT[rarity]:g}%\n⚠️ 重鱼可能断线或折竿。"
     return (f"🐟 {name}（{rarity}）\n⚖️ 重量　{weight(low)}～{weight(high)}\n"
             f"📍 在{area}随机上钩{extra}\n\n前往　{prefix}切换水域 {area}\n开钓　{prefix}抛竿\n"
             f"🎒 钓到后选鱼点亮　{prefix}查看鱼包")
@@ -229,6 +247,11 @@ def play(db, event, cmd, prefix, cfg):
     if pond_raids.matches(cmd):
         return pond_raids.play(db,event,cmd,prefix)
     cooldown = cfg.get("fishing_cooldown_seconds", DEFAULT["fishing_cooldown_seconds"])
+    if cmd=="鱼获品级":
+        return ("🏷️ 每条鱼入包时抽一次品级，小鱼也能升传说。\n"
+                "✨ 升品提高售价，刷新本群同种鱼的品级纪录可得积分。\n"
+                "🌊 活动目标额外升一级，有机会出神话。\n"
+                f"📖 看展品和本群喜报　{prefix}图鉴")
     if cmd=="鱼饵":
         return fishing_bait.menu(db,key,prefix)
     if help_requested(cmd):
@@ -245,13 +268,13 @@ def play(db, event, cmd, prefix, cfg):
                 f"🧭 换钓场、升装备　{prefix}钓鱼进阶")
     if cmd=="钓鱼进阶":
         return (f"🎣 钓鱼进阶\n每条指令前加「{prefix}」。\n\n"
-                f"🎣 钓手等级\n常规鱼获前 {angler.PROTECTED_CASTS} 竿免脱钩。\n巨物始终可能跑鱼。\n装备扛住后再判脱钩。\n每升一级，脱钩率降 1 个百分点。\n池塘最低 2%，其他钓场最低 5%。\n\n"
+                f"🎣 钓手等级\n常规鱼获前 {angler.PROTECTED_CASTS} 竿免脱钩。\n巨物、史诗和传说都可能跑鱼。\n装备扛住后再判脱钩。\n每升一级，脱钩率降 1 个百分点。\n池塘最低 2%，其他钓场最低 5%。\n\n"
                 "🗺 钓场与图鉴\n找钓场　水域\n换钓场　切换水域 外海\n"
                 "看展品　图鉴 外海\n比重量　重量榜\n"
                 "每种鱼展一条，只能用更重的换。\n旧鱼回包，展品受保护。\n\n"
                 "🐾 群友互动　偷鱼玩法 / 鱼塘保护\n\n"
                 "🎒 容量与交易\n升级鱼包　最多 20 条\n升级鱼塘　最多 30 条\n"
-                "查收购价　鱼市\n卖整包　卖出鱼包\n卖整塘　一键卖鱼\n\n"
+                "查升品和奖励　鱼获品级\n查收购价　鱼市\n卖整包　卖出鱼包\n卖整塘　一键卖鱼\n\n"
                 "🧰 鱼竿与鱼线\n看装备　我的鱼竿 / 鱼线\n"
                 "换线　买鱼线（3 鱼币）\n护线　升级鱼线（5 级免断线）\n"
                 "钓稀有鱼　升级鱼竿\n韧性与硬度　强化玩法\n巨物超载可能断线或折竿，新手塘也一样。")
@@ -274,8 +297,8 @@ def play(db, event, cmd, prefix, cfg):
         target=cmd.split(maxsplit=1)[1]
         return guide(target) if target in WATERS else "未找到钓场。发「水域」查看名称。"
     if cmd=="鱼市":
-        return f"🪙 {area}鱼市\n售价＝基础价＋重量加价，取整。\n\n"+"\n".join(
-            f"{name}（{rarity}）{base}币＋{rate}币/公斤" for name,_,_,base,rate,rarity in WATERS[area])
+        return f"🪙 {area}鱼市\n售价＝基础价 × 体重系数 × 品级系数\n\n"+"\n".join(
+            f"{name}（{rarity}）基础 {base} 币" for name,_,_,base,rate,rarity in WATERS[area])
     if cmd in ("重量榜","重量排行榜"):
         return heavy_board(db,key)
     page=BOOK_PAGE.fullmatch(cmd)
@@ -381,19 +404,19 @@ def play(db, event, cmd, prefix, cfg):
         db.execute("""INSERT INTO ledger(grp,member,round,kind,points,rule_version,event,at,reason)
                       VALUES(?,?,0,'鱼饵',?,'bait/1',?,?,?)""",
                    (*key,-bait.points,event["event_id"],now,bait_name))
-        receipt = f"\n🪱 {bait_name}　−{bait.points} 积分，余 {available-bait.points} 分"
+        receipt = f"\n🪱 {bait_name}　−{bait.points} 积分，扣饵后余 {available-bait.points} 分"
     rng = random.Random(event["event_id"])
     levels=[row for row in gear.levels(db,key) if row["tier"]<=rod]
     weights=gear.weights(rod,levels)
-    rarity=rng.choices(("普通","稀有","珍品"),weights=fishing_bait.rarity_weights(weights,bait),k=1)[0]
+    rarity=fishing_bait.choose_rarity(rng,WATERS[area],weights,bait)
     pool=[item for item in WATERS[area] if item[-1]==rarity]
-    fish,low,high,base,rate,rarity=rng.choice(pool)
+    fish,low,high,_,_,rarity=rng.choice(pool)
     grams = round(rng.triangular(low, high, low+(high-low)*bait.weight_mode))
     sighting=giant_fish.current(db,key[0],area,now)
     special=giant_fish.encounter(sighting,area,now,event["event_id"])
     if special:
         species,grams=special
-        fish,_,_,base,rate,rarity=species
+        fish,_,_,_,_,rarity=species
     if sighting.taken and fish==sighting.fish:
         grams=min(grams,giant_fish.giant_min(giant_fish.SPECIES[fish])-1)
     grade=size_grade(fish,grams)
@@ -406,7 +429,8 @@ def play(db, event, cmd, prefix, cfg):
         footer+="\n"+sighting.notice(now)
     if broken and grade=="巨物":
         return f"🌊 巨物{fish}游走了，备用线拉不住它。\n换好鱼线再来　{prefix}买鱼线"+footer
-    risk=grade=="巨物" or (offshore and record and record["count"]>=2)
+    heavy_encounter=grade=="巨物" or rarity in TROPHY_PERCENT
+    risk=heavy_encounter or (offshore and record and record["count"]>=2)
     damage=fight(rng,grams,rod,levels,line_level) if risk else None
     if damage=="线":
         db.execute("UPDATE fishing_tackle SET broken=1 WHERE grp=? AND member=?",key)
@@ -415,27 +439,35 @@ def play(db, event, cmd, prefix, cfg):
         new_level=max(1,rod-1)
         db.execute("UPDATE fishing_wallets SET rod=? WHERE grp=? AND member=?",(new_level,*key))
         return f"你稳住竿柄，{fish}又猛地一挣。\n🎣 鱼竿折断！换用 {new_level} 级竿。\n高阶强化已封存，升回原等级可恢复。"+footer
-    chance = angler.slip_percent(casts-1, not offshore, grade=="巨物")
+    chance = angler.slip_percent(casts-1, not offshore, heavy_encounter)
     if chance and rng.random() < chance/100:
         story=f"水面翻起一大片浪花，巨物{fish}甩开了钩。" if grade=="巨物" else rng.choice(angler.SLIPPED)
+        if rarity in TROPHY_PERCENT:
+            story=f"{RARITY_ICONS[rarity]} {rarity}鱼「{fish}」翻出水面，甩开了钩。"
         return story+"\n💨 脱钩了，下竿再试试！"+footer
-    db.execute("""INSERT INTO fishing_species VALUES(?,?,?,?) ON CONFLICT(grp,member,fish)
-                  DO UPDATE SET best_grams=max(best_grams,excluded.best_grams)""",(*key,fish,grams))
+    event_fish = sighting.active(now) and fish == sighting.fish and grade == "巨物"
+    quality = fish_grades.final_grade(fish, grams, event["event_id"], event_fish)
+    points = fish_grades.award_first_grade_points(db, key, fish, grams, quality, event)
     db.execute("""INSERT INTO fishing_records(grp,member,count,grams,best_name,best_grams,last_cast)
                   VALUES(?,?,1,?,?,?,?) ON CONFLICT(grp,member) DO UPDATE SET
                   count=count+1, grams=grams+excluded.grams,
                   best_name=CASE WHEN excluded.grams>best_grams THEN excluded.best_name ELSE best_name END,
                   best_grams=max(best_grams,excluded.grams), last_cast=excluded.last_cast""",
                (*key, grams, fish, grams, now))
-    price=base+rate*grams//1000
-    item=db.execute("INSERT INTO fishing_pond(grp,member,fish,grams,price,storage) VALUES(?,?,?,?,?,'bag')",
-                    (*key,fish,grams,price)).lastrowid
-    if sighting.active(now) and fish==sighting.fish and grade=="巨物":
+    price = fish_grades.price(fish, grams, quality.final)
+    item = db.execute("""INSERT INTO fishing_pond(grp,member,fish,grams,price,grade,grade_upgraded,storage)
+                         VALUES(?,?,?,?,?,?,?,'bag')""", (*key,fish,grams,price,quality.final,quality.upgraded)).lastrowid
+    if event_fish:
         db.execute("""INSERT INTO fishing_giant_claims(grp,area,start) VALUES(?,?,?)
                       ON CONFLICT(grp,area) DO UPDATE SET start=excluded.start""",(key[0],area,sighting.start))
         footer=progress_footer+"\n"+giant_fish.departure(key[0],area,sighting)
     story = rng.choice(angler.HEAVY_CATCH if grams>=5000 else angler.LIGHT_CATCH)
-    caught=f"{story}\n🎣 上钩了！{fish}（{rarity} · {grade}）\n📍 {area}\n⚖️ {weight(grams)}　🪙 {price} 鱼币\n\n🎒 收入鱼包 #{item}"
+    news = fish_grades.announcement(db, key, fish, grams, quality, event_fish)
+    if news:
+        story = news + "\n" + story
+    badge = fish_grades.label(quality.final, quality.upgraded)
+    reward = f"\n🎁 {fish}品级新高　＋{points} 积分" if points else ""
+    caught=f"{story}\n🎣 上钩了！{fish}（{rarity} · {grade}）\n🏷️ 品级　{badge}{reward}\n📍 {area}\n⚖️ {weight(grams)}　🪙 {price} 鱼币\n\n🎒 收入鱼包 #{item}"
     used=bag_count+1
     if used==bag_capacity:
         detail="。\n"+full_bag_notice(used,bag_capacity,prefix)

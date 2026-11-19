@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 
-from ergou import db, engine
+from ergou import db, engine, fish_grades
 
 
 def without_slips(test):
@@ -167,16 +167,18 @@ class FishingTests(unittest.TestCase):
 
     def test_collection_and_weight_board_survive_sale(self):
         self.say("a","钓鱼",100)
-        self.assertIn("1/105",self.say("b","全图鉴",101))
+        self.assertIn("1/114",self.say("b","全图鉴",101))
         self.assertIn("🐾 "+self.db.execute("SELECT fish FROM fishing_species").fetchone()[0]+"（",self.say("c","鱼类图鉴 1",102)+self.say("d","图鉴 2",103)+self.say("e","图鉴 3",104))
-        self.assertIn("0/105",self.say("f","全图鉴",105,group="two"))
+        self.assertIn("0/114",self.say("f","全图鉴",105,group="two"))
         self.assertIn("#",self.say("g","鱼包 重量",106))
         board=self.say("h","重量榜",107)
         self.assertIn("第 1 名",board)
         self.say("i","卖出鱼包",108)
         self.assertEqual(board,self.say("j","重量排行榜",109))
-        self.assertIn("1/105",self.say("k","全图鉴",110))
+        self.assertIn("1/114",self.say("k","全图鉴",110))
 
+    @without_slips
+    @patch("ergou.fishing.fight", new=lambda *_: None)
     def test_book_by_water_through_chat(self):
         from ergou.fishing_waters import WATERS
         for area,pool in WATERS.items():
@@ -201,39 +203,88 @@ class FishingTests(unittest.TestCase):
         self.db.execute("INSERT INTO chat_models VALUES('one',1,'glm','fixture',?,100)",(b"fixture",))
         self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('one',1,1)")
         menu=self.say("menu","全图鉴",100)
-        for kind,count in (("普通",62),("稀有",27),("珍品",16)):
+        for kind,count in (("普通",62),("稀有",27),("珍品",16),("史诗",6),("传说",3)):
             cmd=kind+"图鉴"
             self.assertIn(f"二狗{cmd} · {count} 种",menu)
             self.assertIn(f"（{kind}）",self.say(cmd,cmd,101))
         self.assertIn("巨物鲤鱼 · 12～25 公斤",menu)
         self.say("wallet","我的鱼竿",102)
-        self.db.execute("INSERT INTO fishing_species VALUES('one','player','鲤鱼',12000)")
-        self.db.execute("INSERT INTO fishing_exhibits VALUES('one','player','鲤鱼',21,1286,10)")
+        self.db.execute("INSERT INTO fishing_species(grp,member,fish,best_grams) VALUES('one','player','鲤鱼',12000)")
+        self.db.execute("INSERT INTO fishing_exhibits(grp,member,fish,item_id,grams,price) VALUES('one','player','鲤鱼',21,1286,10)")
         self.db.execute("""INSERT INTO fishing_pond(id,grp,member,fish,grams,price,storage)
                            VALUES(25,'one','player','鲤鱼',13000,57,'bag')""")
         giant=self.say("giant","查看巨物图鉴",103)
-        for snippet in ("🐾 巨物鲤鱼","新手池塘 · 12公斤起","已点亮 0/105","已发现 1/105",
+        for snippet in ("🐾 巨物鲤鱼","新手池塘 · 12公斤起","已点亮 0/114","已发现 1/114",
                         "个人纪录 12公斤 · 巨物","鲤鱼换展　二狗收入图鉴#25","二狗巨物图鉴 2"):
             self.assertIn(snippet,giant)
         self.assertNotIn("1.286公斤",giant)
-        self.assertIn("2/18",self.say("next","巨物图鉴第２页",104))
+        self.assertIn("2/19",self.say("next","巨物图鉴第２页",104))
         self.assertIn("珍品图鉴 2",self.say("rare","全图鉴 珍品",105))
         self.assertIn("已换入",self.say("store","收入图鉴#25",107))
-        self.assertIn("已点亮 1/105",self.say("done","巨物图鉴",108))
-        self.assertIn("已点亮 0/105",self.say("isolated","巨物图鉴",109,member="other"))
+        self.assertIn("已点亮 1/114",self.say("done","巨物图鉴",108))
+        self.assertIn("已点亮 0/114",self.say("isolated","巨物图鉴",109,member="other"))
+        self.assertIsNone(self.db.execute("SELECT 1 FROM chat_requests").fetchone())
+
+    def test_trophy_rates_and_event_pool(self):
+        from unittest.mock import Mock
+        from ergou import fishing_bait, giant_fish, rod
+        from ergou.fishing_waters import SPECIES, WATERS
+        rng=Mock()
+        rng.choices.return_value=["普通"]
+        for area,school in WATERS.items():
+            stocked={row[-1] for row in school}
+            for bait,epic,legend in zip(fishing_bait.BAITS.values(),(.12,.18,.24),(.01,.015,.02)):
+                for level in (1,5):
+                    fishing_bait.choose_rarity(rng,school,rod.weights(level,[]),bait)
+                    kinds=rng.choices.call_args.args[0]
+                    weights=rng.choices.call_args.kwargs["weights"]
+                    self.assertEqual(set(kinds),stocked)
+                    self.assertEqual(len(kinds),len(weights))
+                    for tier,pct in (("史诗",epic),("传说",legend)):
+                        if tier in stocked:
+                            self.assertAlmostEqual(weights[kinds.index(tier)]*100/sum(weights),pct)
+            for hour in range(12):
+                target=giant_fish.window("test",area,hour*3600).fish
+                self.assertNotIn(SPECIES[target][-1],("史诗","传说"))
+
+    def test_trophy_cast_through_storage_and_book(self):
+        from ergou.fishing_waters import SPECIES
+        self.db.execute("INSERT INTO chat_models VALUES('one',1,'glm','fixture',?,100)",(b"fixture",))
+        self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('one',1,1)")
+        self.assertIn("没有传说鱼",self.say("empty-tier","传说图鉴 新手池塘",99))
+        self.say("travel","切换水域 外海",100)
+        with patch("ergou.fishing.random.Random") as factory:
+            rng=factory.return_value
+            rng.choice.side_effect=lambda pool:pool[0]
+            rng.triangular.side_effect=lambda low,high,mode:high
+            rng.random.return_value=.99
+            for i,(tier,name) in enumerate((("史诗","风暴长尾鲨"),("传说","曜金蓝鳍王"))):
+                rng.choices.return_value=[tier]
+                stamp=101+20*i
+                msg=self.say(tier,"抛竿",stamp)
+                self.assertIn(f"{name}（{tier} · 巨物）",msg)
+                self.assertEqual(msg,self.say(tier,"抛竿",stamp))
+                item,grams=self.db.execute("SELECT id,grams FROM fishing_pond WHERE fish=?",(name,)).fetchone()
+                self.assertEqual(grams,SPECIES[name][2])
+                self.assertIn("已点亮",self.say("store"+tier,f"收入图鉴#{item}",stamp+1))
+                self.assertIn(f"✨ {name}",self.say("book"+tier,"查看"+tier+"图鉴",stamp+2))
+        self.assertIn("1.1吨",self.say("board","重量榜",140))
+        hint=self.say("guide","曜金蓝鳍王怎么钓？",141)
+        self.assertIn("0.01%",hint)
+        self.assertIn("切换水域 外海",hint)
         self.assertIsNone(self.db.execute("SELECT 1 FROM chat_requests").fetchone())
 
     def test_exhibits_are_manual_scoped_and_display_only(self):
         self.say("cast","抛竿",100)
         item,name,grams=self.db.execute("SELECT id,fish,grams FROM fishing_pond").fetchone()
-        self.assertIn("已点亮 0/105",self.say("before","全图鉴",101))
+        self.assertIn("已点亮 0/114",self.say("before","全图鉴",101))
         self.assertIn("没有",self.say("foreign",f"放入图鉴#{item}",102,member="other"))
         self.assertIn("没有",self.say("wrong-room",f"放入图鉴#{item}",102,group="two"))
         put=self.say("exhibit",f"放入图鉴#{item}",103)
         self.assertIn("已点亮",put)
         self.assertEqual(put,self.say("exhibit",f"放入图鉴#{item}",104))
-        self.assertIn("已点亮 1/105",self.say("after","全图鉴",105))
-        self.assertIn("已点亮 0/105",self.say("another","全图鉴",105,member="other"))
+        self.assertIn("已点亮 1/114",self.say("after","全图鉴",105))
+        self.assertIn("已点亮 0/114",self.say("another","全图鉴",105,member="other"))
         self.assertIn("空",self.say("bag","查看鱼包",106))
         self.assertIn("没有",self.say("sell",f"卖鱼#{item}",107))
         self.assertIn("没有",self.say("pond",f"放入鱼塘#{item}",108))
@@ -342,14 +393,14 @@ class FishingTests(unittest.TestCase):
         self.db.execute("INSERT INTO fishing_waters(grp,member) VALUES('one','player')")
         self.assertIn("当前：外海",self.say("where","海域",91))
         for i,(area,pool) in enumerate(WATERS.items()):
-            self.assertEqual({f[-1] for f in pool},{"普通","稀有","珍品"})
+            self.assertTrue({"普通","稀有","珍品"} <= {f[-1] for f in pool})
             self.assertIn(area,self.say(f"go{i}","切换水域 "+area,100+i*65))
             self.say(f"cast{i}","抛竿",101+i*65)
             fish=self.db.execute("SELECT fish,grams FROM fishing_pond ORDER BY id DESC LIMIT 1").fetchone()
             # First two catches guaranteed; later casts can damage equipment.
             if i<2:
                 self.assertIn(fish[0],{f[0] for f in pool})
-        self.assertIn("220公斤",self.say("info","水域介绍 深海暗礁",1000))
+        self.assertIn("420公斤",self.say("info","水域介绍 深海暗礁",1000))
         self.assertIn("未找到",self.say("bad","切换水域 不存在",1001))
 
     @without_slips
@@ -486,6 +537,7 @@ class FishingTests(unittest.TestCase):
                     self.assertLessEqual(width(line),44,line)
 
     @without_slips
+    @patch("ergou.fish_grades.final_grade", new=lambda *_: fish_grades.Grade(0,0))
     def test_paid_bait_debits_member_once_for_an_accepted_cast(self):
         from unittest.mock import patch
         self.db.execute("INSERT INTO chat_models VALUES('one',1,'glm','fixture',?,100)",(b"fixture",))
@@ -532,9 +584,10 @@ class FishingTests(unittest.TestCase):
         self.say("four","抛竿",160)
         self.say("five","抛竿",180)
         self.assertIn("已满",self.say("full","抛竿 高级鱼饵",200))
-        self.assertEqual(self.db.execute("SELECT sum(points) FROM ledger").fetchone()[0],10)
+        self.assertEqual(self.db.execute("SELECT sum(points) FROM ledger WHERE kind='鱼饵'").fetchone()[0],-20)
+        balance=self.db.execute("SELECT sum(points) FROM ledger").fetchone()[0]
         self.say("sell","卖出鱼包",200)
-        self.assertIn("余 5 分",self.say("retry","抛竿 高级鱼饵",200))
+        self.assertIn(f"余 {balance-5} 分",self.say("retry","抛竿 高级鱼饵",200))
 
     @without_slips
     def test_group_cooldown_can_change_and_high_daily_counts_are_allowed(self):

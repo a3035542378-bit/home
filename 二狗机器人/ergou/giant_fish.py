@@ -5,7 +5,7 @@ from random import Random
 from typing import NamedTuple
 
 from .db import BJ
-from .fishing_waters import SPECIES, WATERS, giant_min
+from .fishing_waters import SPECIES, TROPHY_PERCENT, WATERS, giant_min
 
 LEAD = 600
 DURATION = 180
@@ -39,7 +39,8 @@ def window(group, area, now):
         rng = Random(f"giants/v1:{group}:{area}:{slot}")
         start = slot * 3600 + rng.randint(10, 50) * 60
         if now < start + DURATION:
-            candidates = sorted(WATERS[area], key=lambda row: row[2], reverse=True)[:2]
+            regular = (row for row in WATERS[area] if row[-1] not in TROPHY_PERCENT)
+            candidates = sorted(regular, key=lambda row: row[2], reverse=True)[:2]
             fish = "鲤鱼" if area == "新手池塘" else rng.choice(candidates)[0]
             return Sighting(fish, start)
 

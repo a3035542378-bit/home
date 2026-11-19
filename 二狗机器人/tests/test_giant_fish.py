@@ -68,7 +68,10 @@ class GiantFishing(unittest.TestCase):
             self.assertIsNone(conn.execute("SELECT 1 FROM fishing_pond").fetchone())
             self.assertIn("再来",say("fast","抛竿",event.start+1))
             rng.random.return_value=.05
-            got=say("hit","抛竿",event.start+20)
+            with patch("ergou.fish_grades.roll_upgrade", return_value=2):
+                got=say("hit","抛竿",event.start+20)
+            self.assertIn("神话 ✨升品",got)
+            self.assertIn("＋1000 积分",got)
             self.assertIn("鲤鱼（普通 · 巨物）",got)
             self.assertIn("本轮巨物已被钓走",got)
             self.assertTrue(fight.called)
@@ -84,7 +87,7 @@ class GiantFishing(unittest.TestCase):
         self.assertNotIn("收入图鉴#1",say("other","图鉴",event.start+22,"other"))
         self.assertIn("已点亮",say("light","收入图鉴#1",event.start+23))
         self.assertIn("已点亮 18公斤 · 巨物",say("detail","图鉴 新手池塘",event.start+24))
-        self.assertIn("已点亮 1/105",say("global","全图鉴",event.start+25))
+        self.assertIn("已点亮 1/114",say("global","全图鉴",event.start+25))
         self.assertIn("12～25 公斤",say("how","巨物鲤鱼怎么钓？",event.start+26))
         conn.execute("""INSERT INTO fishing_pond(grp,member,fish,grams,price,storage)
                         VALUES('one','owner','鲤鱼',20000,85,'bag')""")
