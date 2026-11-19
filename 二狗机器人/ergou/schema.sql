@@ -40,12 +40,17 @@ CREATE TABLE IF NOT EXISTS ledger (
  round INTEGER NOT NULL, kind TEXT NOT NULL, points INTEGER NOT NULL, rule_version TEXT NOT NULL,
  event TEXT NOT NULL, at REAL NOT NULL, reason TEXT NOT NULL, UNIQUE(game,round,member,kind)
 );
+CREATE INDEX IF NOT EXISTS ledger_member_balance ON ledger(grp,member,points);
 CREATE TRIGGER IF NOT EXISTS ledger_no_update BEFORE UPDATE ON ledger BEGIN SELECT RAISE(ABORT,'immutable'); END;
 CREATE TRIGGER IF NOT EXISTS ledger_no_delete BEFORE DELETE ON ledger BEGIN SELECT RAISE(ABORT,'immutable'); END;
 CREATE TABLE IF NOT EXISTS outbox (
  id INTEGER PRIMARY KEY, biz TEXT UNIQUE NOT NULL, account TEXT NOT NULL REFERENCES account, grp TEXT NOT NULL REFERENCES groups,
  binding INTEGER NOT NULL, body TEXT NOT NULL, state TEXT NOT NULL, created REAL NOT NULL, expires REAL NOT NULL,
  attempts INTEGER NOT NULL DEFAULT 0, ready REAL NOT NULL, lease REAL, detail TEXT, ack_at REAL
+);
+CREATE TABLE IF NOT EXISTS music_search_cards (
+ task INTEGER PRIMARY KEY REFERENCES outbox(id) ON DELETE CASCADE,
+ title TEXT NOT NULL, url TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS sending_queue ON outbox(state,ready,id);
 CREATE TABLE IF NOT EXISTS attempts (
@@ -170,6 +175,9 @@ CREATE TABLE IF NOT EXISTS directed_groups (
 CREATE TABLE IF NOT EXISTS directed_events (
  biz TEXT PRIMARY KEY REFERENCES inbox(event_id), source_time REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS fishing_reply_mentions (
+ biz TEXT PRIMARY KEY REFERENCES directed_events(biz) ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS agent_wechat_links (
  slot TEXT NOT NULL, account TEXT NOT NULL REFERENCES listener_nodes(account),
  grp TEXT NOT NULL REFERENCES groups(id), server_id TEXT NOT NULL, cursor TEXT NOT NULL,
@@ -222,3 +230,80 @@ CREATE TRIGGER IF NOT EXISTS capacity_change AFTER UPDATE OF state,payload ON in
  bytes=bytes+CASE WHEN NEW.state='PENDING' THEN COALESCE(LENGTH(CAST(NEW.payload AS BLOB)),0) ELSE 0 END
  -CASE WHEN OLD.state='PENDING' THEN COALESCE(LENGTH(CAST(OLD.payload AS BLOB)),0) ELSE 0 END; END;
 
+
+CREATE TABLE IF NOT EXISTS fishing_records (
+ grp TEXT NOT NULL REFERENCES groups(id), member TEXT NOT NULL,
+ count INTEGER NOT NULL, grams INTEGER NOT NULL, best_name TEXT NOT NULL,
+ best_grams INTEGER NOT NULL, last_cast REAL NOT NULL, PRIMARY KEY(grp,member)
+);
+
+CREATE TABLE IF NOT EXISTS fishing_wallets (
+ grp TEXT NOT NULL REFERENCES groups(id), member TEXT NOT NULL,
+ coins INTEGER NOT NULL DEFAULT 30 CHECK(coins>=0),
+ rod INTEGER NOT NULL DEFAULT 1 CHECK(rod BETWEEN 1 AND 5),
+ PRIMARY KEY(grp,member)
+);
+CREATE TABLE IF NOT EXISTS fishing_pond (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, grp TEXT NOT NULL, member TEXT NOT NULL,
+ fish TEXT NOT NULL, grams INTEGER NOT NULL CHECK(grams>0), price INTEGER NOT NULL CHECK(price>0),
+ storage TEXT NOT NULL DEFAULT 'pond' CHECK(storage IN ('pond','bag')),
+ FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
+);
+CREATE TABLE IF NOT EXISTS fishing_storage_levels (
+ grp TEXT NOT NULL, member TEXT NOT NULL, storage TEXT NOT NULL CHECK(storage IN ('pond','bag')),
+ level INTEGER NOT NULL CHECK(level BETWEEN 1 AND 5), PRIMARY KEY(grp,member,storage),
+ FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
+);
+CREATE INDEX IF NOT EXISTS fishing_inventory_owner ON fishing_pond(grp,member,storage,id);
+CREATE INDEX IF NOT EXISTS fishing_pond_owner ON fishing_pond(grp,member,id);
+
+CREATE TABLE IF NOT EXISTS fishing_exhibits (
+ grp TEXT NOT NULL, member TEXT NOT NULL, fish TEXT NOT NULL,
+ item_id INTEGER NOT NULL UNIQUE, grams INTEGER NOT NULL CHECK(grams>0),
+ price INTEGER NOT NULL CHECK(price>0), PRIMARY KEY(grp,member,fish),
+ FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
+);
+
+CREATE TABLE IF NOT EXISTS rod_enhancements (
+ grp TEXT NOT NULL, member TEXT NOT NULL, tier INTEGER NOT NULL CHECK(tier BETWEEN 1 AND 5),
+ quality INTEGER NOT NULL CHECK(quality BETWEEN 1 AND tier+2),
+ toughness INTEGER NOT NULL CHECK(toughness BETWEEN 1 AND tier+2),
+ hardness INTEGER NOT NULL CHECK(hardness BETWEEN 1 AND tier+2),
+ PRIMARY KEY(grp,member,tier), FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
+);
+
+CREATE TABLE IF NOT EXISTS asset_display_names(
+ grp TEXT NOT NULL REFERENCES groups, binding INTEGER NOT NULL, member TEXT NOT NULL,
+ name TEXT NOT NULL, checked REAL NOT NULL, PRIMARY KEY(grp,binding,member)
+);
+
+CREATE TABLE IF NOT EXISTS fishing_species (
+ grp TEXT NOT NULL, member TEXT NOT NULL, fish TEXT NOT NULL, best_grams INTEGER NOT NULL,
+ PRIMARY KEY(grp,member,fish)
+);
+CREATE TABLE IF NOT EXISTS fishing_tackle (
+ grp TEXT NOT NULL, member TEXT NOT NULL, broken INTEGER NOT NULL DEFAULT 0 CHECK(broken IN (0,1)),
+ last_attempt REAL NOT NULL, PRIMARY KEY(grp,member)
+);
+CREATE INDEX IF NOT EXISTS fishing_heaviest ON fishing_records(grp,best_grams DESC,member);
+
+CREATE TABLE IF NOT EXISTS fishing_line_levels (
+ grp TEXT NOT NULL, member TEXT NOT NULL, level INTEGER NOT NULL CHECK(level BETWEEN 1 AND 5),
+ PRIMARY KEY(grp,member), FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
+);
+
+CREATE TABLE IF NOT EXISTS fishing_experience (
+ grp TEXT NOT NULL, member TEXT NOT NULL, casts INTEGER NOT NULL CHECK(casts>=1),
+ PRIMARY KEY(grp,member), FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
+);
+
+CREATE TABLE IF NOT EXISTS fishing_waters (
+ grp TEXT NOT NULL, member TEXT NOT NULL, area TEXT NOT NULL DEFAULT '外海', PRIMARY KEY(grp,member),
+ FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
+);
+
+CREATE TABLE IF NOT EXISTS fishing_raids (
+ grp TEXT NOT NULL REFERENCES groups(id), member TEXT NOT NULL,
+ protected_until REAL NOT NULL DEFAULT 0, last_attempt REAL,
+ PRIMARY KEY(grp,member)
+);

@@ -7,10 +7,11 @@ import re
 import sys
 import time
 from ctypes import wintypes
+from datetime import datetime
 from typing import NamedTuple
 
 from . import admin
-from .db import allowed, audit, dump, record_failure, transaction
+from .db import BJ, allowed, audit, dump, record_failure, transaction
 
 
 PROVIDERS = {
@@ -21,6 +22,39 @@ PROVIDERS = {
 }
 MODEL_ID = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.:/-]{0,255}")
 PERSONA = "你是微信群里的柴犬机器人二狗。用简短自然的中文回答，可以幽默。如果不知道就直说。"
+
+
+WEATHER_INSTRUCTION = (
+    "按用户的问题自然回答，不必反复提柴犬身份。你可以查城市天气。用户问今天、明天、后天的气温、"
+    "降雨或出门带伞时，先从本人的对话中确定城市；不清楚只问城市名，用户补充城市后继续查询。"
+    "需要数据时整条回复只输出 WEATHER|城市名|天数，今天为0，明天1，后天2。例如 WEATHER|北京|0。"
+    "只填城市，不含个人地址或其他信息。其他日期说明仅支持未来三天。不要编造天气或声称能任意联网。"
+)
+
+
+def weather_answer(db,reply):
+    from . import queries
+    from .bulletins import weather_request
+    if not reply.startswith("WEATHER|"):
+        return reply
+    match=re.fullmatch(r"WEATHER\|([^\W\d_]+(?:[ ·-][^\W\d_]+)*)\|([012])",reply)
+    if not match or len(match[1])>48:
+        return "请告诉我城市名，以及想查今天、明天还是后天。"
+    city,day=match.groups()
+    now=time.time()
+    key=f"forecast:{city}:{day}"
+    with transaction(db):
+        cached=db.execute("SELECT reply FROM weather_cache WHERE city=? AND at>?",(key,now-600)).fetchone()
+        if cached:
+            return cached[0]
+        if not allowed(db,"外部查询/天气"+datetime.fromtimestamp(now,BJ).date().isoformat(),500,86400,now):
+            return "今天的天气查询额度已用完。"
+    try:
+        result=queries.lookup("天气",city,weather_request,forecast_day=int(day))
+    except queries.ProviderError as exc:
+        return f"这次没查到{city}的天气（{exc}）。"
+    db.execute("INSERT OR REPLACE INTO weather_cache VALUES(?,?,?)",(key,now,result))
+    return result
 
 
 class ModelError(ValueError):
@@ -239,17 +273,17 @@ def switch(db, event, enabled, mentioned):
             "SELECT 1 FROM directed_events WHERE biz=? AND source_time>?",
             (event["event_id"],time.time()-120)).fetchone()):
         raise ValueError("需要当前已授权群内的新点名消息")
-    row=db.execute("SELECT admins,enabled FROM smart_controls WHERE grp=?",(group,)).fetchone()
+    row=db.execute("SELECT admins,enabled,generation FROM smart_controls WHERE grp=?",(group,)).fetchone()
     if not row or event["member"] not in json.loads(row["admins"]):
         raise ValueError("仅本群后台指定的智能对话管理员可以切换")
     if enabled and not db.execute("SELECT 1 FROM chat_models WHERE grp=? AND verified IS NOT NULL AND credential IS NOT NULL",(group,)).fetchone():
         raise ValueError("请运营人员先在本群后台测试并保存模型和密钥")
-    if bool(row["enabled"]) != enabled:
+    if bool(row["enabled"]) != enabled or (enabled and row["generation"] == 0):
         db.execute("UPDATE smart_controls SET enabled=?,version=version+1,generation=generation+1 WHERE grp=?",(enabled,group))
         cancel_chat(db,group)
         db.execute("DELETE FROM local_turns WHERE grp=?",(group,))
         audit(db,event["member"],group,"群内切换智能对话","开启" if enabled else "关闭")
-    return "本群已开启智能对话。" if enabled else "本群已关闭智能对话。二狗仍可接关键词、查天气、玩游戏和讲笑话。"
+    return "本群已开启智能对话。点名聊天优先由大模型回答。" if enabled else "本群已关闭智能对话。二狗仍可接关键词、查天气、玩游戏和讲笑话。"
 
 
 def configure(db, user, group, fields):
@@ -290,6 +324,13 @@ def configure(db, user, group, fields):
         db.execute("DELETE FROM local_turns WHERE grp=?",(group,))
         audit(db,user["name"],group,"停用群聊模型" if disable else "验证并启用群聊模型",provider+" "+model)
     return settings(db,user,group)
+
+
+def api_first(db, group):
+    # 第零代保留仅在后台验证模型时的默认路由，群内显式开启后优先使用模型。
+    return db.execute("""SELECT 1 FROM smart_controls c JOIN chat_models m ON m.grp=c.grp
+                         WHERE c.grp=? AND c.enabled=1 AND c.generation>0
+                         AND m.verified IS NOT NULL AND m.credential IS NOT NULL""",(group,)).fetchone() is not None
 
 
 def submit(db, event, text):
@@ -389,10 +430,12 @@ class ChatWorker:
             if not current():
                 db.execute("UPDATE chat_requests SET state='CANCELLED',prompt=NULL WHERE seq=? AND state='RUNNING'",(row["seq"],))
                 return True
-            messages = [{"role":"system","content":PERSONA}]
+            messages = [{"role":"system","content":f"{PERSONA} 北京时间 {datetime.fromtimestamp(now,BJ):%Y-%m-%d}。{WEATHER_INSTRUCTION}"}]
             for turn in turns:
                 messages.extend(({"role":"user","content":turn.user},{"role":"assistant","content":turn.assistant}))
             reply = complete(row["provider"],row["model"],key,[*messages,prompt])
+            if current():
+                reply = weather_answer(db,reply)
             state = "DONE"
         except ValueError as exc:
             state,reply = "FAILED","汪，聊天服务暂时没接通，稍后再叫我试试。"

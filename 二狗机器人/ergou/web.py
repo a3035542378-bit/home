@@ -12,7 +12,7 @@ from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs,urlsplit
 from . import admin, bridge, jobs, models, operations, retention
-from .db import closing_db, dump
+from .db import DEFAULT, closing_db, dump
 from .engine import receive
 from .monitor import overview
 from . import group_tools, reply_rules
@@ -151,7 +151,7 @@ class Handler(BaseHTTPRequestHandler):
         if not post and path=="/api/status":
             counts={r[0]:r[1] for r in db.execute("SELECT state,COUNT(*) FROM outbox WHERE grp=? GROUP BY state",(group,))}
             return self.respond(200,dict(group=group,mode=g["mode"],account=g["account"],state=g["state"],binding=g["binding"],paused=g["paused"],
-                version=g["version"],config=json.loads(g["config"]),received=db.execute("SELECT COUNT(*) FROM inbox WHERE grp=?",(group,)).fetchone()[0],outbox=counts))
+                version=g["version"],config=DEFAULT|json.loads(g["config"]),received=db.execute("SELECT COUNT(*) FROM inbox WHERE grp=?",(group,)).fetchone()[0],outbox=counts))
         if not post and path in ("/api/view","/api/export"):
             rows=admin.view(db,u,group,params.get("name",["会话"])[0])
             if path.endswith("/export"):

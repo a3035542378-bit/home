@@ -255,6 +255,31 @@ class Listener:
             if (message.get("direction") == "incoming" and message.get("type") == 1 and not message.get("recall")
                     and valid_id(sender) and sender != self.account and number(source) and int(source) > 0
                     and isinstance(payload["text"], str) and len(dump(payload).encode()) <= 8192):
+                from .engine import addressed_command
+                cmd=addressed_command(payload["text"],"二狗",payload.get("mention_account")==self.account)
+                from .pond_raids import TARGET
+                if (TARGET.fullmatch((cmd if cmd is not None else payload["text"]).strip())
+                        and isinstance(mentions,dict) and mentions.get("state")=="known"
+                        and mentions.get("all") is not True and isinstance(mentions.get("userIds"),list)):
+                    targets=[uid for uid in mentions["userIds"] if uid!=self.account]
+                    if len(targets)==1 and valid_id(targets[0]):
+                        payload["pond_target"]=targets[0]
+                        from .display_names import refresh
+                        refresh(self.db,self.client,self.group,targets)
+                from .intents import command_alias
+                cmd=command_alias(cmd) if cmd else cmd
+                if cmd in ("资产榜","资产排行榜","重量榜","重量排行榜","总榜","周榜","月榜","抽签 报名"):
+                    from .display_names import refresh
+                    from .engine import ranking_rows
+                    from .rod import ASSET_RANKS
+                    members=[sender]
+                    if cmd in ("资产榜","资产排行榜"):
+                        members.extend(r["member"] for r in self.db.execute(ASSET_RANKS+" LIMIT 10",(self.group,self.group)))
+                    elif cmd in ("重量榜","重量排行榜"):
+                        members.extend(r[0] for r in self.db.execute("SELECT member FROM fishing_records WHERE grp=? ORDER BY best_grams DESC,member LIMIT 10",(self.group,)))
+                    elif cmd in ("总榜","周榜","月榜"):
+                        members.extend(r["member"] for r in ranking_rows(self.db,self.group,cmd,time.time()))
+                    refresh(self.db,self.client,self.group,members)
                 receipt = bridge.endpoint(self.db, "event", self.secret, {"group_id": self.group, "sender_id": sender,
                                           "source_message_id": source, "payload": payload})
                 sequence = receipt["ingest_sequence"]
@@ -372,13 +397,28 @@ def inspect_text_send(client, token, task, timeout=8):
                     message=client.get(client.base+"/messages/"+quote(mid,safe=""))
                     identity=(message.get("id"),message.get("accountId"),message.get("threadId"),
                               message.get("direction"),message.get("serverId"))
+                    card=task.get("share")
+                    if card:
+                        link=message.get("link") or {}
+                        matches=(message.get("type")==49 and message.get("appMessageType")==5
+                                 and link.get("url")==card["url"] and link.get("title")==card["title"])
+                    elif task.get("mention_sender"):
+                        mentions=message.get("mentions") or {}
+                        body=message.get("body")
+                        suffix="\u2005"+task["body"]
+                        matches=(type(message.get("type")) is int and message["type"]==1
+                                 and isinstance(body,str) and body.startswith("@") and body.endswith(suffix)
+                                 and len(body)>len(suffix)+1 and isinstance(mentions,dict)
+                                 and mentions.get("state")=="known" and mentions.get("all") is not True
+                                 and mentions.get("userIds")==[task["mention_sender"]])
+                    else:
+                        matches=type(message.get("type")) is int and message["type"]==1 and message.get("body")==task["body"]
                     if (identity!=(mid,client.slot,task["grp"],"outgoing",sid)
-                            or type(message.get("type")) is not int or message["type"]!=1
-                            or message.get("body")!=task["body"]):
+                            or not matches):
                         return "UNKNOWN","微信已受理，发件记录与任务不符，待核对"
                     return "ACKNOWLEDGED","微信已受理，已回读核对本群发件记录"
             elif state in ("cancelled","failed"):
-                return "FAILED","微信未受理文字消息"
+                return "FAILED","微信未受理消息"
             elif state not in ("queued","submitting"):
                 break
         except (OSError,http.client.HTTPException,ValueError):
@@ -396,7 +436,10 @@ def inspect_text_send(client, token, task, timeout=8):
 def send_direct(client, token, task):
     conn=http.client.HTTPConnection("127.0.0.1",client.port,timeout=5)
     try:
-        conn.request("POST",client.base+"/sends",body=dump({"threadId":task["grp"],"text":task["body"]}).encode(),
+        payload={"threadId":task["grp"],**(task.get("share") or {"text":task["body"]})}
+        if task.get("mention_sender"):
+            payload["mentions"]={"userIds":[task["mention_sender"]]}
+        conn.request("POST",client.base+"/sends",body=dump(payload).encode(),
                      headers={"Authorization":"Bearer "+token,"Content-Type":"application/json","Idempotency-Key":"ergou-"+task["biz"]})
         response=conn.getresponse()
         if response.status in (400,401,403,404,422):
@@ -485,6 +528,10 @@ def replies(db,client,node_secret,token,name=None):
                             state,detail=send_voice(client,token,task,authorized,auth=auth)
                     else:
                         if model_reply_authorized(db,task["biz"]):
+                            card=db.execute("SELECT title,url FROM music_search_cards WHERE task=?",(task["id"],)).fetchone()
+                            if card:
+                                task["share"]=dict(kind="share",title=card["title"],url=card["url"],
+                                                   description="在 Apple Music 查看搜索结果")
                             state,detail=send_direct(client,token,task)
                         else:
                             state,detail="FAILED","本群智能对话或语音上下文授权已变化"

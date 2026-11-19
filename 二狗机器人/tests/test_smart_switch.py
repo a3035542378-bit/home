@@ -61,6 +61,20 @@ class SmartSwitchTests(unittest.TestCase):
         self.assertTrue(models.control_settings(self.db,self.operator,"room")["enabled"])
         self.assertEqual(self.db.execute("SELECT count(*) FROM audit WHERE action='群内切换智能对话'").fetchone()[0],2)
 
+    def test_explicit_api_mode_preempts_local_commands_until_admin_closes(self):
+        self.verified()
+        self.assertIn("管理员",self.say("开启智能对话","member"))
+        self.assertIn("本群积分",self.say("积分","member"))
+        self.assertIn("已开启",self.say("开启智能对话"))
+        self.assertIn("管理员",self.say("关闭智能对话","member"))
+        with patch("ergou.models.protect",return_value=b"fixture"),patch("ergou.models.complete",return_value="模型回答") as send:
+            self.assertIsNone(self.say("积分","member"))
+            self.assertTrue(models.ChatWorker().work(self.db))
+            self.assertEqual(send.call_args.args[-1][-1]["content"],"积分")
+            self.assertIn("已关闭",self.say("关闭智能对话"))
+            self.assertIn("本群积分",self.say("积分","member"))
+            send.assert_called_once()
+
     def test_off_cancels_ready_and_running_answers_and_context(self):
         self.verified()
         worker=models.ChatWorker()

@@ -37,6 +37,18 @@ class Leisure(unittest.TestCase):
             self.assertIn("青椒炒蛋",self.reply(self.say("二狗查菜谱 鸡蛋")))
             self.assertIn("本地菜谱还没有",self.reply(self.say("二狗菜谱 不存在的菜")))
 
+    def test_live_music_creates_one_share_for_the_original_event(self):
+        args=("sim-account","private-room","private-member","card-1",{"text":"二狗点歌 周杰伦 晴天"})
+        for _ in range(2):
+            engine.receive(self.db,*args,adapter_version="agent-wechat-events/2.7.1")
+            engine.step(self.db)
+        rows=self.db.execute("SELECT title,url,body FROM music_search_cards JOIN outbox ON task=id").fetchall()
+        self.assertEqual(len(rows),1)
+        title,url,body=rows[0]
+        self.assertEqual(title,"周杰伦 晴天")
+        self.assertEqual(url,body.splitlines()[-1])
+        self.assertEqual(parse_qs(urlsplit(url).query),{"term":[title]})
+
     def test_wikipedia_receipt_and_metadata(self):
         seq=self.say("二狗查百科 小熊猫")
         self.assertIsNone(self.reply(seq))

@@ -175,20 +175,34 @@ def play(db,e,action,code,arg,manager):
     return f"{code} {msg}"
 
 
-def ranking(db,group,period,now):
-    rows=db.execute("""SELECT member,SUM(points) total,DENSE_RANK() OVER(ORDER BY SUM(points) DESC) place
+def ranking_rows(db,group,period,now):
+    return db.execute("""SELECT member,SUM(points) total,DENSE_RANK() OVER(ORDER BY SUM(points) DESC) place
                      FROM ledger WHERE grp=? AND at>=? AND at<=? GROUP BY member ORDER BY total DESC,member LIMIT 20""",
                     (group,window(period,now),now)).fetchall()
-    return " / ".join(f"第{r['place']}名 {r['member']} {r['total']}分" for r in rows) or "本周期暂无积分"
+
+
+def ranking(db,group,period,now):
+    from .display_names import labels
+    name=labels(db,group)
+    rows=ranking_rows(db,group,period,now)
+    scores=[f"第{r['place']}名　{name(r['member'])}　{r['total']}分" for r in rows]
+    return f"🏅 本群积分{period}\n\n"+("\n".join(scores) or "本周期暂无积分")
 
 
 def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
-    from . import feature_menu, intents, leisure, models, reply_rules
+    from . import feature_menu, fishing, intents, leisure, models, reply_rules
     cmd=cmd.strip()
     if cmd in ("开启智能对话","关闭智能对话"):
         return models.switch(db,e,cmd=="开启智能对话",mentioned)
-    if cmd.rstrip("。！？!?").strip() in ("菜单","功能菜单","全部功能"):
+    canonical=intents.command_alias(cmd)
+    if canonical.rstrip("。！？!?").strip() in ("菜单","功能菜单","全部功能"):
         return feature_menu.render(db,g,e,cfg,prefix or cfg["prefix"])
+    if cmd and models.api_first(db,e["grp"]):
+        if canonical=="游戏列表" and cfg["games"] and "钓鱼" not in cfg.get("disabled_games",[]):
+            return "智能对话中可直接玩：\n"+fishing.game_list_entry(prefix or cfg["prefix"])
+        if fishing.matches(canonical):
+            return fishing.play(db,e,canonical,prefix or cfg["prefix"],cfg)
+        return models.submit(db,e,cmd)
     try:
         matched=reply_rules.match(db,e,cmd)
     except (ValueError,TypeError,KeyError,IndexError,AttributeError):
@@ -197,13 +211,15 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
         return "本群的自定义回复规则出现异常，请运营人员检查规则设置。"
     if matched is not None:
         return matched
-    cmd=leisure.normalize(intents.interpret(cmd,cfg))
+    cmd=leisure.normalize(intents.interpret(canonical,cfg))
     first,_,args=cmd.strip().partition(" ")
     first=cfg.get("aliases",{}).get(first,first)
     args=args.strip()
     if first in ("帮助",""):
         return feature_menu.render(db,g,e,cfg,prefix or cfg["prefix"])
     manager=bool(db.execute("SELECT 1 FROM managers WHERE grp=? AND member=?",(e["grp"],e["member"])).fetchone())
+    if fishing.matches(cmd):
+        return fishing.play(db,e,cmd,prefix or cfg["prefix"],cfg)
     if first=="群规":
         return cfg["rules"]
     if first=="运势":
@@ -224,7 +240,13 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
             raise ValueError("本群已关闭此功能")
         return op(db,e,args,manager)
     if first in ("点歌","菜谱"):
-        return leisure.local(first,args)
+        reply=leisure.local(first,args)
+        if first=="点歌" and args and e["adapter_version"]=="agent-wechat-events/2.7.1":
+            queue(db,g,e["event_id"],reply,e["arrived"])
+            db.execute("""INSERT OR IGNORE INTO music_search_cards SELECT id,?,? FROM outbox
+                          WHERE biz=? AND body=?""",(args,reply.splitlines()[-1],e["event_id"],reply))
+            return None
+        return reply
     if first=="百科" and not args:
         return "想查什么词条？例如「二狗百科 大熊猫」。"
     if first in ("天气","快递","百科"):
@@ -234,7 +256,10 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     if game_command and not cfg["games"]:
         raise ValueError("本群游戏已关闭")
     if first=="游戏列表":
-        return "、".join(n for n in [*GAMES,*plugins.active(db)] if n not in cfg.get("disabled_games",[]))
+        names="、".join(n for n in [*GAMES,*plugins.active(db)] if n not in cfg.get("disabled_games",[]))
+        if "钓鱼" in cfg.get("disabled_games",[]):
+            return names
+        return "\n".join(filter(None,(fishing.game_list_entry(prefix or cfg["prefix"]),names)))
     if first=="开始":
         return start(db,g,e,args,cfg)
     if first in ("加入","退出","状态","结束"):
@@ -262,6 +287,9 @@ def process(db,g,e):
         for member in p.get("members",[]):
             db.execute("INSERT OR IGNORE INTO known_members VALUES(?,?)",(e["grp"],member))
         return "DONE",None
+    if e["kind"] in ("join","leave"):
+        from .display_names import labels
+        label=labels(db,g["id"])(e["member"],p.get("name"))
     if e["kind"]=="join":
         if db.execute("INSERT OR IGNORE INTO known_members VALUES(?,?)",(e["grp"],e["member"])).rowcount:
             from .member_policy import active
@@ -270,10 +298,10 @@ def process(db,g,e):
             seconds=cfg.get("welcome_window",0)
             if seconds:
                 prior=db.execute("SELECT MIN(due) FROM welcomes WHERE grp=? AND due>=?",(e["grp"],e["arrived"])).fetchone()[0]
-                db.execute("INSERT OR REPLACE INTO welcomes VALUES(?,?,?,?,?,?)",(e["grp"],e["account"],e["binding"],e["member"],str(p.get("name",e["member"]))[:80],prior or e["arrived"]+seconds))
+                db.execute("INSERT OR REPLACE INTO welcomes VALUES(?,?,?,?,?,?)",(e["grp"],e["account"],e["binding"],e["member"],label,prior or e["arrived"]+seconds))
                 return "DONE",None
             from .greetings import welcome
-            return "DONE",welcome(cfg,str(p.get("name",e["member"]))[:80],g["id"],e["arrived"])
+            return "DONE",welcome(cfg,label,g["id"],e["arrived"])
         return "IGNORED",None
     if e["kind"]=="bot_leave":
         db.execute("UPDATE groups SET paused=1 WHERE id=?",(e["grp"],))
@@ -287,7 +315,7 @@ def process(db,g,e):
         from .member_policy import active
         if present and "leave" in active(db,g["id"],g["account"],g["binding"]):
             from .member_notices import departure
-            return "DONE",departure(str(p.get("name") or "一位群成员")[:80])
+            return "DONE",departure(label)
         return "DONE",None
     if e["kind"]=="revoke":
         db.execute("INSERT OR IGNORE INTO recalls VALUES(?,?,?,?)",(e["seq"],e["grp"],str(p.get("original_source",""))[:160],e["arrived"]))
@@ -303,12 +331,16 @@ def process(db,g,e):
     mentioned=not voice and p.get("mention_account")==g["account"]
     prefix="二狗" if live_listener or voice else cfg["prefix"]
     cmd=addressed_command(text,prefix,mentioned)
+    if cmd is None and p.get("pond_target") and e["message_type"]=="text":
+        from .pond_raids import TARGET
+        if TARGET.fullmatch(text.strip()):
+            cmd=text.strip()
+    authorized_control=(mentioned and cmd in ("开启智能对话","关闭智能对话") and db.execute(
+        """SELECT 1 FROM smart_controls c,json_each(c.admins) m WHERE c.grp=? AND m.value=?""",
+        (e["grp"],e["member"])).fetchone())
     moderation=None
     if e["member"] not in cfg["allowlist"] and (text in cfg.get("exact_words",[]) or any(word in text for word in cfg["words"])):
         db.execute("INSERT INTO hits(grp,seq,version,result) VALUES(?,?,?,?)",(e["grp"],e["seq"],g["version"],cfg["moderation"]))
-        authorized_control=(mentioned and cmd in ("开启智能对话","关闭智能对话") and db.execute(
-            """SELECT 1 FROM smart_controls c,json_each(c.admins) m WHERE c.grp=? AND m.value=?""",
-            (e["grp"],e["member"])).fetchone())
         if cfg["moderation"] in ("撤回","移出群聊") and not authorized_control:
             from .moderation import apply_action
             return "DONE",apply_action(db,g,e,cfg["moderation"])
@@ -318,7 +350,7 @@ def process(db,g,e):
         if moderation:
             return "DONE",moderation
         return "CHAT",None
-    if not allowed(db,dump(["cmd",e["grp"],e["member"]]),cfg.get("command_rate",30),10,e["arrived"]):
+    if not authorized_control and not allowed(db,dump(["cmd",e["grp"],e["member"]]),cfg.get("command_rate",30),10,e["arrived"]):
         return "RATE_LIMITED",None
     stamp=p.get("source_time")
     if live_listener and type(stamp) in (int,float) and e["arrived"]-120<stamp<=e["arrived"]+5:

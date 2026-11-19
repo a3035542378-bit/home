@@ -1,3 +1,4 @@
+import json
 import unittest
 from unittest.mock import patch
 
@@ -36,6 +37,19 @@ class NativeDelivery(unittest.TestCase):
             self.get.reset_mock()
             self.assertEqual(self.inspect()[0],"UNKNOWN")
             self.assertEqual(self.get.call_count,1)
+
+    def test_music_search_card_payload_and_readback(self):
+        card=dict(kind="share",title="周杰伦 晴天",url="https://music.apple.com/cn/search?term=test",
+                  description="在 Apple Music 查看搜索结果")
+        self.task["share"]=card
+        self.message.update(type=49,appMessageType=5,link=dict(title=card["title"],url=card["url"]))
+        with patch.object(aw.http.client,"HTTPConnection") as factory:
+            conn=factory.return_value
+            conn.getresponse.return_value.status=202
+            self.assertEqual(aw.send_direct(self.client,"send-fixture",self.task)[0],"ACKNOWLEDGED")
+            self.assertEqual(json.loads(conn.request.call_args.kwargs["body"]),dict(threadId=self.task["grp"],**card))
+        self.message["link"]["url"]="https://other.example/"
+        self.assertEqual(self.inspect()[0],"UNKNOWN")
 
     def test_missing_projection_and_unavailable_readback(self):
         for fields in ({"localMessageId":None},{"serverId":"0"},{"serverId":str(2**64)}):

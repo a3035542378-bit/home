@@ -22,7 +22,7 @@
 |GET /api/reply-diagnostics?group=…|health 返回当前绑定的心跳、授权和服务状态。records 返回最近十条已登记的点名文字或语音事件的时间、类型、处理状态、发送尝试和回执时间|本群读权限。仅返回状态摘要，不含正文或成员身份|
 |GET /api/status?group=…|群、账号、接入模式、状态、绑定版本、配置版本和计数|授权范围内可读|
 |GET /api/view、/api/export|group、name；返回表格行或 UTF-8 CSV|读权限；权限和撤回记录限系统管理员|
-|POST /api/config|group、version、patch；返回新版本|本群写权限，乐观锁；冲突后取最新版本|
+|POST /api/config|group、version、patch。fishing_cooldown_seconds 设置本群抛竿间隔（1～86400 秒，默认 20 秒），保存后对下一次抛竿生效。返回新版本|本群写权限，乐观锁；冲突后取最新版本|
 |GET /api/chat-model?group=…|供应商、本群当前模型、版本和最近验证时间。另用模型列表接口读取可选 ID|系统管理员或该群运营管理员|
 |POST /api/chat-model|group、version、action。verify 另带 provider、model、key。disable 停用并移除密钥|同上。verify 以固定问候测试所选官方接口，通过后原子替换。相同供应商可留空沿用原密钥。并发冲突返回 409|
 |POST /api/chat-model/models|group、provider（deepseek、glm、qwen 或 openai）、key。返回模型 ID 数组 models。百炼按页读取，智谱从公开 OpenAPI 的文字对话模型枚举读取|限本群运营或系统管理员。key 留空可沿用本群同一供应商已验证的密钥。智谱公开目录请求不携带 Key，模型权限由聊天测试验证。读取列表不保存设置|

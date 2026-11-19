@@ -345,7 +345,7 @@ $("simulate").onsubmit=async e=>{e.preventDefault();const group=$("group").value
 boot().catch(e=>{if(e.message!=="请登录")$("loginError").textContent=e.message;});
 
 function showControls(){
-  const actions={"发送任务":["确认送达","结束跟进"],"积分流水":["调分","冲正"],"定时通知":["停用通知"],"入站异常":["重试入站"],"撤回记录":["反查内容","启用留存","关闭留存"]};
+  const actions={"发送任务":["确认送达","结束跟进"],"积分流水":["调分","冲正","发放货币"],"定时通知":["停用通知"],"入站异常":["重试入站"],"撤回记录":["反查内容","启用留存","关闭留存"]};
   const list=actions[page]||[];
   $("controls").hidden=!list.length||user.role==="只读人员";
   const form=$("controlForm");form.reset();form.elements.action.replaceChildren(...list.map(k=>new Option(k,k)));
@@ -354,12 +354,19 @@ function showControls(){
 function selectAction(){
   const action=$("controlForm").elements.action.value;
   $("targetLabel").hidden=["启用留存","关闭留存"].includes(action);
+  $("currencyLabel").hidden=$("amountLabel").hidden=action!=="发放货币";
+  $("controlForm").elements.amount.disabled=action!=="发放货币";
+  $("controlForm").elements.points.disabled=action!=="调分";
   $("pointsLabel").hidden=action!=="调分";
   $("reasonLabel").hidden=["反查内容","关闭留存"].includes(action);
 }
 $("controlForm").elements.action.onchange=selectAction;
+let pendingGrant=null;
 $("controlForm").onsubmit=async e=>{
   e.preventDefault();const f=e.target.elements, action=f.action.value, group=$("group").value;
+  const submit=e.target.querySelector("button");
+  if(submit.disabled)return;
+  submit.disabled=true;
   try{
     let result;
     if(action==="反查内容")result=(await api("api/recall",{group,seq:Number(f.target.value)})).text;
@@ -367,10 +374,20 @@ $("controlForm").onsubmit=async e=>{
       if(action==="启用留存"&&!f.reason.value.trim())throw Error("请先告知群成员，并填写告知记录");
       await api("api/retention",{group,notice:action==="启用留存"?f.reason.value:""});result=action+"已生效";
     }else{
-      result=(await api("api/operation",{group,action:["确认送达","结束跟进"].includes(action)?"核对发送":action,
-        target:f.target.value,resolution:action,points:Number(f.points.value),key:crypto.randomUUID(),reason:f.reason.value})).result;
+      const payload={group,action:["确认送达","结束跟进"].includes(action)?"核对发送":action,
+        target:f.target.value,resolution:action,points:Number(f.points.value),reason:f.reason.value};
+      let key=crypto.randomUUID();
+      if(action==="发放货币"){
+        payload.currency=f.currency.value;
+        payload.points=Number(f.amount.value);
+        const signature=JSON.stringify([user.name,payload]);
+        if(pendingGrant?.signature===signature)key=pendingGrant.key;
+        pendingGrant={signature,key};
+      }
+      result=(await api("api/operation",{...payload,key})).result;
+      if(action==="发放货币")pendingGrant=null;
     }
     await render();$("opResult").textContent=result;
-  }catch(err){error(err);}
+  }catch(err){error(err);}finally{submit.disabled=false;}
 };
 

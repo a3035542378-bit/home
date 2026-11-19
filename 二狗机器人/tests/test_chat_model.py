@@ -90,6 +90,38 @@ class ModelTests(unittest.TestCase):
             self.assertEqual(len(self.transport.call_args.args[-1]),2)
         self.assertFalse(self.db.execute("SELECT 1 FROM chat_requests WHERE prompt IS NOT NULL").fetchone())
 
+    def test_fuzhou_uses_chinese_city_suffix_and_matching_province(self):
+        from ergou.queries import weather_locations
+        for city in ("抚州","江西抚州","江西省抚州"):
+            with self.subTest(city=city):
+                correct=dict(name="抚州市",admin1="江西")
+                request=Mock(side_effect=[{},dict(results=[correct])])
+                self.assertEqual(weather_locations(city,request,123),[correct])
+                self.assertEqual([c.args[1]["name"] for c in request.call_args_list],["抚州","抚州市"])
+        request=Mock(return_value=dict(results=[dict(name="福州市",admin1="福建省")]))
+        self.assertEqual(weather_locations("江西抚州",request,123),[])
+
+    def test_weather_clarification_and_grounded_forecast(self):
+        self.save()
+        self.transport.side_effect=["想查哪个城市？","WEATHER|北京|1"]
+        worker=models.ChatWorker()
+        location={"results":[dict(name="北京",latitude=39.9,longitude=116.4)]}
+        forecast=dict(current=dict(time="2026-11-19T14:15",temperature_2m=5.4),
+                      daily=dict(time=["2026-11-19","2026-11-20"],temperature_2m_min=[2,3],
+                                 temperature_2m_max=[8,9],precipitation_probability_max=[10,80]))
+        with patch("ergou.bulletins.weather_request",side_effect=[location,forecast]) as fetch:
+            for i,text in enumerate(["明天要带伞吗","北京"]):
+                seq=receive(self.db,"sim-account","room","member",str(i),dict(text="二狗 "+text))
+                step(self.db)
+                self.assertTrue(worker.work(self.db))
+            self.assertIn("想查哪个城市",self.transport.call_args.args[-1][-2]["content"])
+            answer=self.db.execute("SELECT body FROM outbox JOIN inbox ON event_id=biz WHERE seq=?",(seq,)).fetchone()[0]
+            self.assertIn("11月20日预计 3～9°C",answer)
+            self.assertIn("80%，出门建议带伞",answer)
+            self.assertEqual(models.weather_answer(self.db,"WEATHER|北京|1"),answer)
+            self.assertEqual(fetch.call_count,2)
+            self.assertEqual(fetch.call_args_list[0].args[1]["name"],"北京")
+
     def test_native_directed_only(self):
         api=Fixture()
         secret="x"*40

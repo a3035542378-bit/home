@@ -73,6 +73,8 @@ def validate(patch):
             raise ValueError("配置内容过长")
         if isinstance(v,list) and (len(v)>(len(GAMES) if k=="disabled_games" else 100) or any(not isinstance(w,str) or not 0<len(w)<=80 for w in v)):
             raise ValueError("列表内容无效")
+    if not 1<=patch.get("fishing_cooldown_seconds",DEFAULT["fishing_cooldown_seconds"])<=86400:
+        raise ValueError("钓鱼间隔须为 1–86400 秒")
     if "prefix" in patch and (not 1<=len(patch["prefix"])<=12 or any(c.isspace() for c in patch["prefix"])):
         raise ValueError("前缀须为 1–12 个非空白字符")
     if not 1<=patch.get("max_games",3)<=3 or not 0<=patch.get("reward",10)<=100:

@@ -11,7 +11,7 @@ DEFAULT = dict(enabled=True, prefix="二狗", rules="友善交流，尊重隐私
                reward=10, max_games=3, words=[], allowlist=[], moderation="记录", city="",
                bots=[], games=True, polls=True, draws=True, quiet_start=0, quiet_end=0,
                welcome_window=0,daily_rewards=0,aliases={},disabled_games=[],exact_words=[],
-               weekly_push=False,send_rate=5,command_rate=30,rules_url="")
+               fishing_cooldown_seconds=20,weekly_push=False,send_rate=5,command_rate=30,rules_url="")
 SCHEMA = Path(__file__).with_name("schema.sql")
 
 
@@ -48,7 +48,21 @@ def initialize(path):
             migrate+="ALTER TABLE schedules ADD COLUMN until REAL;\n"
         if columns and "version" not in columns:
             migrate+="ALTER TABLE schedules ADD COLUMN version INTEGER NOT NULL DEFAULT 1;\n"
+        waters={r[1] for r in db.execute("PRAGMA table_info(fishing_waters)")}
+        if waters and "area" not in waters:
+            migrate+="ALTER TABLE fishing_waters ADD COLUMN area TEXT NOT NULL DEFAULT '外海';\n"
+        pond_columns={r[1] for r in db.execute("PRAGMA table_info(fishing_pond)")}
+        if pond_columns and "storage" not in pond_columns:
+            migrate+="ALTER TABLE fishing_pond ADD COLUMN storage TEXT NOT NULL DEFAULT 'pond' CHECK(storage IN ('pond','bag'));\n"
         backfill="INSERT OR IGNORE INTO participation SELECT game,member,joined FROM players;" if version<3 else ""
+        if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='fishing_species'").fetchone():
+            # 只补录升级前的鱼获，之后转手的鱼不计入新主人的垂钓纪录。
+            backfill+="""
+INSERT OR IGNORE INTO fishing_species
+ SELECT grp,member,fish,max(grams) FROM (
+ SELECT grp,member,fish,grams FROM fishing_pond
+ UNION ALL SELECT grp,member,best_name,best_grams FROM fishing_records
+ ) GROUP BY grp,member,fish;"""
         db.executescript("\n".join(("BEGIN IMMEDIATE;",migrate,SCHEMA.read_text(encoding="utf-8"),
                                     group_tools_schema,moderation_schema,bulletin_schema,policy_schema,roster_schema,
                                     deliveries_schema,voice_policy_schema,voice_events_schema,backfill,"COMMIT;")))

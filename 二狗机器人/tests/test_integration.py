@@ -16,6 +16,26 @@ from ergou.engine import receive,step
 
 
 class Integration(unittest.TestCase):
+    def test_scoped_currency_grants(self):
+        data=dict(action="发放货币",currency="鱼币",target="new-member",points=2000,key="grant-1",reason="活动奖励")
+        grant=lambda user,group,fields: operations.act(self.db,user,group,fields)
+        operator=dict(name="ops",role="运营管理员",scopes='["one"]')
+        with self.assertRaises(PermissionError):
+            grant(operator,"two",data)
+        with self.assertRaises(PermissionError):
+            grant(dict(operator,role="只读人员"),"one",data)
+        result=grant(operator,"one",data)
+        self.assertEqual(result,grant(operator,"one",data))
+        self.assertEqual(self.db.execute("SELECT coins FROM fishing_wallets WHERE grp='one' AND member='new-member'").fetchone()[0],2030)
+        with self.assertRaisesRegex(ValueError,"CONFLICT"):
+            grant(operator,"one",dict(data,currency="积分"))
+        for change in (dict(currency="水晶"),dict(currency="金币"),dict(points=-1),dict(points=True),dict(points=0)):
+            with self.assertRaises(ValueError):
+                grant(operator,"one",dict(data,key="invalid",**change))
+        grant(operator,"one",dict(data,key="grant-2",currency="积分"))
+        self.assertEqual(self.db.execute("SELECT SUM(points) FROM ledger WHERE grp='one' AND member='new-member'").fetchone()[0],2000)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM audit WHERE action='发放货币'").fetchone()[0],2)
+
     def test_weekly_participation_and_archive(self):
         from ergou import reports
         from ergou.db import window
@@ -71,7 +91,7 @@ class Integration(unittest.TestCase):
         self.assertEqual(seq,bridge.endpoint(self.db,"event",key,event))
         step(self.db)
         task=bridge.endpoint(self.db,"claim",key,{})["task"]
-        self.assertIn("命令",task["body"])
+        self.assertIn("二狗菜单",task["body"])
         ack=dict(task=task["id"],attempt=task["attempt"],state="ACKNOWLEDGED")
         self.assertTrue(bridge.endpoint(self.db,"result",key,ack)["updated"])
         self.assertFalse(bridge.endpoint(self.db,"result",key,ack)["updated"])

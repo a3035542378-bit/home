@@ -18,7 +18,10 @@ def claim(db, account, now=None, *, directed_group=None):
         db.execute("UPDATE attempts SET ended=?,result='UNKNOWN' WHERE ended IS NULL AND task IN (SELECT id FROM outbox WHERE state='SENDING' AND lease<=?)",(now,now))
         db.execute("UPDATE outbox SET state='UNKNOWN',detail='发送租约到期' WHERE state='SENDING' AND lease<=?",(now,))
         db.execute("UPDATE outbox SET state='EXPIRED',body='' WHERE state IN ('PENDING','RETRY_WAIT') AND expires<=?",(now,))
-        row=db.execute("""SELECT o.*,g.account active,g.binding current,g.paused,g.config,vi.seq voice_seq FROM outbox o
+        row=db.execute("""SELECT o.*,g.account active,g.binding current,g.paused,g.config,vi.seq voice_seq,
+          (SELECT i.member FROM fishing_reply_mentions m JOIN inbox i ON i.event_id=m.biz
+           WHERE m.biz=o.biz AND i.grp=o.grp AND i.account=o.account AND i.binding=o.binding) AS mention_sender
+          FROM outbox o
           JOIN groups g ON g.id=o.grp JOIN account a ON a.id=o.account
           LEFT JOIN inbox vi ON vi.event_id=o.biz AND vi.message_type='voice' AND vi.adapter_version=?
           WHERE o.account=? AND o.state IN ('RETRY_WAIT','PENDING') AND o.ready<=?

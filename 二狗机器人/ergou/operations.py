@@ -4,6 +4,32 @@ from .db import audit,dump,transaction
 from .admin import permitted
 
 
+def grant_currency(db,group,data,key,reason):
+    member=data.get("target")
+    amount=data.get("points")
+    currency=data.get("currency")
+    limit=2**53-1
+    if currency not in ("积分","鱼币"):
+        raise ValueError("仅可发放积分或鱼币，水晶预留给支付购买")
+    if not isinstance(member,str) or not member.isprintable() or not 1<=len(member)<=160 or member.strip()!=member:
+        raise ValueError("请填写有效成员 ID")
+    if type(amount) is not int or not 1<=amount<=limit:
+        raise ValueError("发放数量必须为有效正整数")
+    if currency=="鱼币":
+        db.execute("INSERT OR IGNORE INTO fishing_wallets(grp,member) VALUES(?,?)",(group,member))
+        balance=db.execute("SELECT coins FROM fishing_wallets WHERE grp=? AND member=?",(group,member)).fetchone()[0]
+    else:
+        balance=db.execute("SELECT COALESCE(SUM(points),0) FROM ledger WHERE grp=? AND member=?",(group,member)).fetchone()[0]
+    if balance+amount>limit:
+        raise ValueError("余额超出支持范围")
+    if currency=="鱼币":
+        db.execute("UPDATE fishing_wallets SET coins=coins+? WHERE grp=? AND member=?",(amount,group,member))
+    else:
+        db.execute("""INSERT INTO ledger(grp,member,round,kind,points,rule_version,event,at,reason)
+                      VALUES(?,?,0,'发放货币',?,'grant/1',?,?,?)""",(group,member,amount,key,time.time(),reason))
+    return f"已向 {member} 发放 {amount} {currency}，余额 {balance+amount}"
+
+
 def act(db,u,g,d):
     permitted(u,g,True)
     op=d.get("action")
@@ -11,13 +37,18 @@ def act(db,u,g,d):
     reason=d.get("reason")
     if not isinstance(key,str) or not 1<=len(key)<=120 or not isinstance(reason,str) or not 1<=len(reason.strip())<=200:
         raise ValueError("操作需要幂等键与原因")
-    signature=dump([u["name"],op,reason,d.get("target"),d.get("points"),d.get("resolution")])
+    fields=[u["name"],op,reason,d.get("target"),d.get("points"),d.get("resolution")]
+    if op=="发放货币":
+        fields.append(d.get("currency"))
+    signature=dump(fields)
     with transaction(db):
         old=db.execute("SELECT * FROM operations WHERE grp=? AND key=?",(g,key)).fetchone()
         if old:
             if old["signature"]!=signature:raise ValueError("CONFLICT 幂等键已用于其他操作")
             return old["result"]
-        if op in ("调分","冲正"):
+        if op=="发放货币":
+            result=grant_currency(db,g,d,key,reason)
+        elif op in ("调分","冲正"):
             target=d["target"]
             delta=d.get("points")
             if op=="冲正":
@@ -50,6 +81,6 @@ def act(db,u,g,d):
         else:
             raise ValueError("未知管理操作")
         db.execute("INSERT INTO operations VALUES(?,?,?,?)",(key,g,signature,result))
-        audit(db,u["name"],g,op,reason)
+        audit(db,u["name"],g,op,result+"；"+reason if op=="发放货币" else reason)
         return result
 

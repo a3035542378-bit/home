@@ -1,6 +1,7 @@
 import tempfile
 import time
 import unittest
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -71,6 +72,46 @@ class FeatureMenuTests(unittest.TestCase):
         for command in ("游戏列表","投票 V","投票 创建","抽签 报名","抽签 重抽"):
             self.assertNotIn(command,other)
         self.assertEqual(self.say("二狗菜单"),member)
+
+    def test_first_screen_and_api_mode_explanation(self):
+        self.db.execute("INSERT INTO chat_models VALUES('room',1,'openai','model',?,?)",(b"key",time.time()))
+        self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('room',1,1)")
+        menu=self.say("二狗菜单")
+        first=menu.split("\n\n🗳️ 群互动")[0]
+        self.assertIn("🏅 二狗积分",first.splitlines())
+        self.assertLessEqual(len(first.splitlines()),10)
+        for line in menu.splitlines():
+            width=sum(2 if unicodedata.east_asian_width(c) in ("W","F") else 1 for c in line)
+            self.assertLessEqual(width,40,line)
+        for command in ("积分","天气 北京","点歌 茉莉花","游戏列表","群规","投票 V01 1","抽签 报名"):
+            self.assertIn(command,first)
+        self.assertIn("本地指令需管理员关闭",first)
+        self.assertNotIn("@ 我",menu)
+        self.assertEqual(menu.count("G01 换成"),1)
+
+    def test_fishing_discovery_walkthrough(self):
+        for group,prefix in (("room","二狗"),("other","团团")):
+            if group=="other":
+                admin.configure(self.db,self.admin,group,1,dict(prefix=prefix))
+                self.db.execute("INSERT INTO chat_models VALUES('other',1,'glm','test',?,100)",(b"test",))
+                self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('other',1,1)")
+            def ask(cmd):
+                return self.say(prefix+cmd,group=group)
+            self.assertIn(prefix+"钓鱼玩法",ask("菜单").split("\n\n🗳️ 群互动")[0])
+            self.assertIn(prefix+"抛竿",ask("游戏列表"))
+            guide=ask("钓鱼玩法")
+            self.assertEqual(guide,ask("怎么钓鱼？"))
+            for cmd in ("抛竿","钓鱼","查看鱼包","放入鱼塘#12","卖鱼#12","钓鱼进阶"):
+                self.assertIn(prefix+cmd,guide)
+            self.assertIn("升级鱼线",ask("钓鱼进阶"))
+            self.assertIsNone(self.db.execute("SELECT 1 FROM fishing_wallets WHERE grp=?",(group,)).fetchone())
+            self.assertIn(prefix+"钓鱼玩法",ask("抛竿"))
+            self.assertIn("1/5",ask("查看鱼包"))
+        self.db.execute("UPDATE groups SET config=json_set(config,'$.disabled_games',json_array('钓鱼')) WHERE id='room'")
+        self.assertNotIn("钓鱼玩法",self.say("二狗菜单"))
+        self.assertNotIn("钓鱼玩法",self.say("二狗游戏列表"))
+        self.assertIn("关闭",self.say("二狗钓鱼帮助"))
+        self.model.assert_not_called()
 
     def test_menu_reflects_model_readiness_without_invoking_it(self):
         unconfigured=self.say("二狗菜单")

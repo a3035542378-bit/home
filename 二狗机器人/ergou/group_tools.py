@@ -161,8 +161,8 @@ def redeem(db,event,arg):
     name=arg.strip()
     if not name:
         available=db.execute("SELECT name,price FROM reward_offers WHERE grp=? ORDER BY price,name",(group,)).fetchall()
-        return ("本群可兑换："+ "、".join(f"{r['name']}（{r['price']}分）" for r in available)
-                +"。发送「二狗 兑换 奖励名」。") if available else "本群暂未上架兑换奖励。"
+        return ("🎁 本群可兑换\n\n"+ "\n".join(f"{r['name']}　{r['price']} 分" for r in available)
+                +"\n\n发送「兑换 奖励名」时请先点名。") if available else "本群暂未上架兑换奖励。"
     existing=db.execute("SELECT * FROM redemptions WHERE seq=?",(event["seq"],)).fetchone()
     if existing:
         return f"兑换单 #{existing['id']} · {existing['name']} · {existing['price']} 分"
@@ -177,4 +177,4 @@ def redeem(db,event,arg):
                 VALUES(?,?,0,'兑换',?,'redeem/1',?,?,?)""",(group,member,-price,event["event_id"],event["arrived"],name)).lastrowid
     order=db.execute("INSERT INTO redemptions(grp,member,name,price,seq,ledger_id,created) VALUES(?,?,?,?,?,?,?)",
                      (group,member,name,price,event["seq"],debit,event["arrived"])).lastrowid
-    return f"兑换单 #{order} · {name} · 已扣 {price} 分，剩余 {balance-price} 分。请联系群运营领取。"
+    return f"🎁 兑换单 #{order}\n{name}\n已扣 {price} 分，剩余 {balance-price} 分。\n\n请联系群运营领取。"

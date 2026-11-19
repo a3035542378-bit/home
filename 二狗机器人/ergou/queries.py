@@ -93,27 +93,60 @@ def fetch(url,params,deadline,headers=None):
         raise ProviderError("DEPENDENCY_TIMEOUT 查询失败或超时") from None
 
 
-def lookup(kind,arg,request=fetch,*,check=None):
+def weather_locations(arg,request,deadline):
+    province=re.fullmatch(r"(河北|山西|辽宁|吉林|黑龙江|江苏|浙江|安徽|福建|江西|山东|河南|湖北|湖南|广东|海南|四川|贵州|云南|陕西|甘肃|青海|台湾)省?([一-龥]{2,12})",arg)
+    city=province[2] if province else arg
+    names=[city]
+    if re.fullmatch(r"[一-龥]{2,10}",city) and not city.endswith(("市","区","县")):
+        names.append(city+"市")
+    for name in names:
+        params=dict(name=name,count=10 if province else 1,language="zh",format="json")
+        places=request(GEO,params,deadline).get("results",[])
+        if province:
+            places=[p for p in places if p.get("admin1","").removesuffix("省")==province[1]]
+        if places:
+            return places
+    return []
+
+
+def lookup(kind,arg,request=fetch,*,check=None,forecast_day=None):
     deadline=time.monotonic()+8
     try:
         if kind=="百科":
             from .leisure import encyclopedia
             return encyclopedia(arg,deadline,check=check)
         if kind=="天气":
-            locations=request(GEO,dict(name=arg,count=1,language="zh",format="json"),deadline).get("results",[])
+            locations=weather_locations(arg,request,deadline)
             if not locations:
                 raise ProviderError("城市查询无结果")
             place=locations[0]
             if check:
                 check()
-            data=request(FORECAST,dict(latitude=float(place["latitude"]),longitude=float(place["longitude"]),
-                         timezone="Asia/Shanghai",current="temperature_2m"),deadline)
+            params=dict(latitude=float(place["latitude"]),longitude=float(place["longitude"]),
+                        timezone="Asia/Shanghai",current="temperature_2m")
+            if forecast_day is not None:
+                params.update(timezone="auto",forecast_days=forecast_day+1,
+                              daily="temperature_2m_min,temperature_2m_max,precipitation_probability_max")
+            data=request(FORECAST,params,deadline)
             current=data["current"]
             temp=float(current["temperature_2m"])
             if not math.isfinite(temp) or not -100<=temp<=70:
                 raise ValueError()
             stamp=datetime.fromisoformat(current["time"])
-            return f"{str(place['name'])[:60]} · {temp:g} °C · 北京时间 {stamp:%m-%d %H:%M} · 来源 Open-Meteo / GeoNames"
+            if forecast_day is not None:
+                daily=data["daily"]
+                date=datetime.fromisoformat(daily["time"][forecast_day])
+                low=float(daily["temperature_2m_min"][forecast_day])
+                high=float(daily["temperature_2m_max"][forecast_day])
+                rain=float(daily["precipitation_probability_max"][forecast_day])
+                if not (-100 <= low <= high <= 70 and 0 <= rain <= 100):
+                    raise ValueError()
+                label=" ".join(str(place[k]) for k in ("name","admin1","country") if place.get(k))
+                advice="，出门建议带伞" if rain>=50 else ""
+                return (f"🌤 {label}\n当地 {date:%m月%d日}预计 {low:g}～{high:g}°C\n"
+                        f"☔ 最高降水概率 {rain:g}%{advice}\n\n"
+                        f"当地 {stamp:%m-%d %H:%M} 气温估计 {temp:g}°C\n来源：Open-Meteo / GeoNames")
+            return f"🌡️ {str(place['name'])[:60]}　{temp:g} °C\n北京时间 {stamp:%m-%d %H:%M}\n来源：Open-Meteo / GeoNames"
         carrier,number=parcel_args(arg)
         if carrier!="DHL":
             body=json.dumps({"ShipperCode":CARRIERS[carrier],"LogisticCode":number},separators=(",",":"))
@@ -123,7 +156,7 @@ def lookup(kind,arg,request=fetch,*,check=None):
             if data.get("Success") is not True:
                 raise ProviderError("快递鸟未受理，请核对账号权限及免费额度")
             status={"0":"暂无轨迹","1":"已揽收","2":"运输中","3":"已签收","4":"问题件"}.get(str(data.get("State")),"暂无明确状态")
-            return f"{carrier} · {status} · 来源快递鸟"
+            return f"📦 {carrier}　{status}\n来源：快递鸟"
         data=request(DHL,dict(trackingNumber=number),deadline,{"DHL-API-Key":os.environ["ERGOU_DHL_KEY"]})
         if not data.get("shipments"):
             raise ProviderError("快递查询无结果")
