@@ -74,6 +74,27 @@ WATERS = {
 FISH = tuple(fish for school in WATERS.values() for fish in school)
 HABITAT = {fish[0]:area for area,school in WATERS.items() for fish in school}
 
+SPECIES = {row[0]: row for row in FISH}
+
+
+def giant_min(species):
+    _, low, high, *_ = species
+    return 12000 if species[0] == "鲤鱼" else low + ((high - low) * 95 + 99) // 100
+
+
+def size_grade(fish, grams):
+    species = SPECIES.get(fish)
+    if not species:
+        return ""
+    low, high = species[1:3]
+    if grams >= giant_min(species):
+        return "巨物"
+    position = (grams - low) / (high - low)
+    if position >= .75:
+        return "大型"
+    return "标准" if position >= .25 else "小型"
+
+
 def weight(grams):
     if grams >= 1_000_000:
         return f"{grams/1_000_000:,.3f}".rstrip("0").rstrip(".")+"吨"
@@ -85,5 +106,5 @@ def guide(area):
     pool=WATERS[area]
     names=[f[0] for f in pool]
     listing="\n".join("、".join(names[i:i+3]) for i in range(0,len(names),3))
-    risk="永久免断线、免折竿" if area=="新手池塘" else "超载有损坏风险"
-    return f"📍 {area}\n🛡️ {risk}\n⚖️ {weight(min(f[1] for f in pool))}～{weight(max(f[2] for f in pool))}\n\n🐟 可钓 {len(pool)} 种\n{listing}"
+    risk="常规鱼获免损，巨物有断线折竿风险" if area=="新手池塘" else "超载有损坏风险"
+    return f"📍 {area}\n🛡️ {risk}\n⚖️ {weight(min(f[1] for f in pool))}～{weight(max(25000 if f[0]=='鲤鱼' else f[2] for f in pool))}\n\n🐟 可钓 {len(pool)} 种\n{listing}"

@@ -1,7 +1,7 @@
 """鱼包和鱼塘共用鱼获编号，所有变更随入站消息一起提交。"""
 import re
 
-from .fishing_waters import HABITAT, weight
+from .fishing_waters import HABITAT, size_grade, weight
 
 
 # 每级的容量、由上一级升到该级的鱼币费用
@@ -46,7 +46,10 @@ def inventory(db, key, storage, page, by_weight, prefix):
         rows = db.execute(f"""SELECT id,fish,grams,price FROM fishing_pond
                               WHERE grp=? AND member=? AND storage=? ORDER BY {order} LIMIT 6 OFFSET ?""",
                           (*key, storage, (page-1)*6)).fetchall()
-        lines.extend(f"#{r['id']} {r['fish']}　{weight(r['grams'])}　{r['price']} 鱼币" for r in rows)
+        for row in rows:
+            grade=size_grade(row["fish"],row["grams"])
+            label=f" · {grade}" if grade else ""
+            lines.append(f"#{row['id']} {row['fish']}　{weight(row['grams'])}{label}　{row['price']} 鱼币")
         if page < pages:
             lines.append(f"翻页　{prefix}{name}{' 重量' if by_weight else ''} {page+1}")
         sample = rows[0]["id"]

@@ -24,11 +24,15 @@ def level(casts):
     return 1 + casts // CASTS_PER_LEVEL
 
 
-def slip_percent(previous_casts, starter):
-    if previous_casts < PROTECTED_CASTS:
+def slip_floor(starter):
+    return 2 if starter else 5
+
+
+def slip_percent(previous_casts, starter, giant=False):
+    if previous_casts < PROTECTED_CASTS and not giant:
         return 0
-    base, minimum = (5, 2) if starter else (12, 5)
-    return max(minimum, base - (level(previous_casts) - 1))
+    base = 5 if starter else 12
+    return max(slip_floor(starter), base - (level(previous_casts) - 1))
 
 
 def advance(db, key, historical_catches):
@@ -49,7 +53,8 @@ def profile(db, key, historical_catches, area):
     row = db.execute("SELECT casts FROM fishing_experience WHERE grp=? AND member=?", key).fetchone()
     casts = row[0] if row else historical_catches
     remaining = CASTS_PER_LEVEL - casts % CASTS_PER_LEVEL
-    chance = slip_percent(casts, area == "新手池塘")
+    starter = area == "新手池塘"
+    chance = slip_percent(casts, starter)
     return (f"🎣 钓手 {level(casts)} 级\n累计 {casts} 竿　再抛 {remaining} 竿升级\n"
-            f"📍 {area}　下竿脱钩率 {chance}%\n"
+            f"📍 {area}　下竿脱钩率 {chance}%\n🌊 巨物脱钩率 {slip_percent(casts,starter,True)}%\n"
             f"每 {CASTS_PER_LEVEL} 竿升一级，跑鱼也算一竿。")

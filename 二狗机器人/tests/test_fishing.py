@@ -167,15 +167,15 @@ class FishingTests(unittest.TestCase):
 
     def test_collection_and_weight_board_survive_sale(self):
         self.say("a","钓鱼",100)
-        self.assertIn("1/105",self.say("b","图鉴",101))
+        self.assertIn("1/105",self.say("b","全图鉴",101))
         self.assertIn("个人纪录",self.say("c","鱼类图鉴 1",102)+self.say("d","图鉴 2",103)+self.say("e","图鉴 3",104))
-        self.assertIn("0/105",self.say("f","图鉴",105,group="two"))
+        self.assertIn("0/105",self.say("f","全图鉴",105,group="two"))
         self.assertIn("#",self.say("g","鱼包 重量",106))
         board=self.say("h","重量榜",107)
         self.assertIn("第 1 名",board)
         self.say("i","卖出鱼包",108)
         self.assertEqual(board,self.say("j","重量排行榜",109))
-        self.assertIn("1/105",self.say("k","图鉴",110))
+        self.assertIn("1/105",self.say("k","全图鉴",110))
 
     def test_book_by_water_through_chat(self):
         from ergou.fishing_waters import WATERS
@@ -199,14 +199,14 @@ class FishingTests(unittest.TestCase):
     def test_exhibits_are_manual_scoped_and_display_only(self):
         self.say("cast","抛竿",100)
         item,name,grams=self.db.execute("SELECT id,fish,grams FROM fishing_pond").fetchone()
-        self.assertIn("已点亮 0/105",self.say("before","图鉴",101))
+        self.assertIn("已点亮 0/105",self.say("before","全图鉴",101))
         self.assertIn("没有",self.say("foreign",f"放入图鉴#{item}",102,member="other"))
         self.assertIn("没有",self.say("wrong-room",f"放入图鉴#{item}",102,group="two"))
         put=self.say("exhibit",f"放入图鉴#{item}",103)
         self.assertIn("已点亮",put)
         self.assertEqual(put,self.say("exhibit",f"放入图鉴#{item}",104))
-        self.assertIn("已点亮 1/105",self.say("after","图鉴",105))
-        self.assertIn("已点亮 0/105",self.say("another","图鉴",105,member="other"))
+        self.assertIn("已点亮 1/105",self.say("after","全图鉴",105))
+        self.assertIn("已点亮 0/105",self.say("another","全图鉴",105,member="other"))
         self.assertIn("空",self.say("bag","查看鱼包",106))
         self.assertIn("没有",self.say("sell",f"卖鱼#{item}",107))
         self.assertIn("没有",self.say("pond",f"放入鱼塘#{item}",108))
@@ -291,10 +291,10 @@ class FishingTests(unittest.TestCase):
         self.assertEqual(fight(rng,60000,1,[],5),"竿")
 
     @without_slips
-    def test_starter_water_permanently_protects_and_recovers(self):
+    def test_starter_water_protects_regular_fish_and_recovers(self):
         from unittest.mock import patch
         self.assertIn("新手池塘",self.say("water","水域",90))
-        with patch("ergou.fishing.fight",side_effect=AssertionError("安全区不判损坏")):
+        with patch("ergou.fishing.size_grade",return_value="标准"), patch("ergou.fishing.fight",side_effect=AssertionError("新手常规鱼不判损坏")):
             for i in range(5):
                 self.assertIn("上钩",self.say(str(i),"抛竿",100+60*i))
             self.say("space","放入鱼塘#1",340.5)
@@ -408,7 +408,7 @@ class FishingTests(unittest.TestCase):
         single=self.say("single","鱼塘",101)
         self.assertEqual(single.split("\n\n"),[
             "🐟 我的鱼塘　1 级\n容量 1/1 条",
-            "#1 鲫鱼　205克　4 鱼币",
+            "#1 鲫鱼　205克 · 小型　4 鱼币",
             "点亮图鉴　二狗放入图鉴#1\n卖这一条　二狗卖鱼#1",
             "扩到 4 条需 20 鱼币\n二狗升级鱼塘",
         ])

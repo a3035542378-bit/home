@@ -41,7 +41,7 @@ def render(db,group,event,cfg,prefix):
         lines.extend(["\n🎮 群游戏",start,"加入 G01","状态 G01","G01 动作","退出 G01",
                       "发起人或群管可用：","G01 重置","结束 G01"])
         if "钓鱼" not in cfg.get("disabled_games",[]):
-            lines.extend([f"🎣 钓第一条鱼：{prefix}抛竿",f"🪱 查看鱼饵：{prefix}鱼饵",f"挑鱼收藏或出售：{prefix}查看鱼包",f"📋 个人档案：{prefix}钓鱼信息",f"🐾 {prefix}偷鱼玩法　/　鱼塘保护"])
+            lines.extend([f"🎣 钓第一条鱼：{prefix}抛竿",f"🪱 查看鱼饵：{prefix}鱼饵",f"挑鱼收藏或出售：{prefix}查看鱼包",f"📋 个人档案：{prefix}钓鱼信息",f"🌊 巨物预告：{prefix}巨物鱼讯",f"🐾 {prefix}偷鱼玩法　/　鱼塘保护"])
     notes=[]
     if roles["group_admin"] and cfg["polls"]:
         notes.extend(["🗳 群管创建投票","投票 创建 午餐|米饭|面条","多选时在主题前加「多选 」"])

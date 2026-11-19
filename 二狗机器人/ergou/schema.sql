@@ -307,3 +307,8 @@ CREATE TABLE IF NOT EXISTS fishing_raids (
  protected_until REAL NOT NULL DEFAULT 0, last_attempt REAL,
  PRIMARY KEY(grp,member)
 );
+
+CREATE TABLE IF NOT EXISTS fishing_giant_claims (
+ grp TEXT NOT NULL REFERENCES groups(id), area TEXT NOT NULL, start INTEGER NOT NULL,
+ PRIMARY KEY(grp,area)
+);
