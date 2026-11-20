@@ -1,4 +1,5 @@
 """Group-scoped operations, message statistics and point redemptions."""
+import json
 import time
 from datetime import datetime, timedelta
 
@@ -159,22 +160,34 @@ def redeem(db,event,arg,prefix="二狗"):
     """Runs inside the inbox transaction together with the reply and ledger debit."""
     group,member=event["grp"],event["member"]
     name=arg.strip()
+    balance=db.execute("SELECT COALESCE(SUM(points),0) FROM ledger WHERE grp=? AND member=?",(group,member)).fetchone()[0]
     if not name:
         available=db.execute("SELECT name,price FROM reward_offers WHERE grp=? ORDER BY price,name",(group,)).fetchall()
         if not available:
             return "本群暂未上架兑换奖励。"
         lines = [f"{r['name']}　{r['price']} 分" for r in available]
-        return "\n".join(["🎁 本群可兑换", *lines, "", "选好后这样发（会扣积分）：", f"{prefix}兑换 {available[0]['name']}"])
+        cheapest = available[0]
+        if cheapest["price"] > balance:
+            next_step = f"还差 {cheapest['price']-balance} 分可兑最便宜的一项。查积分\n{prefix}积分"
+        else:
+            next_step = f"发送即扣 {cheapest['price']} 分，兑换「{cheapest['name']}」\n{prefix}兑换 {cheapest['name']}"
+        return "\n".join([f"🎁 本群可兑换 · 余额 {balance} 分", *lines, next_step])
     existing=db.execute("SELECT * FROM redemptions WHERE seq=?",(event["seq"],)).fetchone()
     if existing:
         return f"兑换单 #{existing['id']} · {existing['name']} · {existing['price']} 分"
     offer=db.execute("SELECT price FROM reward_offers WHERE grp=? AND name=?",(group,name)).fetchone()
     if not offer:
         raise ValueError(f"本群没有这项奖励。查看可兑换的奖励：\n{prefix}兑换列表")
-    balance=db.execute("SELECT COALESCE(SUM(points),0) FROM ledger WHERE grp=? AND member=?",(group,member)).fetchone()[0]
     price=offer[0]
     if balance<price:
-        raise ValueError(f"兑换需要 {price} 分，你在本群有 {balance} 分。")
+        cheaper=db.execute("SELECT 1 FROM reward_offers WHERE grp=? AND price<=? LIMIT 1",(group,balance)).fetchone()
+        if cheaper:
+            step=f"{prefix}兑换列表\n另有积分足够的奖励。"
+        else:
+            cfg=json.loads(db.execute("SELECT config FROM groups WHERE id=?",(group,)).fetchone()[0])
+            step=(f"{prefix}游戏列表\n想攒积分，可以看看本群游戏。" if cfg["games"] and cfg["reward"]>0
+                  else f"{prefix}积分")
+        raise ValueError(f"🎁 「{name}」还差 {price-balance} 分，未扣积分。\n{step}\n需要 {price} 分，你在本群有 {balance} 分。")
     debit=db.execute("""INSERT INTO ledger(grp,member,round,kind,points,rule_version,event,at,reason)
                 VALUES(?,?,0,'兑换',?,'redeem/1',?,?,?)""",(group,member,-price,event["event_id"],event["arrived"],name)).lastrowid
     order=db.execute("INSERT INTO redemptions(grp,member,name,price,seq,ledger_id,created) VALUES(?,?,?,?,?,?,?)",

@@ -36,7 +36,7 @@ class FishingReplies(unittest.TestCase):
 
         cast = say(13, "player-a", "二狗抛竿")
         self.assertEqual(cast["mention_sender"], "player-a")
-        self.assertIn("二狗钓鱼信息", cast["body"])
+        self.assertEqual("二狗查看鱼包", cast["body"].splitlines()[1])
         conn.execute("UPDATE fishing_pond SET price=6 WHERE grp=? AND member='player-a'", (api.room,))
         conn.execute("""INSERT INTO fishing_pond(grp,member,fish,grams,price,storage)
                         VALUES(?,'player-a','鲫鱼',208,8,'bag')""", (api.room,))

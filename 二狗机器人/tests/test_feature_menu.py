@@ -107,7 +107,7 @@ class FeatureMenuTests(unittest.TestCase):
                 self.assertIn(prefix+cmd,guide)
             self.assertIn("升级鱼线",ask("钓鱼进阶"))
             self.assertIsNone(self.db.execute("SELECT 1 FROM fishing_wallets WHERE grp=?",(group,)).fetchone())
-            self.assertIn(prefix+"钓鱼玩法",ask("抛竿"))
+            self.assertEqual(prefix+"查看鱼包",ask("抛竿").splitlines()[1])
             self.assertIn("1/5",ask("查看鱼包"))
         self.db.execute("UPDATE groups SET config=json_set(config,'$.disabled_games',json_array('钓鱼')) WHERE id='room'")
         self.assertNotIn("钓鱼玩法",self.say("二狗菜单"))
@@ -129,8 +129,13 @@ class FeatureMenuTests(unittest.TestCase):
     def test_reward_list_shows_a_command_for_this_group(self):
         admin.configure(self.db,self.admin,"other",1,dict(prefix="团团"))
         self.db.execute("INSERT INTO reward_offers VALUES('other','选片权',5)")
-        self.assertIn("团团兑换 选片权",self.say("团团兑换列表",group="other"))
+        self.assertIn("团团积分",self.say("团团兑换列表",group="other"))
+        self.db.execute("""INSERT INTO ledger(grp,member,round,kind,points,rule_version,event,at,reason)
+                           VALUES('other','reader',0,'奖励',5,'fixture','credit',1,'测试')""")
+        reply=self.say("团团兑换列表",group="other")
+        self.assertEqual(reply.splitlines()[-1],"团团兑换 选片权")
         self.assertFalse(self.db.execute("SELECT 1 FROM redemptions").fetchone())
+        self.assertIn("剩余 0 分",self.say(reply.splitlines()[-1],group="other"))
 
     def test_native_mention_requires_verified_mention_and_sends_once(self):
         api=Fixture()

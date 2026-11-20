@@ -351,7 +351,7 @@ class FishingTests(unittest.TestCase):
         self.assertIn("1 级",self.say("other","鱼线",103,group="two"))
         self.db.execute("UPDATE fishing_wallets SET coins=600 WHERE grp='one'")
         self.db.execute("INSERT INTO fishing_tackle VALUES('one','player',1,90)")
-        self.assertIn("先发",self.say("broken","升级鱼线",104))
+        self.assertIn("二狗买鱼线",self.say("broken","升级鱼线",104))
         self.say("repair","买鱼线",105)
         self.assertIn("2 级",self.say("inspect","鱼线",106))
         for i in range(3):
@@ -406,14 +406,14 @@ class FishingTests(unittest.TestCase):
         self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('one',1,1)")
         for i in range(5):
             catch=self.say(str(i),"抛竿",100+i*60)
-        self.assertIn("鱼包已满（5/5 条），暂时无法钓鱼",catch)
+        self.assertIn("鱼包已满 5/5",catch)
         self.assertIn("二狗查看鱼包",catch)
         def state():
             return tuple(self.db.execute("""SELECT coins,last_attempt,count FROM fishing_wallets
                 JOIN fishing_tackle USING(grp,member) JOIN fishing_records USING(grp,member)
                 WHERE grp='one' AND member='player'""").fetchone())
         before=state()
-        self.assertIn("暂时无法钓鱼",self.say("immediate","钓鱼",341))
+        self.assertIn("先腾出 1 格",self.say("immediate","钓鱼",341))
         self.assertIn("鱼包已满",self.say("full","抛竿",400))
         self.assertIn("累计 5 竿",self.say("full-level","钓手等级",400))
         self.assertEqual(state(),before)
@@ -466,10 +466,10 @@ class FishingTests(unittest.TestCase):
             VALUES('one','player','测试鱼',?,5,'bag')""",[(i*1000,) for i in range(1,21)])
         self.assertIn("鱼包已满",self.say("cap","抛竿",200))
         first=self.say("page","查看鱼包 重量",201)
-        self.assertEqual(first.count("测试鱼"),6)
+        self.assertEqual(sum(l.startswith("#") for l in first.splitlines()),6)
         self.assertIn("#20 测试鱼　20公斤",first)
         self.assertIn("鱼包 重量 2",first)
-        self.assertEqual(self.say("last","鱼包 重量 4",202).count("测试鱼"),2)
+        self.assertEqual(sum(l.startswith("#") for l in self.say("last","鱼包 重量 4",202).splitlines()),2)
         self.db.executemany("""INSERT INTO fishing_pond(grp,member,fish,grams,price)
             VALUES('one','player','大鱼',?,5)""",[(2000000,)]*30)
         self.assertIn("仍在鱼包",self.say("limit","放入鱼塘#1",203))
@@ -485,17 +485,17 @@ class FishingTests(unittest.TestCase):
         self.assertEqual(single.split("\n\n"),[
             "🐟 我的鱼塘　1 级\n容量 1/1 条\n🌱 成长位 0/1",
             "#1 鲫鱼　205克 · 小型　4 鱼币",
-            "招牌免偷　二狗设为招牌鱼#1\n点亮图鉴　二狗放入图鉴#1\n卖这一条　二狗卖鱼#1",
+            "设为招牌鱼可免偷\n二狗设为招牌鱼#1\n查看可展出的鱼\n二狗放入图鉴\n立即出售 #1 · 当前 4 鱼币。\n二狗卖鱼#1",
             "扩到 4 条需 20 鱼币\n二狗升级鱼塘",
         ])
         self.say("upgrade","升级鱼塘",102)
         put(106)
         multi=self.say("multi","鱼塘 重量",103)
-        self.assertIn("选鱼操作（以 #1 为例）",multi)
-        self.assertIn("卖整塘　　二狗一键卖鱼",multi.splitlines())
+        self.assertIn("立即出售 #1 · 当前 4 鱼币",multi)
+        self.assertIn("全部出售会清空鱼塘 · 共 2 条，当前 8 鱼币。\n二狗一键卖鱼",multi)
         self.assertIn("卖出 2 条",self.say("sell","一键卖鱼",104))
         empty=self.say("empty","查看鱼塘",105)
-        self.assertIn("二狗查看鱼包",empty)
+        self.assertIn("二狗抛竿",empty)
         self.assertNotIn("二狗卖鱼#",empty)
 
     def test_existing_pond_migration_preserves_ids_and_overflow(self):

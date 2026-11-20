@@ -257,8 +257,20 @@ def matches(cmd):
 
 
 def full_bag_notice(count,capacity,prefix):
-    return (f"🎒 鱼包已满（{count}/{capacity} 条），暂时无法钓鱼。\n"
-            f"选一条存塘或卖掉，就能继续抛竿。\n{prefix}查看鱼包")
+    return f"🎒 鱼包已满（{count}/{capacity} 条），先腾出 {count-capacity+1} 格再钓。\n{prefix}查看鱼包"
+
+
+def line_help(db, key, coins, area, prefix, now, heading="鱼线已断"):
+    if coins>=3:
+        return f"🧵 {heading}。换线扣 3 鱼币，余额 {coins} 鱼币。\n{prefix}买鱼线"
+    held = db.execute("SELECT 1 FROM fishing_pond WHERE grp=? AND member=? LIMIT 1",key).fetchone()
+    if held:
+        step = f"{prefix}卖鱼\n可先免费查看一条鱼的售价。"
+    elif area!="新手池塘":
+        step = f"{prefix}切换水域 新手池塘\n回塘免费，备用线能钓普通鱼。"
+    else:
+        step = fish_storage.cast_step(db,key,prefix,now)+"\n备用线能钓新手池塘的普通鱼。"
+    return f"🧵 {heading}。换线需 3 鱼币，余额 {coins}，还差 {3-coins} 币。\n{step}"
 
 
 def play(db, event, cmd, prefix, cfg):
@@ -269,7 +281,7 @@ def play(db, event, cmd, prefix, cfg):
         pond_growth.settle(db,event["grp"],event["arrived"])
         return gear.leaderboard(db,event["grp"],event["member"])
     if not cfg["games"] or "钓鱼" in cfg.get("disabled_games",[]):
-        raise ValueError("本群已关闭钓鱼")
+        raise ValueError(f"本群已关闭钓鱼，查看可用功能\n{prefix}菜单")
     key = (event["grp"], event["member"])
     pilot = breeding.enabled(db,key[0])
     breeding.resolve(db,key,event["arrived"])
@@ -381,7 +393,7 @@ def play(db, event, cmd, prefix, cfg):
             if line_level==len(LINE_COST):
                 return "鱼线已满 5 级，抛竿时不会断线。"
             if broken:
-                return f"鱼线已断，先发「{prefix} 买鱼线」换新；换线保留等级。"
+                return line_help(db,key,coins,area,prefix,event["arrived"])
             cost=LINE_COST[line_level]
             if coins<cost:
                 return f"升级需要 {cost} 鱼币。"
@@ -389,18 +401,19 @@ def play(db, event, cmd, prefix, cfg):
             line_level+=1
             db.execute("""INSERT INTO fishing_line_levels VALUES(?,?,?) ON CONFLICT(grp,member)
                           DO UPDATE SET level=excluded.level""",(*key,line_level))
+        if broken:
+            return line_help(db,key,coins,area,prefix,event["arrived"],f"{line_level} 级鱼线已断")
         levels=[r for r in gear.levels(db,key) if r["tier"]<=rod]
         limit=line_capacity(line_level,rod,levels)/1000
-        state="已断，换线 3 币" if broken else "完好"
         effect="满级免断线；鱼竿仍可能折断。" if line_level==len(LINE_COST) else (
             f"安全承重 {limit:g} 公斤\n升级需要 {LINE_COST[line_level]} 鱼币。")
         paid=f"升级成功，消耗 {cost} 鱼币。\n" if cmd=="升级鱼线" else ""
-        return f"{paid}🧵 鱼线 {line_level} 级　{state}\n{effect}"
+        return f"{paid}🧵 鱼线 {line_level} 级　完好\n{effect}"
     if cmd in ("买鱼线","购买鱼线"):
         if not broken:
             return "鱼线完好，无需购买。"
         if coins<3:
-            return "换线需要 3 鱼币，可先卖鱼。"
+            return line_help(db,key,coins,area,prefix,event["arrived"])
         db.execute("UPDATE fishing_wallets SET coins=coins-3 WHERE grp=? AND member=?",key)
         db.execute("UPDATE fishing_tackle SET broken=0 WHERE grp=? AND member=?",key)
         return "新鱼线已装好，消耗 3 鱼币。"
@@ -426,7 +439,7 @@ def play(db, event, cmd, prefix, cfg):
         return full_bag_notice(bag_count,bag_capacity,prefix)
     now = event["arrived"]
     if broken and offshore:
-        return f"🧵 鱼线已断\n原地换线　{prefix}买鱼线\n免费回塘　{prefix}切换水域 新手池塘"
+        return line_help(db,key,coins,area,prefix,now)
     last=tackle["last_attempt"] if tackle else record["last_cast"] if record else None
     if last is not None and now < last + cooldown:
         return f"🎣 鱼窝还没静下来，{math.ceil(last+cooldown-now)} 秒后再来。"
@@ -464,13 +477,13 @@ def play(db, event, cmd, prefix, cfg):
     if not sighting.taken and sighting.start-giant_fish.LEAD<=now<sighting.start+giant_fish.DURATION:
         footer+="\n"+sighting.notice(now)
     if broken and grade=="巨物":
-        return f"🌊 巨物{fish}游走了，备用线拉不住它。\n换好鱼线再来　{prefix}买鱼线"+footer
+        return line_help(db,key,coins,area,prefix,now,f"巨物{fish}游走了，备用线拉不住它")+footer
     heavy_encounter=grade=="巨物" or rarity in TROPHY_PERCENT
     risk=heavy_encounter or (offshore and record and record["count"]>=2)
     damage=fight(rng,grams,rod,levels,line_level) if risk else None
     if damage=="线":
         db.execute("UPDATE fishing_tackle SET broken=1 WHERE grp=? AND member=?",key)
-        return f"你正往回收线，{fish}突然往深处一蹿。\n🧵 鱼线断了！换线需 3 鱼币\n{prefix}买鱼线"+footer
+        return line_help(db,key,coins,area,prefix,now,"鱼线断了")+footer
     if damage=="竿":
         new_level=max(1,rod-1)
         db.execute("UPDATE fishing_wallets SET rod=? WHERE grp=? AND member=?",(new_level,*key))
@@ -504,12 +517,9 @@ def play(db, event, cmd, prefix, cfg):
         story = news + "\n" + story
     badge = fish_grades.label(quality.final, quality.upgraded)
     reward = f"\n🎁 {fish}品级新高　＋{points} 积分" if points else ""
-    caught=f"{story}\n🎣 上钩了！{fish}（{rarity} · {grade}）\n🏷️ 品级　{badge}{reward}\n📍 {area}\n⚖️ {weight(grams)}　🪙 {price} 鱼币\n\n🎒 收入鱼包 #{item}"
     used=bag_count+1
-    if used==bag_capacity:
-        detail="。\n"+full_bag_notice(used,bag_capacity,prefix)
-    else:
-        detail=f"（{used}/{bag_capacity} 条）\n处理鱼获　{prefix}查看鱼包"
-    if record is None:
-        detail+=f"\n📖 新手指南　{prefix}钓鱼玩法"
-    return caught+detail+footer+f"\n📋 个人档案　{prefix}钓鱼信息"
+    bag_label = "鱼包已满" if used==bag_capacity else "鱼包"
+    grade_line = f"\n🏷️ 品级 {badge}" if quality.upgraded or badge!="普通" else ""
+    return (f"🎣 上钩了！#{item} {fish}（{rarity} · {grade}）\n{prefix}查看鱼包\n"
+            f"{area}｜{bag_label} {used}/{bag_capacity} · {weight(grams)} · {price} 币"
+            f"{grade_line}{reward}\n{story}{footer}")

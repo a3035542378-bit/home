@@ -1,4 +1,5 @@
 """鱼包和鱼塘共用鱼获编号，所有变更随入站消息一起提交。"""
+import math
 import re
 import time
 
@@ -47,7 +48,9 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
     if is_pond and count:
         active = db.execute(pond_growth.SELECT+" AND p.member=? AND g.next_at IS NOT NULL",key).fetchall()
         lines.insert(2,f"🌱 成长位 {len(active)}/{pond_growth.SLOTS[level-1]}")
-    if is_pond and breeding.enabled(db,key[0]):
+    pending=""
+    show_breeding = is_pond and breeding.enabled(db,key[0])
+    if show_breeding:
         pending=breeding.banner(breeding.state(db,key),prefix)
         if pending:
             lines[1:1]=[pending]
@@ -58,6 +61,15 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
         rows = db.execute(f"""SELECT id,fish,grams,price,grade,grade_upgraded FROM fishing_pond
                               WHERE grp=? AND member=? AND storage=? ORDER BY {order} LIMIT ? OFFSET ?""",
                           (*key, storage, page_size, (page-1)*page_size)).fetchall()
+        if not is_pond:
+            item=rows[0]["id"]
+            pond_used,pond_capacity,_=occupancy(db,key,"pond")
+            if pond_used<pond_capacity:
+                lines[:3]=[f"🎒 鱼包 {count}/{capacity} 条 · 可把 #{item} {rows[0]['fish']} 存塘",
+                           f"{prefix}放入鱼塘#{item}", ""]
+            else:
+                lines[:3]=[f"🎒 鱼包 {count}/{capacity} 条 · 塘已满，可先查单条售价",
+                           f"{prefix}卖鱼", ""]
         for row in rows:
             if is_pond:
                 detail = pond_growth.panel(db,key,row["id"],changes or {},prefix,now if now is not None else time.time())
@@ -74,20 +86,28 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
             if quality:
                 lines.append("　🏷️ " + quality)
         if page < pages:
-            lines.append(f"翻页　{prefix}{name}{' 重量' if by_weight else ''} {page+1}")
-        sample = rows[0]["id"]
+            lines.append(f"下一页\n{prefix}{name}{' 重量' if by_weight else ''} {page+1}")
+        sample = rows[0]
+        item = sample["id"]
         lines.append("")
-        if count > 1:
-            lines.append(f"选鱼操作（以 #{sample} 为例）")
         if is_pond:
-            lines.append(f"招牌免偷　{prefix}设为招牌鱼#{sample}")
-        if not is_pond:
-            lines.append(f"移入鱼塘　{prefix}放入鱼塘#{sample}")
-        lines.extend([f"点亮图鉴　{prefix}放入图鉴#{sample}", f"卖这一条　{prefix}卖鱼#{sample}"])
+            lines.extend(["设为招牌鱼可免偷", f"{prefix}设为招牌鱼#{item}"])
+        sale_note = breeding_sale_note(db,key,item) if is_pond else ""
+        lines.extend(["查看可展出的鱼", f"{prefix}放入图鉴",
+                      f"立即出售 #{item} · 当前 {sample['price']} 鱼币。{sale_note}", f"{prefix}卖鱼#{item}"])
         if count > 1:
-            lines.append(f"卖整塘　　{prefix}一键卖鱼" if is_pond else f"卖整包　　{prefix}卖出鱼包")
+            total = db.execute("SELECT sum(price) FROM fishing_pond WHERE grp=? AND member=? AND storage=?",
+                               (*key,storage)).fetchone()[0]
+            cmd = "一键卖鱼" if is_pond else "卖出鱼包"
+            note=breeding_sale_note(db,key) if is_pond else ""
+            lines.extend([f"全部出售会清空{name} · 共 {count} 条，当前 {total} 鱼币。{note}", f"{prefix}{cmd}"])
     else:
-        lines.append(f"鱼塘是空的。先去鱼包，挑一条想养的鱼。\n{prefix}查看鱼包" if is_pond else f"鱼包是空的。钓到的鱼会放在这里。\n{prefix}抛竿")
+        has_bag = is_pond and occupancy(db,key,"bag")[0]
+        if pending:
+            return "\n".join(lines[:3])
+        hint = f"{prefix}查看鱼包" if has_bag else cast_step(db,key,prefix,now)
+        navigation = f"\n🥚 查看亲鱼条件\n{prefix}繁育配对" if show_breeding else ""
+        return f"{icon} {name}是空的（0/{capacity} 条）。\n{hint}{navigation}"
     if count > capacity:
         lines.append("原有鱼获已保留，腾出位置或扩容后可继续存鱼。")
     if level < len(TIERS[storage]):
@@ -114,21 +134,45 @@ def upgrade(db, key, storage):
     return f"{name}已升到 {level+1} 级，可放 {capacity} 条鱼，消耗 {cost} 鱼币。"
 
 
+def cast_step(db, key, prefix, now):
+    broken_offshore = db.execute("""SELECT 1 FROM fishing_tackle t JOIN fishing_waters w USING(grp,member)
+                                    WHERE t.grp=? AND t.member=? AND t.broken=1 AND w.area!='新手池塘'""",key).fetchone()
+    if broken_offshore:
+        return f"鱼线已断，先免费返回新手池塘\n{prefix}切换水域 新手池塘"
+    from .db import DEFAULT
+    ready=db.execute("""SELECT coalesce(t.last_attempt,r.last_cast) +
+                            coalesce(json_extract(g.config,'$.fishing_cooldown_seconds'),?)
+                        FROM groups g LEFT JOIN fishing_tackle t ON t.grp=g.id AND t.member=?
+                        LEFT JOIN fishing_records r ON r.grp=g.id AND r.member=?
+                        WHERE g.id=?""",(DEFAULT["fishing_cooldown_seconds"],key[1],key[1],key[0])).fetchone()
+    if ready and ready[0] is not None and now is not None and ready[0]>now:
+        return f"再等 {math.ceil(ready[0]-now)} 秒即可抛竿。先看钓鱼信息\n{prefix}钓鱼信息"
+    return prefix+"抛竿"
+
+
+def pond_full(count, capacity, prefix):
+    return f"🐟 鱼塘已满（{count}/{capacity} 条），鱼仍在鱼包里。先选塘鱼腾位。\n{prefix}查看鱼塘"
+
+
 def move_to_pond(db, key, item, prefix, now):
     fish = db.execute("SELECT fish FROM fishing_pond WHERE grp=? AND member=? AND id=? AND storage='bag'",
                       (*key, item)).fetchone()
     if not fish:
-        return "你的鱼包里没有这条鱼。"
+        return f"你的鱼包里没有这条鱼。查看可入塘的鱼\n{prefix}放入鱼塘"
     count, capacity, _ = occupancy(db, key, "pond")
     if count >= capacity:
-        hint = "可卖出塘里的鱼。" if capacity == TIERS["pond"][-1][0] else "可卖鱼或升级鱼塘。"
-        return f"鱼塘已满（{count}/{capacity} 条），鱼仍在鱼包里。{hint}"
+        return pond_full(count,capacity,prefix)
     db.execute("UPDATE fishing_pond SET storage='pond' WHERE grp=? AND member=? AND id=?", (*key, item))
     status = pond_growth.install(db,key,item,now)
-    if status.startswith("成长位已满"):
-        status += f"\n{prefix}换入成长位#{item}"
     pond_growth.mark(db,key,now,"store")
-    return f"已将 #{item} {fish[0]} 放入鱼塘（{count+1}/{capacity} 条）。\n{status}\n🛡️ 查看护塘　{prefix}鱼塘保护"
+    return f"已将 #{item} {fish[0]} 放入鱼塘（{count+1}/{capacity} 条）。\n{prefix}鱼塘\n{status}"
+
+
+def breeding_sale_note(db, key, item=None):
+    pair = db.execute("SELECT p1,p2 FROM breed_pairs WHERE grp=? AND member=? AND state='active'",key).fetchone()
+    if pair and (item is None or item in tuple(pair)):
+        return "配对会中止，费用不退。"
+    return ""
 
 
 def sell(db, key, column, value, prefix, now):
@@ -137,14 +181,16 @@ def sell(db, key, column, value, prefix, now):
     params = (*key, value)
     count, total = db.execute("SELECT count(*),sum(price) FROM fishing_pond WHERE "+where, params).fetchone()
     if not count:
-        return "你的鱼包和鱼塘里没有这条鱼。" if column == "id" else f"{NAMES[value]}是空的。"
+        if column=="id":
+            return f"你的鱼包和鱼塘里没有这条鱼。查看可售的鱼\n{prefix}卖鱼"
+        return f"{NAMES[value]}是空的。查看库存\n{prefix}查看{NAMES[value]}"
     breed_metrics.sale(db,where,params,now)
     db.execute("DELETE FROM pond_growth WHERE item IN (SELECT id FROM fishing_pond WHERE "+where+")",params)
     db.execute("DELETE FROM fishing_pond WHERE "+where, params)
     coins = db.execute("UPDATE fishing_wallets SET coins=coins+? WHERE grp=? AND member=? RETURNING coins",
                        (total, *key)).fetchone()[0]
-    return (f"🪙 卖出 {count} 条鱼\n到账 {total} 枚鱼币\n当前余额　{coins} 鱼币\n\n"
-            f"📋 个人档案　{prefix}钓鱼信息")
+    return (f"🪙 卖出 {count} 条鱼\n到账 {total} 枚鱼币\n当前余额　{coins} 鱼币\n"
+            f"{prefix}钓鱼信息")
 
 
 def exhibit(db, key, item, prefix, now):
@@ -191,15 +237,32 @@ def handle(db, key, cmd, prefix, now=None):
     if action:
         return pond_growth.act(db,key,action[1],int(action[2]),now,prefix)
     if cmd in ("卖鱼", "放入图鉴", "放入鱼塘"):
-        row = db.execute("""SELECT id,fish,price FROM fishing_pond
-                            WHERE grp=? AND member=? AND (? != '放入鱼塘' OR storage='bag')
-                            ORDER BY storage='bag' DESC,price,id LIMIT 1""", (*key,cmd)).fetchone()
-        if row is None:
-            return f"🎒 还没有可选的鱼。钓到后会看到鱼的编号。\n{prefix}抛竿"
-        intent = {"卖鱼": "想卖哪条鱼", "放入鱼塘": "想把哪条鱼放进塘", "放入图鉴": "想用哪条鱼点亮图鉴"}[cmd]
-        price = f"（可卖 {row['price']} 鱼币）" if cmd == "卖鱼" else ""
-        return (f"{intent}？选好编号后再发。\n比如这条：#{row['id']} {row['fish']}{price}\n"
-                f"{prefix}{cmd}#{row['id']}" + ("\n发送这条指令即出售。" if cmd == "卖鱼" else ""))
+        rows = db.execute("""SELECT p.id,p.fish,p.price,p.storage,p.grams,e.grams exhibited FROM fishing_pond p
+                             LEFT JOIN fishing_exhibits e USING(grp,member,fish)
+                             WHERE p.grp=? AND p.member=? ORDER BY p.storage='bag' DESC,p.price,p.id""",key).fetchall()
+        if cmd=="放入鱼塘":
+            rows=[r for r in rows if r["storage"]=="bag"]
+            used,capacity,_=occupancy(db,key,"pond")
+            if rows and used>=capacity:
+                return pond_full(used,capacity,prefix)
+        if cmd=="放入图鉴" and rows:
+            used,capacity,_=occupancy(db,key,"bag")
+            rows=[r for r in rows if r["fish"] in HABITAT and
+                  (r["exhibited"] is None or (r["grams"]>r["exhibited"] and (r["storage"]=="bag" or used<capacity)))]
+            if not rows:
+                return f"📖 暂无可直接展出的鱼。查看图鉴里的鱼种和展品重量\n{prefix}全图鉴"
+        if not rows:
+            return f"🎒 还没有可选的鱼获编号。先钓一条，鱼获会收入鱼包。\n{cast_step(db,key,prefix,now)}"
+        row=rows[0]
+        label=f"#{row['id']} {row['fish']}"
+        if cmd=="卖鱼":
+            detail=f"🪙 #{row['id']} {row['fish']} · {row['price']} 鱼币，发送即卖出。"
+            detail+=breeding_sale_note(db,key,row["id"]) if row["storage"]=="pond" else ""
+        elif cmd=="放入鱼塘":
+            detail=f"🐟 {label} 在鱼包里，发送即可入塘（{used}/{capacity} 条）。"
+        else:
+            detail=f"📖 发送即可展出编号 {label}。" + ("原展品将退回鱼包。" if row["exhibited"] is not None else "")
+        return f"{detail}\n{prefix}{cmd}#{row['id']}"
     page = PAGE.fullmatch(cmd)
     if page:
         storage = "bag" if page[1] == "鱼包" else "pond"

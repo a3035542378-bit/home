@@ -13,7 +13,7 @@ from .games import GAMES, RULE_VERSION, start_board, visible_board
 ACTIVE = "('RUNNING','PAUSED','WAITING_PLAYERS')"
 KINDS = {"message","join","baseline","leave","revoke","bot_leave"}
 LIMIT = 50000
-UNKNOWN_COMMAND = "🤖 没看懂这个指令。发「{prefix}菜单」查看我能做什么，或发「{prefix}钓鱼玩法」查看钓鱼指南。"
+UNKNOWN_COMMAND = "🤖 没看懂这个指令。打开菜单选一项吧。\n{prefix}菜单"
 
 
 def addressed_command(text, prefix, mentioned):
@@ -327,6 +327,8 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
         return "想查什么词条？例如「二狗百科 大熊猫」。"
     if first in ("天气","快递","百科"):
         from .queries import submit
+        if first=="天气" and not (args or cfg["city"]):
+            return f"🌤 想查哪个城市？例如查北京，发送\n{prefix}天气 北京"
         return submit(db,e,first,args or (cfg["city"] if first=="天气" else ""))
     game_command=first in ("游戏列表","开始","加入","退出","状态","结束") or re.fullmatch(r"G[0-9]+",first.upper())
     if game_command and not cfg["games"]:
@@ -351,7 +353,7 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
         return fishing.play(db,e,guide,prefix,cfg)
     fallback = UNKNOWN_COMMAND.format(prefix=prefix)
     if "天气" in cmd:
-        fallback = f"🤖 没看懂这个指令。想查天气，请发「{prefix}天气 北京」。发「{prefix}菜单」查看更多。"
+        fallback = f"🌤 想查天气？把北京换成你的城市。\n{prefix}天气 北京"
     return respond(db,e,cmd.strip(),fallback=fallback)
 
 

@@ -57,7 +57,7 @@ class CommandAliasTests(unittest.TestCase):
                     conn.execute("""INSERT INTO fishing_pond(id,grp,member,fish,grams,price,storage)
                                     VALUES(?,?,'player','鲫鱼',125,3,'bag')""", (number,group))
                     self.assertIn("编号", say("二狗收入图鉴", seq+1, group))
-                    self.assertIn("编号", say(f"二狗卖鱼#{number}？", seq+4, group))
+                    self.assertIn(f"二狗卖鱼#{number}", say(f"二狗卖鱼#{number}？", seq+4, group))
                     self.assertIsNone(say(f"收入图鉴#{number}", seq+2, group))
                     result = say(f"二狗收入图鉴#{number}", seq+3, group)
                     self.assertIn("已点亮", result)
