@@ -7,6 +7,8 @@ import json
 import random
 import re
 
+from .fish_receipts import grid
+
 COMMANDS={"强化鱼竿","回退强化","强化玩法"}
 REFORGE=re.compile(r"重铸 (韧性|硬度)(?: ([1-5]))?")
 
@@ -62,14 +64,19 @@ def change(db,key,cmd,rod,event_id,prefix="二狗",now=None):
     cap=tier+2
     if cmd=="强化鱼竿":
         values=[rng.randint(1,cap) for _ in range(3)]
+        change=f"新开第 {tier} 阶，品质 {values[0]}、韧性 {values[1]}、硬度 {values[2]}。"
         db.execute("INSERT INTO rod_enhancements VALUES(?,?,?,?,?,?)",(*key,tier,*values))
     elif match:
         column={"韧性":"toughness","硬度":"hardness"}[match[1]]
+        old=next(r[column] for r in rows if r["tier"]==tier)
+        value=rng.randint(1,cap)
         db.execute(f"UPDATE rod_enhancements SET {column}=? WHERE grp=? AND member=? AND tier=?",
-                   (rng.randint(1,cap),*key,tier))
+                   (value,*key,tier))
+        change=f"第 {tier} 阶{match[1]}：{old} → {value}。"
     else:
+        change=f"已移除第 {tier} 阶，剩余 {tier-1} 阶。"
         db.execute("DELETE FROM rod_enhancements WHERE grp=? AND member=? AND tier=?",(*key,tier))
-    return f"{cmd}成功，消耗 {cost} 鱼币。\n"+describe(rod,levels(db,key))
+    return f"{cmd}成功，消耗 {cost} 鱼币。\n{change}\n"+describe(rod,levels(db,key))
 
 
 ASSET_RANKS = """WITH pond AS (SELECT member,sum(price) value FROM fishing_pond WHERE grp=? GROUP BY member),
@@ -87,6 +94,7 @@ def leaderboard(db,group,member):
     from .display_names import labels
     name_for=labels(db,group)
     lines=["🏆 本群资产榜","鱼币余额＋鱼包和鱼塘售价",""]
+    entries=[]
     mine="你还未入榜。"
     for idx,row in enumerate(rows):
         if row["member"]==member:
@@ -95,5 +103,5 @@ def leaderboard(db,group,member):
             name=name_for(row["member"])
             if name=="一位群成员":
                 name="你" if row["member"]==member else "昵称暂不可用"
-            lines.append(f"{row['place']}. {name}　{row['total']} 鱼币")
-    return "\n".join([*lines,"","📍 "+mine])
+            entries.append((f"第 {row['place']} 名",name,f"{row['total']} 鱼币"))
+    return "\n".join([*lines,*grid(entries),"","📍 "+mine])

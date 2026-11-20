@@ -125,6 +125,18 @@ def leave(db, item, now):
     db.execute("UPDATE pond_growth SET flagship=0 WHERE item=?",(item,))
 
 
+def displaced(db,key):
+    slots=db.execute(SELECT+" AND p.member=? AND g.next_at IS NOT NULL ORDER BY p.id",key).fetchall()
+    if slots and len(slots)>=SLOTS[slots[0]["level"]-1]:
+        return slots[0]["item"]
+    return None
+
+
+def slot_hint(db,key,item):
+    other=displaced(db,key)
+    return f"换入编号 {item}，编号 {other} 会暂停成长" if other else f"先让编号 {item} 进入成长位"
+
+
 def install(db, key, item, now, replace=False):
     register(db,item)
     row = db.execute(SELECT + " AND p.member=? AND p.id=?",(*key,item)).fetchone()
@@ -136,14 +148,14 @@ def install(db, key, item, now, replace=False):
     limit = child["adult"] if child else cap(row["fish"],row["original_grams"])
     if row["grade"] is None or row["rounds"] == ROUNDS or row["grams"] >= limit:
         return "🏁 这条鱼已定型。"
-    slots = db.execute(SELECT+" AND p.member=? AND g.next_at IS NOT NULL ORDER BY p.id",key).fetchall()
-    if len(slots) >= SLOTS[row["level"]-1]:
+    other=displaced(db,key)
+    if other is not None:
         if not replace:
-            return "成长位已满，换入时会暂停编号最小的在养鱼。"
-        pause(db,slots[0]["item"],now)
+            return f"成长位已满，换入时编号 {other} 会暂停。"
+        pause(db,other,now)
     db.execute("UPDATE pond_growth SET next_at=?+coalesce(remaining_seconds,?),remaining_seconds=NULL WHERE item=?",
                (now,SECONDS,item))
-    return "🌱 已进入成长位，3 分钟一轮。"
+    return f"🌱 编号 {item} 已进入成长位，3 分钟一轮。"+(f"编号 {other} 已暂停。" if other is not None else "")
 
 
 def migrate(db, now):
@@ -169,13 +181,13 @@ def act(db, key, action, item, now, prefix):
         result = install(db,key,item,now,True)
         if result.startswith("🌱"):
             mark(db,key,now,"tend")
-        return result
+        return result+f"\n{prefix}繁育配对" if breeding.enabled(db,key[0]) and result.startswith("🌱") else result
     if breeding.fry(db,item):
         return "繁育鱼使用独立成长曲线，无需投喂。"
     if row["rounds"] == ROUNDS or row["grams"] >= cap(row["fish"],row["original_grams"]):
         return "🏁 已定型，饲料留给其他鱼吧。"
     if row["next_at"] is None:
-        return f"先让它进入成长位，位满时会换下一尾。\n{prefix}换入成长位#{item}"
+        return f"🌱 {slot_hint(db,key,item)}\n{prefix}换入成长位#{item}"
     if row["food"]:
         return f"🍤 还有 {row['food']} 轮饲料。"
     cost = feed_cost(row["original_price"],row["rounds"])

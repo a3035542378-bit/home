@@ -228,7 +228,7 @@ class PondGrowthTests(unittest.TestCase):
         candidate=self.put(name="鲫鱼")
         self.put(name="鲫鱼")
         result=self.say("图鉴榜",101)
-        self.assertIn("1. 群昵称　1 种 · 1 种",result)
+        self.assertIn("[第 1 名]  [群昵称]  [1 种]  [1 种]",result)
         self.assertIn("你排第 2",result)
         self.assertIn("还有 1 种",result)
         self.assertIn(f"二狗收入图鉴#{candidate}",result)

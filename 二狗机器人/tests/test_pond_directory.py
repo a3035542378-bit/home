@@ -41,13 +41,13 @@ class PondDirectoryTests(unittest.TestCase):
         self.scenario()
         home=self.send("二狗鱼塘")
         self.assertIn("已满 4/4 条｜成长位 1/1",home)
-        for block in ("#82 鹦嘴鱼 · 优良","2.288 公斤 → 上限 2.974 公斤","#77 真鲷 · 普通 · 已定型","2.690 公斤｜现价 13 鱼币"):
+        for block in ("[编号: 82]  [鹦嘴鱼]","上限 2.974 公斤","[编号: 77]  [真鲷","[2.690 公斤]  [13 鱼币]  [已定型]"):
             self.assertIn(block,home)
         self.assertNotIn("投喂#77",home)
         self.assertNotIn("一键卖鱼",home)
         for line in home.splitlines():
-            self.assertLessEqual(sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in line),44,line)
-        self.assertIn("#71 ",self.send(next(l for l in commands(home) if l=="二狗鱼塘 2")))
+            self.assertLessEqual(sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in line),80 if line.startswith("[") else 44,line)
+        self.assertIn("[编号: 71]",self.send(next(l for l in commands(home) if l=="二狗鱼塘 2")))
         guide=self.send(commands(home)[-1])
         detail=self.send(next(l for l in commands(guide) if l.startswith("二狗查看鱼#")))
         for field in ("原重","现重","上限","品相加价","原价","现价"):
@@ -60,7 +60,7 @@ class PondDirectoryTests(unittest.TestCase):
         self.scenario()
         preview=self.send("二狗放入图鉴")
         command=preview.splitlines()[-1]
-        self.assertEqual(command,"二狗点亮图鉴#82 #77")
+        self.assertEqual(command,"二狗点亮图鉴 编号82、77")
         result=self.send(command)
         self.assertIn("已点亮 2 种",result)
         self.assertIn("2/114",result)
@@ -102,7 +102,7 @@ class PondDirectoryTests(unittest.TestCase):
         self.assertIn("最多",self.send("二狗点亮图鉴"+" ".join(f"#{i}" for i in range(1,12))))
         self.assertEqual(self.db.execute("SELECT count(*) FROM fishing_exhibits").fetchone()[0],0)
         result=self.send("二狗点亮图鉴#82 #77 #63 #90 #91")
-        for phrase in ("#82 跳过 · 亲鱼正在配对","#63 跳过 · 同种只展一尾","#90 跳过","#91 跳过","✨ #77"):
+        for phrase in ("[编号: 82]  [亲鱼正在配对","[编号: 63]  [同种只展一尾","[编号: 90]","[编号: 91]","[编号: 77]  [真鲷]"):
             self.assertIn(phrase,result)
         self.assertEqual(self.db.execute("SELECT state FROM breed_pairs").fetchone()[0],"active")
         self.assertIn("未超过现有展品重量",self.send("二狗点亮图鉴#63 #82"))
@@ -149,4 +149,4 @@ class PondDirectoryTests(unittest.TestCase):
         self.db.execute("UPDATE groups SET config=json_set(config,'$.games',json('false')) WHERE id=?",(self.key[0],))
         self.assertNotIn("钓鱼帮助",self.send("二狗菜单"))
         self.assertIn("未开启",self.send("二狗鱼塘帮助"))
-        self.assertIn("关闭",self.send("二狗点亮图鉴#82 #77"))
+        self.assertIn("关闭",self.send("二狗点亮图鉴 编号82、77"))

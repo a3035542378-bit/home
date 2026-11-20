@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
-from .db import BJ, allowed, record_failure, transaction
+from .db import BJ, DEFAULT, allowed, record_failure, transaction
 
 GEO = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST = "https://api.open-meteo.com/v1/forecast"
@@ -221,6 +221,9 @@ def work(db,request=fetch):
             if row["kind"]=="百科" and state=="FAILED":
                 from .leisure import search_link
                 reply+="\n可手动检索："+search_link(row["argument"])
+            if state=="FAILED" and row["kind"] in ("天气","快递"):
+                prefix=json.loads(g["config"]).get("prefix",DEFAULT["prefix"])
+                reply+=f"\n{prefix}{row['kind']}帮助"
             queue(db,g,row["event_id"],reply,row["arrived"])
     return True
 

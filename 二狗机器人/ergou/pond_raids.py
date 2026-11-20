@@ -93,8 +93,9 @@ def play(db, event, cmd, prefix):
     last = db.execute("SELECT last_attempt FROM fishing_raids WHERE grp=? AND member=?",key).fetchone()
     if last and last[0] is not None and now<last[0]+COOLDOWN:
         return f"🐾 刚去过鱼塘，{math.ceil(last[0]+COOLDOWN-now)} 秒后再来。"
-    if guard_until(db,owner)>now:
-        return f"🛡️ {name}的鱼塘有人守着，这一网没下水。"
+    until=guard_until(db,owner)
+    if until>now:
+        return f"🛡️ {name}的鱼塘有人守着，守护至 {expiry(until)}，这一网没下水。"
     used,capacity,_ = fish_storage.occupancy(db,key,"bag")
     if used>=capacity:
         return f"🎒 鱼包已满。先发「{prefix}查看鱼包」腾一格。"
@@ -114,12 +115,12 @@ def play(db, event, cmd, prefix):
             db.execute("INSERT INTO breed_transfers(item,member,at) VALUES(?,?,?)",(item["id"],key[1],now))
         breed_metrics.refresh(db,owner,now)
         return (f"🐟 你在{name}的塘边轻轻一捞，网里一沉！\n"
-                f"#{item['id']} {item['fish']}　{weight(item['grams'])}\n🎒 已收入你的鱼包。")
+                f"#{item['id']} {item['fish']}　{weight(item['grams'])}\n🎒 已收入你的鱼包。\n{prefix}查看鱼包")
     if roll<SUCCESS+CAUGHT:
         coins = db.execute("SELECT coins FROM fishing_wallets WHERE grp=? AND member=?",key).fetchone()[0]
         fine = min(coins,rng.randint(2,5))
         db.execute("UPDATE fishing_wallets SET coins=coins-? WHERE grp=? AND member=?",(fine,*key))
         db.execute("UPDATE fishing_wallets SET coins=coins+? WHERE grp=? AND member=?",(fine,*owner))
-        result = f"🪙 赔给{name} {fine} 鱼币。" if fine else "口袋里没鱼币，只好空手溜走。"
+        result = f"🪙 赔给{name} {fine} 鱼币，余额 {coins-fine} 鱼币。" if fine else "口袋里没鱼币，只好空手溜走。"
         return "🪿 看塘鹅逮了个正着，扑着翅膀一顿胖揍！\n"+result
     return "💨 网刚伸进水里，鱼就游散了。\n你拎着空网悄悄溜走。"

@@ -56,7 +56,7 @@ class CommandAliasTests(unittest.TestCase):
                     conn.execute("INSERT INTO fishing_wallets(grp,member) VALUES(?,'player')", (group,))
                     conn.execute("""INSERT INTO fishing_pond(id,grp,member,fish,grams,price,storage)
                                     VALUES(?,?,'player','鲫鱼',125,3,'bag')""", (number,group))
-                    self.assertIn(f"二狗批量点亮图鉴#{number}", say("二狗收入图鉴", seq+1, group))
+                    self.assertIn(f"二狗点亮图鉴 编号{number}", say("二狗收入图鉴", seq+1, group))
                     self.assertIn(f"二狗卖鱼#{number}", say(f"二狗卖鱼#{number}？", seq+4, group))
                     self.assertIsNone(say(f"收入图鉴#{number}", seq+2, group))
                     result = say(f"二狗收入图鉴#{number}", seq+3, group)

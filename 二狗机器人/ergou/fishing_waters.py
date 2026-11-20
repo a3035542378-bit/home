@@ -1,4 +1,6 @@
 """钓场与游戏鱼种配置。"""
+from .fish_receipts import mass as weight
+
 LEGACY = (
     ("鲫鱼",100,900,4,4,"普通"), ("鲤鱼",500,4000,5,4,"普通"),
     ("草鱼",800,5500,6,4,"普通"), ("鲈鱼",300,2000,10,6,"稀有"),
@@ -107,13 +109,6 @@ def size_grade(fish, grams):
         return "大型"
     return "标准" if position >= .30 else "小型"
 
-
-def weight(grams):
-    if grams >= 1_000_000:
-        return f"{grams/1_000_000:,.3f}".rstrip("0").rstrip(".")+"吨"
-    if grams >= 1000:
-        return f"{grams/1000:.3f}".rstrip("0").rstrip(".")+"公斤"
-    return f"{grams}克"
 
 def guide(area):
     pool=WATERS[area]

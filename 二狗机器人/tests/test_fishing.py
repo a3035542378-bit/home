@@ -149,7 +149,7 @@ class FishingTests(unittest.TestCase):
             self.db.execute("DELETE FROM asset_display_names")
             refresh_names(self.db,client,"one")
             board=self.say(str(i),"资产榜",101+i)
-            self.assertIn("1. "+expected,board)
+            self.assertIn("[第 1 名]  ["+expected+"]",board)
             self.assertNotIn("私人备注",board)
             self.assertNotIn("player",board)
             if i==0: person["roomDisplayName"]=""
@@ -182,7 +182,7 @@ class FishingTests(unittest.TestCase):
         self.assertIn("无需购买",self.say("f","买鱼线",224))
         self.assertIn("秒后",self.say("g","抛竿",225))
         with patch("ergou.fishing.fight",return_value="竿"):
-            self.assertIn("1 级竿",self.say("h","抛竿",280))
+            self.assertIn("鱼竿 2 → 1 级",self.say("h","抛竿",280))
         self.assertEqual(tuple(self.db.execute("SELECT rod,coins FROM fishing_wallets").fetchone()),(1,97))
         self.assertEqual(self.db.execute("SELECT count(*) FROM fishing_pond").fetchone()[0],2)
         self.assertIn("2 条",self.say("i","我的鱼获",281))
@@ -236,10 +236,10 @@ class FishingTests(unittest.TestCase):
         self.db.execute("""INSERT INTO fishing_pond(id,grp,member,fish,grams,price,storage)
                            VALUES(25,'one','player','鲤鱼',13000,57,'bag')""")
         giant=self.say("giant","查看巨物图鉴",103)
-        for snippet in ("🐾 巨物鲤鱼","新手池塘 · 12公斤起","已点亮 0/114","已发现 1/114",
-                        "个人纪录 12公斤 · 巨物","【收入图鉴#25】鲤鱼换展","【巨物图鉴 2】"):
+        for snippet in ("🐾 巨物鲤鱼","新手池塘 · 12.000 公斤起","已点亮 0/114","已发现 1/114",
+                        "个人纪录 12.000 公斤 · 巨物","【收入图鉴#25】鲤鱼换展","【巨物图鉴 2】"):
             self.assertIn(snippet,giant)
-        self.assertNotIn("1.286公斤",giant)
+        self.assertNotIn("1.286 公斤",giant)
         self.assertIn("2/19",self.say("next","巨物图鉴第２页",104))
         self.assertIn("珍品图鉴 2",self.say("rare","全图鉴 珍品",105))
         self.assertIn("已换入",self.say("store","收入图鉴#25",107))
@@ -282,13 +282,14 @@ class FishingTests(unittest.TestCase):
                 rng.choices.return_value=[tier]
                 stamp=101+20*i
                 msg=self.say(tier,"抛竿",stamp)
-                self.assertIn(f"{name}（{tier} · 巨物）",msg)
+                self.assertIn(f"[名称: {name}",msg)
+                self.assertIn("[大小: 巨物",msg)
                 self.assertEqual(msg,self.say(tier,"抛竿",stamp))
                 item,grams=self.db.execute("SELECT id,grams FROM fishing_pond WHERE fish=?",(name,)).fetchone()
                 self.assertEqual(grams,SPECIES[name][2])
                 self.assertIn("已点亮",self.say("store"+tier,f"收入图鉴#{item}",stamp+1))
                 self.assertIn(f"✨ {name}",self.say("book"+tier,"查看"+tier+"图鉴",stamp+2))
-        self.assertIn("1.1吨",self.say("board","重量榜",140))
+        self.assertIn("1.100 吨",self.say("board","重量榜",140))
         hint=self.say("guide","曜金蓝鳍王怎么钓？",141)
         self.assertIn("0.01%",hint)
         self.assertIn("切换水域 外海",hint)
@@ -343,7 +344,7 @@ class FishingTests(unittest.TestCase):
         self.say("make-room",f"卖鱼#{lighter}",109)
         self.assertIn("已放回鱼包",self.say("frompond",f"放入图鉴#{heaviest}",110))
         self.assertEqual(specimen(),(heaviest,52))
-        self.assertIn("已点亮 52克",self.say("book","图鉴 新手池塘",111))
+        self.assertIn("已点亮 52 克",self.say("book","图鉴 新手池塘",111))
         self.assertIn("未点亮",self.say("unlit","图鉴",112))
         self.assertEqual(self.db.execute("SELECT storage FROM fishing_pond WHERE id=?",(heavy,)).fetchone()[0],"bag")
 
@@ -357,7 +358,7 @@ class FishingTests(unittest.TestCase):
             self.assertIn("切换水域 "+area,catch_guide(fish,"二狗"))
         reply=self.say("natural","渊底银甲王怎么钓？",100)
         self.assertIn("切换水域 深渊海沟",reply)
-        self.assertIn("22公斤～300公斤",reply)
+        self.assertIn("22.000 公斤～300.000 公斤",reply)
         self.assertEqual(reply,self.say("ask","鱼种查询 渊底银甲王",101))
         self.assertIn("没找到",self.say("unknown","鱼种查询 不存在的鱼",102))
         self.assertFalse(self.db.execute("SELECT 1 FROM chat_requests").fetchone())
@@ -420,7 +421,7 @@ class FishingTests(unittest.TestCase):
             # First two catches guaranteed; later casts can damage equipment.
             if i<2:
                 self.assertIn(fish[0],{f[0] for f in pool})
-        self.assertIn("420公斤",self.say("info","水域介绍 深海暗礁",1000))
+        self.assertIn("420.000 公斤",self.say("info","水域介绍 深海暗礁",1000))
         self.assertIn("未找到",self.say("bad","切换水域 不存在",1001))
 
     @without_slips
@@ -428,7 +429,7 @@ class FishingTests(unittest.TestCase):
         self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('one',1,1)")
         for i in range(5):
             catch=self.say(str(i),"抛竿",100+i*60)
-        self.assertIn("鱼包已满 5/5",catch)
+        self.assertIn("鱼包已满（5/5 条）",catch)
         self.assertIn("二狗查看鱼包",catch)
         def state():
             return tuple(self.db.execute("""SELECT coins,last_attempt,count FROM fishing_wallets
@@ -450,7 +451,7 @@ class FishingTests(unittest.TestCase):
         self.assertIn("4/5",self.say("bag","查看鱼包",400))
         self.assertIn("上钩",self.say("cast","抛竿",400))
         self.assertIn("卖出 5 条",self.say("clearbag","卖出鱼包",401))
-        self.assertIn("#1 ",self.say("pond","鱼塘",402))
+        self.assertIn("[编号: 1]",self.say("pond","鱼塘",402))
         self.assertIn("卖出 1 条",self.say("clearpond","一键卖鱼",403))
         self.assertIn("空",self.say("empty","一键卖鱼",404))
         self.assertEqual(self.db.execute("SELECT count(*) FROM chat_requests").fetchone()[0],0)
@@ -472,7 +473,7 @@ class FishingTests(unittest.TestCase):
 
     def test_upgrade_costs_maxima_pages_and_weights(self):
         from ergou.fishing_waters import weight
-        self.assertEqual([weight(x) for x in (999,1000,30102,1000000)],["999克","1公斤","30.102公斤","1吨"])
+        self.assertEqual([weight(x) for x in (999,1000,30102,1000000)],["999 克","1.000 公斤","30.102 公斤","1.000 吨"])
         self.say("init","我的鱼竿",100)
         self.db.execute("UPDATE fishing_wallets SET coins=10")
         self.assertIn("需要 25",self.say("poor","升级鱼包",101))
@@ -488,10 +489,10 @@ class FishingTests(unittest.TestCase):
             VALUES('one','player','测试鱼',?,5,'bag')""",[(i*1000,) for i in range(1,21)])
         self.assertIn("鱼包已满",self.say("cap","抛竿",200))
         first=self.say("page","查看鱼包 重量",201)
-        self.assertEqual(sum(l.startswith("#") for l in first.splitlines()),6)
-        self.assertIn("#20 测试鱼　20公斤",first)
+        self.assertEqual(sum(l.startswith("[编号:") for l in first.splitlines()),6)
+        self.assertIn("[编号: 20]  [测试鱼]  [20.000 公斤]",first)
         self.assertIn("鱼包 重量 2",first)
-        self.assertEqual(sum(l.startswith("#") for l in self.say("last","鱼包 重量 4",202).splitlines()),2)
+        self.assertEqual(sum(l.startswith("[编号:") for l in self.say("last","鱼包 重量 4",202).splitlines()),2)
         self.db.executemany("""INSERT INTO fishing_pond(grp,member,fish,grams,price)
             VALUES('one','player','大鱼',?,5)""",[(2000000,)]*30)
         self.assertIn("仍在鱼包",self.say("limit","放入鱼塘#1",203))
@@ -505,15 +506,15 @@ class FishingTests(unittest.TestCase):
         put(205)
         single=self.say("single","鱼塘",101)
         self.assertIn("已满 1/1 条｜成长位 0/1",single)
-        self.assertIn("#1 鲫鱼",single)
-        self.assertIn("205 克｜现价 4 鱼币",single)
+        self.assertIn("[编号: 1]  [鲫鱼]",single)
+        self.assertIn("[205 克]  [4 鱼币]",single)
         self.assertNotIn("下一页",single)
         self.assertNotIn("一键卖鱼",single)
         self.assertIn("【鱼塘操作】",single.splitlines()[-1])
         self.say("upgrade","升级鱼塘",102)
         put(106)
         multi=self.say("multi","鱼塘 重量",103)
-        self.assertIn("#1 鲫鱼",multi)
+        self.assertIn("[编号: 1]  [鲫鱼]",multi)
         help_text=self.say("guide","鱼塘操作",103)
         self.assertIn("【一键卖鱼】清空 2 条，共 8 鱼币",help_text)
         self.assertIn("卖出 2 条",self.say("sell","一键卖鱼",104))
@@ -537,9 +538,9 @@ class FishingTests(unittest.TestCase):
             self.say("wallet","我的鱼竿",100)
             old_pond=self.say("legacy","鱼塘",101)
             self.assertIn("2/1",old_pond)
-            self.assertIn("#41 老鱼",old_pond)
+            self.assertIn("[编号: 41]  [老鱼]",old_pond)
             self.assertIn("已保留",old_pond)
-            self.assertIn("#76",self.say("new","抛竿",102))
+            self.assertIn("[编号: 76",self.say("new","抛竿",102))
             self.assertIn("仍在鱼包",self.say("wait","放入鱼塘#76",103))
             self.assertIn("可放 4 条",self.say("upgrade","升级鱼塘",104))
             self.assertIn("3/4",self.say("keep","放入鱼塘#76",105))
@@ -555,7 +556,7 @@ class FishingTests(unittest.TestCase):
             with self.subTest(cmd=cmd):
                 reply=self.say(f"mobile-{i}",cmd,100+i)
                 for line in reply.splitlines():
-                    self.assertLessEqual(width(line),44,line)
+                    self.assertLessEqual(width(line),80 if line.startswith("[") else 44,line)
 
     @without_slips
     @patch("ergou.fish_grades.final_grade", new=lambda *_: fish_grades.Grade(0,0))

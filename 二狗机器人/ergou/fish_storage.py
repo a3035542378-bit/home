@@ -4,6 +4,7 @@ import re
 import time
 
 from . import breed_metrics, breeding, exhibit_batch, fish_grades, pond_growth, pond_view
+from .fish_receipts import grid, mass
 from .fishing_waters import HABITAT, size_grade, weight
 
 
@@ -59,16 +60,11 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
         step=prefix+"卖鱼"
         purpose="塘已满，先查单条售价"
     lines=[f"🎒 鱼包 {count}/{capacity} 条","", "🐟 本页鱼获"]
+    lines.extend(grid((f"编号: {r['id']}",r["fish"],mass(r["grams"]),f"{r['price']} 鱼币",fish_grades.label(r["grade"],r["grade_upgraded"]) or "历史鱼") for r in rows))
     for row in rows:
-        size=size_grade(row["fish"],row["grams"])
-        label=f" · {size}" if size else ""
-        lines.append(f"#{row['id']} {row['fish']}　{weight(row['grams'])}{label}　{row['price']} 鱼币")
         child=breeding.fry(db,row["id"])
         if child:
-            lines.append("　🐣 "+breeding.source(child,key[1]))
-        quality=fish_grades.label(row["grade"],row["grade_upgraded"])
-        if quality:
-            lines.append("　🏷️ "+quality)
+            lines.append(f"🐣 编号 {row['id']} · "+breeding.source(child,key[1]))
     if page<pages:
         lines.append(f"【{name}{' 重量' if by_weight else ''} {page+1}】下一页")
     lines.extend(["","🎒 处理鱼获","【放入图鉴】查看可展出的鱼",f"【卖鱼#{item}】立即出售，到账 {sample['price']} 鱼币"])
@@ -165,7 +161,7 @@ def sell(db, key, column, value, prefix, now):
     db.execute("DELETE FROM fishing_pond WHERE "+where, params)
     coins = db.execute("UPDATE fishing_wallets SET coins=coins+? WHERE grp=? AND member=? RETURNING coins",
                        (total, *key)).fetchone()[0]
-    return (f"🪙 卖出 {count} 条鱼\n到账 {total} 枚鱼币，当前余额　{coins} 鱼币。")
+    return (f"🪙 已卖出 {count} 条鱼\n到账 {total} 枚鱼币，当前余额　{coins} 鱼币。")
 
 
 def exhibit(db, key, item, prefix, now):
@@ -232,7 +228,7 @@ def handle(db, key, cmd, prefix, now=None):
         row=rows[0]
         label=f"#{row['id']} {row['fish']}"
         if cmd=="卖鱼":
-            detail=f"🪙 #{row['id']} {row['fish']} · {row['price']} 鱼币，发送即卖出。"
+            detail="🪙 售鱼报价 · 未出售\n"+grid([(f"编号: {row['id']}",row["fish"],f"售价: {row['price']} 鱼币")])[0]+"\n发送即卖出。"
             detail+=breeding_sale_note(db,key,row["id"]) if row["storage"]=="pond" else ""
         else:
             detail=f"🐟 {label} 在鱼包里，发送即可入塘（{used}/{capacity} 条）。"

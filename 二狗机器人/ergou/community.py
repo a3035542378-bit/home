@@ -29,7 +29,7 @@ def poll(db, e, args, manager):
     opts = json.loads(row["options"])
     if len(parts) > 1:
         if now >= row["deadline"]:
-            raise ValueError("投票已截止")
+            raise ValueError(f"投票 {parts[0]} 已截止，本次未计票。\n【投票 {parts[0]}】查看最终票数")
         digits = parts[1].split(",")
         if len(parts)!=2 or any(v not in [str(i) for i in range(1,len(opts)+1)] for v in digits):
             raise ValueError("选项编号无效")
@@ -86,4 +86,6 @@ def poll_guide(db,event,manager,prefix):
     lines=[f"🗳 最近的投票 · {poll['title']}",f"【投票 {code}】免费查看选项和票数"]
     if poll["deadline"]>event["arrived"]:
         lines.append(f"【投票 {code} 1】投给第 1 项，发送即计票")
+    else:
+        lines.append("投票已截止。")
     return "\n".join(lines)

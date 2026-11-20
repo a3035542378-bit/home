@@ -2,7 +2,8 @@
 import math
 import random
 import re
-from . import breed_metrics, breeding, exhibit_board, pond_growth, angler, fish_grades, fish_storage, fishing_bait, giant_fish, pond_raids
+from . import exhibit_batch, breed_metrics, breeding, exhibit_board, pond_growth, angler, fish_grades, fish_storage, fishing_bait, giant_fish, pond_raids
+from .fish_receipts import grid, single
 from .db import DEFAULT
 from . import rod as gear
 
@@ -193,14 +194,15 @@ def heavy_board(db,key):
         rank() OVER(ORDER BY best_grams DESC) place FROM fishing_records WHERE grp=?)
         SELECT * FROM (SELECT * FROM ranked ORDER BY place,member LIMIT 10)
         UNION SELECT * FROM ranked WHERE member=? ORDER BY place,member""",key)
-    lines=["🏆 本群单尾重量榜"]
+    lines=["🏆 本群单尾重量榜","按亲钓上钩时的重量排名",""]
+    entries=[]
     mine="你还没有上榜鱼获。"
     for idx,r in enumerate(rows):
         if idx<10:
-            lines.append(f"{r['place']}. {names(r['member'])} · {r['best_name']} {weight(r['best_grams'])}")
+            entries.append((f"第 {r['place']} 名",names(r['member']),r['best_name'],weight(r['best_grams'])))
         if r['member']==key[1]:
             mine=f"你的纪录：第 {r['place']} 名，{weight(r['best_grams'])}。"
-    return "\n".join([*lines,"","📍 "+mine])
+    return "\n".join([*lines,*grid(entries),"","📍 "+mine])
 
 
 LINE_COST=(0,25,60,140,300)
@@ -277,9 +279,10 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         return find_topic(cmd).body.format(p=prefix)
     if cmd=="偷鱼玩法":
         return pond_raids.play(db,event,cmd,prefix)
+    if batch_ids is not None and (not batch_ids or len(batch_ids)>exhibit_batch.LIMIT):
+        return exhibit_batch.render(db,key,prefix,event["arrived"],batch_ids)
     breeding.resolve(db,key,event["arrived"])
     if batch_ids is not None:
-        from . import exhibit_batch
         pond_growth.settle(db,key[0],event["arrived"],key[1])
         reply=exhibit_batch.render(db,key,prefix,event["arrived"],batch_ids)
         if pilot:
@@ -311,7 +314,13 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         sighting=giant_fish.current(db,key[0],area,now)
         if sighting.taken:
             return giant_fish.departure(key[0],area,sighting)
-        return f"📍 {area} · 本场每种鱼都可能出没\n{sighting.notice(now, area, prefix=prefix)}"
+        previous=""
+        if now<sighting.start-giant_fish.LEAD:
+            last=giant_fish.window(key[0],area,(sighting.start//3600-1)*3600)
+            claimed=db.execute("SELECT 1 FROM fishing_giant_claims WHERE grp=? AND area=? AND start=?",
+                               (key[0],area,last.start)).fetchone()
+            previous=f"上一场巨物{last.fish}"+("已被钓走。" if claimed else "已到时消失。")+"\n"
+        return f"📍 {area} · 本场每种鱼都可能出没\n{previous}{sighting.notice(now, area, prefix=prefix)}"
     if cmd in ("水域","海域","水域列表","海域列表"):
         names=list(WATERS)
         rows=["、".join(names[i:i+3]) for i in range(0,len(names),3)]
@@ -458,7 +467,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     footer = receipt+"\n"+angler.progress(casts)
     progress_footer=footer
     if not sighting.taken and sighting.start-giant_fish.LEAD<=now<sighting.start+giant_fish.DURATION:
-        footer+="\n"+sighting.notice(now, area)
+        footer+="\n\n"+sighting.notice(now, area)
     if broken and grade=="巨物":
         return line_help(db,key,coins,area,prefix,now,f"巨物{fish}游走了，备用线拉不住它")+footer
     heavy_encounter=grade=="巨物" or rarity in TROPHY_PERCENT
@@ -470,13 +479,13 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     if damage=="竿":
         new_level=max(1,rod-1)
         db.execute("UPDATE fishing_wallets SET rod=? WHERE grp=? AND member=?",(new_level,*key))
-        return f"你稳住竿柄，{fish}又猛地一挣。\n🎣 鱼竿折断！换用 {new_level} 级竿。\n高阶强化已封存，升回原等级可恢复。"+footer
+        return f"🎣 鱼竿折断！鱼竿 {rod} → {new_level} 级。\n你稳住竿柄，{fish}又猛地一挣，游走了。"+("\n高阶强化已封存，升回原等级可恢复。" if new_level<rod else "")+footer+f"\n{prefix}我的鱼竿"
     chance = angler.slip_percent(casts-1, not offshore, heavy_encounter)
     if chance and rng.random() < chance/100:
         story=f"水面翻起一大片浪花，巨物{fish}甩开了钩。" if grade=="巨物" else rng.choice(angler.SLIPPED)
         if rarity in TROPHY_PERCENT:
             story=f"{RARITY_ICONS[rarity]} {rarity}鱼「{fish}」翻出水面，甩开了钩。"
-        return story+"\n💨 脱钩了，下竿再试试！"+footer
+        return "💨 脱钩了，这一竿没带回鱼。\n"+story+footer+f"\n{prefix}钓鱼信息"
     event_fish = sighting.active(now) and fish == sighting.fish and grade == "巨物"
     quality = fish_grades.final_grade(fish, grams, event["event_id"], event_fish)
     points = fish_grades.award_first_grade_points(db, key, fish, grams, quality, event)
@@ -493,7 +502,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     if event_fish:
         db.execute("""INSERT INTO fishing_giant_claims(grp,area,start) VALUES(?,?,?)
                       ON CONFLICT(grp,area) DO UPDATE SET start=excluded.start""",(key[0],area,sighting.start))
-        footer=progress_footer+"\n"+giant_fish.departure(key[0],area,sighting)
+        footer=progress_footer+"\n\n"+giant_fish.departure(key[0],area,sighting)
     story = rng.choice(angler.HEAVY_CATCH if grams>=5000 else angler.LIGHT_CATCH)
     news = fish_grades.announcement(db, key, fish, grams, quality, event_fish)
     if news:
@@ -501,8 +510,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     badge = fish_grades.label(quality.final, quality.upgraded)
     reward = f"\n🎁 {fish}品级新高　＋{points} 积分" if points else ""
     used=bag_count+1
-    bag_label = "鱼包已满" if used==bag_capacity else "鱼包"
-    grade_line = f"\n🏷️ 品级 {badge}" if quality.upgraded or badge!="普通" else ""
-    return (f"🎣 上钩了！#{item} {fish}（{rarity} · {grade}）\n"
-            f"{area}｜{bag_label} {used}/{bag_capacity} · {weight(grams)} · {price} 币"
-            f"{grade_line}{reward}\n{story}{footer}\n\n🎒 处理鱼获\n{prefix}查看鱼包")
+    status="鱼包已满" if used==bag_capacity else "已收入鱼包"
+    return "\n".join(["🎣 上钩了！",story,"",f"📍 {area}"+(f" · {rarity}鱼种" if rarity!="普通" else ""),*single(item,fish,badge,grade,grams,price),
+                      "",f"🎒 {status}（{used}/{bag_capacity} 条）"+reward+footer,
+                      "【查看鱼包】处理这条鱼",prefix+"查看鱼包"])

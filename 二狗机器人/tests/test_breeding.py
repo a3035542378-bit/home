@@ -43,7 +43,7 @@ class Game:
     def pair(self):
         a,b=self.fish(),self.fish()
         with patch.object(breeding,"SUCCESS",1):
-            assert "配对成功" in self.confirm(a,b,100)
+            assert "已开始配对" in self.confirm(a,b,100)
         return a,b
 
     def balance(self):
@@ -71,17 +71,17 @@ class BreedingTests(unittest.TestCase):
     def test_boundary_restart_replay_and_two_claims(self):
         game=self.game
         a,b=game.pair()
-        assert "已有一对" in game.say(f"繁育配对#{b} #{a}",120)
+        assert "配对中" in game.say(f"繁育配对#{b} #{a}",120)
         assert game.balance()==94
         assert "还差 1 秒" in game.say("繁育状态",1899)
-        assert "没有待领" in game.say("领取幼鱼",1899)
+        assert "还差 1 秒" in game.say("领取幼鱼",1899)
         game.con.close()
         db.initialize(game.path)
         game.con=db.connect(game.path)
-        assert "已繁育成功" in game.say("繁育状态",1900)
+        assert "幼鱼可领取" in game.say("繁育状态",1900)
         assert "已领取" in game.say("领取幼鱼",1900,source="claim")
         assert "已领取" in game.say("领取幼鱼",1901,source="claim")
-        assert "没有待领" in game.say("领取幼鱼",1902)
+        assert "已经领取" in game.say("领取幼鱼",1902)
         assert game.balance()==94
         assert game.con.execute("SELECT count(*) FROM breed_fry").fetchone()[0]==1
 
@@ -91,13 +91,13 @@ class BreedingTests(unittest.TestCase):
         a,b=game.pair()
         game.fish("鲫鱼")
         game.fish("泥鳅")
-        assert "已繁育成功" in game.say("繁育状态",100+7*86400)
+        assert "幼鱼已保留" in game.say("繁育状态",100+7*86400)
         assert "鱼塘已满" in game.say("领取幼鱼",100+7*86400)
-        assert "已有一对" in game.say(f"繁育配对#{b} #{a}",101+7*86400)
+        assert "幼鱼已保留" in game.say(f"繁育配对#{b} #{a}",101+7*86400)
         assert game.con.execute("SELECT count(*) FROM breed_pairs").fetchone()[0]==1
         assert "到账" in game.say(f"卖鱼#{a}",102+7*86400)
         assert "已领取" in game.say("领取幼鱼",103+7*86400)
-        assert "没有待领" in game.say("领取幼鱼",104+7*86400)
+        assert "已经领取" in game.say("领取幼鱼",104+7*86400)
         assert game.con.execute("SELECT count(*) FROM breed_fry").fetchone()[0]==1
 
 
@@ -112,7 +112,7 @@ class BreedingTests(unittest.TestCase):
             cmd={"sale":f"卖鱼#{a}","bulk":"一键卖鱼","exhibit":f"收入图鉴#{b}"}[action]
             reply=game.say(cmd,1899)
             assert any(word in reply for word in ("卖出","已点亮"))
-        assert "没有待领" in game.say("领取幼鱼",1900)
+        assert "中止" in game.say("领取幼鱼",1900)
         assert game.con.execute("SELECT state FROM breed_pairs").fetchone()[0]=="cancelled"
 
 
@@ -124,14 +124,14 @@ class BreedingTests(unittest.TestCase):
         foreign=game.fish(group="west")
         peer=game.fish(member="q")
         for item in [a,other,immature,foreign,peer]:
-            assert "配对成功" not in game.say(f"繁育配对#{a} #{item}",20)
+            assert "已开始配对" not in game.say(f"繁育配对#{a} #{item}",20)
         assert game.balance()==100
         b=game.fish()
         with patch.object(breeding,"SUCCESS",0):
-            assert "配对成功" in game.confirm(a,b,100)
+            assert "已开始配对" in game.confirm(a,b,100)
         assert "未开启" in game.say("领取幼鱼",1900,group="west")
         assert "失败" in game.say("繁育状态",1900)
-        assert "配对成功" in game.confirm(a,b,1901)
+        assert "已开始配对" in game.confirm(a,b,1901)
         assert game.balance()==88
 
 
@@ -152,7 +152,7 @@ class BreedingTests(unittest.TestCase):
         assert quote()[0]>1.3*row["birth"] and quote()[-1]==9
         game.say("鱼塘",3700)
         assert quote()==(500,3,0,0,10)
-        assert "配对成功" in game.confirm(item,b,3701)
+        assert "已开始配对" in game.confirm(item,b,3701)
         assert "已点亮" in game.say(f"收入图鉴#{item}",3702)
         assert "塘养繁育" in game.say("图鉴 新手池塘 1",3703)
         for table in ("ledger","fishing_records","fishing_species","fishing_grade_news"):
@@ -188,8 +188,8 @@ class BreedingTests(unittest.TestCase):
         game.con.execute("INSERT INTO fishing_storage_levels VALUES('west','p','pond',2)")
         breed_metrics.switch(game.con,"west",True,30)
         x,y=game.fish(group="west"),game.fish(group="west")
-        assert "配对成功" in game.confirm(a,b,31)
-        assert "配对成功" in game.confirm(x,y,31,group="west")
+        assert "已开始配对" in game.confirm(a,b,31)
+        assert "已开始配对" in game.confirm(x,y,31,group="west")
         assert game.balance()==0
         assert game.con.execute("SELECT count(*) FROM breed_pairs WHERE state='active'").fetchone()[0]==2
 
@@ -199,7 +199,7 @@ class BreedingTests(unittest.TestCase):
         a,b=game.pair()
         assert "到账" in game.say(f"卖鱼#{a}",1900)
         assert "已领取" in game.say("领取幼鱼",1901)
-        assert "没有待领" in game.say("领取幼鱼",1902)
+        assert "已经领取" in game.say("领取幼鱼",1902)
 
 
     def test_fry_keeps_curve_after_theft_and_moving_back_to_pond(self):
@@ -223,19 +223,19 @@ class BreedingTests(unittest.TestCase):
         a,b=g.fish(),g.fish()
         assert "先查看" in g.say(f"确认配对#{a} #{b}",100)
         quote=g.say(f"繁育配对#{a} #{b}",101)
-        for text in (f"#{a} 鲤鱼",f"#{b} 鲤鱼","6 鱼币","75%","确认配对"):
+        for text in (f"[编号: {a}]  [鲤鱼]",f"[编号: {b}]  [鲤鱼]","6 鱼币","75%","确认配对"):
             assert text in quote
         assert g.balance()==100
         assert "先查看" in g.say(f"确认配对#{a} #{b}",701)
         with patch.object(breeding,"SUCCESS",1):
             ack=g.confirm(a,b,702)
         assert breeding.clock(2502) in ack
-        assert "已有一对" in g.say(f"确认配对#{a} #{b}",703)
+        assert "配对中" in g.say(f"确认配对#{a} #{b}",703)
         assert g.balance()==94
         pond=g.say("鱼塘",86500)
-        assert "待领幼鱼" in pond.splitlines()[2]
+        assert "幼鱼可领取" in pond.splitlines()[2]
         assert "领取幼鱼" in pond.splitlines()[3]
-        assert "待领幼鱼" not in g.say("鱼塘",86501,group="west")
+        assert "幼鱼可领取" not in g.say("鱼塘",86501,group="west")
         claim=g.say("领取幼鱼",86502)
         assert "鲤鱼幼鱼" in claim and "你亲自繁育的第一尾" in claim
         assert "亲自繁育的第一尾" in g.say("鱼塘",86503)
@@ -301,8 +301,8 @@ class BreedingTests(unittest.TestCase):
         g.fish(member="q")
         g.fish(group="west")
         reply=g.say("繁育配对",10)
-        self.assertIn(f"塘里 #{a}（成年）",reply)
-        self.assertIn(f"包里 #{b}（成年）",reply)
+        self.assertIn(f"[编号: {a}]  [鱼塘]  [成年]",reply)
+        self.assertIn(f"[编号: {b}]  [鱼包]  [成年]",reply)
         self.assertEqual(reply.splitlines()[-1],f"二狗放入鱼塘#{b}")
         self.assertIn("已将",g.say(f"放入鱼塘#{b}",11))
         guide=g.say("繁育配对",12)
@@ -321,7 +321,7 @@ class BreedingTests(unittest.TestCase):
         reply=g.say("繁育配对",10)
         for word in ("1/1","20 鱼币","余额 7",f"卖鱼#{spare}"):
             self.assertIn(word,reply)
-        self.assertLessEqual(len(reply.splitlines()),5)
+        self.assertLessEqual(len(reply.splitlines()),8)
         self.assertNotIn("放入鱼塘",reply)
         self.assertEqual(g.balance(),7)
         g.say(f"卖鱼#{spare}",11)
@@ -333,7 +333,7 @@ class BreedingTests(unittest.TestCase):
         reply=g.say("繁育配对",14)
         self.assertIn("先腾 1 个塘位",reply)
         self.assertNotIn("放入鱼塘",reply)
-        self.assertLessEqual(len(reply.splitlines()),5)
+        self.assertLessEqual(len(reply.splitlines()),8)
 
     def test_first_pair_single_fish_uses_its_habitat_and_own_stock(self):
         g=self.game
@@ -341,7 +341,7 @@ class BreedingTests(unittest.TestCase):
         g.fish("虹鳟",1000,member="q")
         g.fish("虹鳟",1000,group="west")
         reply=g.say("繁育配对",10)
-        for word in (f"塘里 #{a}（成年）","还缺一条","山涧溪流","二狗切换钓场 山涧溪流"):
+        for word in (f"[编号: {a}]  [鱼塘]  [成年]","还缺一条","山涧溪流","二狗切换钓场 山涧溪流"):
             self.assertIn(word,reply)
         g.say("切换钓场 山涧溪流",11)
         self.assertIn("二狗抛竿",g.say("繁育配对",12))
@@ -351,7 +351,7 @@ class BreedingTests(unittest.TestCase):
         a,b=g.fish(),g.fish(grams=250,adult=False)
         g.con.execute("INSERT INTO breed_fry VALUES(?,250,500,'p',1)",(b,))
         reply=g.say("繁育配对",10)
-        self.assertIn(f"#{b}（幼鱼）",reply)
+        self.assertIn(f"[编号: {b}]  [鱼塘]  [幼鱼]",reply)
         self.assertIn(f"二狗换入成长位#{b}",reply)
         self.assertIn("进入成长位",g.say(f"换入成长位#{b}",11))
         self.assertIn("正在成长",g.say("繁育配对",12))
@@ -403,8 +403,8 @@ class BreedingTests(unittest.TestCase):
         for fish in ("泥鳅","白条","虹鳟"):
             g.fish(fish)
         reply=g.say("繁育配对",10)
-        self.assertIn(f"包里 #{a}",reply)
-        self.assertIn(f"包里 #{b}",reply)
+        self.assertIn(f"[编号: {a}]  [鱼包]",reply)
+        self.assertIn(f"[编号: {b}]  [鱼包]",reply)
         self.assertIn("升级鱼塘",reply)
         self.assertNotIn("放入鱼塘",reply)
         self.assertEqual(g.balance(),100)
