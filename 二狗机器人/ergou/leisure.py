@@ -40,7 +40,7 @@ def local(kind, argument):
         if not argument:
             return "想听哪首歌？例如「二狗点歌 茉莉花」。"
         song = term(argument)
-        return "在 Apple Music 搜索歌曲或歌手「" + song + "」\nhttps://music.apple.com/cn/search?" + urlencode({"term":song})
+        return "🎵 在 Apple Music 搜索歌曲或歌手「" + song + "」\nhttps://music.apple.com/cn/search?" + urlencode({"term":song})
     if kind!="菜谱":
         raise ValueError("无效的本地查询类型")
     menu = "、".join(RECIPES)
@@ -54,10 +54,10 @@ def local(kind, argument):
     if not names:
         return "本地菜谱还没有这个菜名或食材。现有："+menu+"。"
     if len(names)>1:
-        return "这些菜用得上："+ "、".join(names)+"。回复「二狗菜谱 菜名」查看做法。"
+        return "🍳 可以做这些菜\n"+"\n".join(f"【菜谱 {name}】看食材和做法" for name in names)
     name = names[0]
     ingredients,steps = RECIPES[name]
-    return f"{name}\n食材：{ingredients}。\n做法：{steps}"
+    return f"🍳 {name}\n食材：{ingredients}。\n做法：{steps}"
 
 
 def search_link(keyword):
@@ -87,7 +87,7 @@ def _page(params, deadline):
         if type(page_id) is not int or page_id<=0 or not isinstance(title,str) or not title.strip():
             raise ValueError()
         summary = " ".join(page.get("extract","").split())[:240]
-        return (f"中文维基百科 · {title[:120]}\n"+(summary+"\n" if summary else "")+
+        return (f"📚 中文维基百科 · {title[:120]}\n"+(summary+"\n" if summary else "")+
                 f"https://zh.wikipedia.org/?curid={page_id}")
     except queries.ProviderError:
         raise

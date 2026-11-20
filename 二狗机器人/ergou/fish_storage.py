@@ -53,9 +53,12 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
     item=sample["id"]
     pond_used,pond_capacity,_=occupancy(db,key,"pond")
     if pond_used<pond_capacity:
-        lines=[f"🎒 鱼包 {count}/{capacity} 条 · 可把 #{item} {sample['fish']} 存塘",f"{prefix}放入鱼塘#{item}",""]
+        step=f"{prefix}放入鱼塘#{item}"
+        purpose=f"可把 #{item} {sample['fish']} 存塘"
     else:
-        lines=[f"🎒 鱼包 {count}/{capacity} 条 · 塘已满，可先查单条售价",f"{prefix}卖鱼",""]
+        step=prefix+"卖鱼"
+        purpose="塘已满，先查单条售价"
+    lines=[f"🎒 鱼包 {count}/{capacity} 条","", "🐟 本页鱼获"]
     for row in rows:
         size=size_grade(row["fish"],row["grams"])
         label=f" · {size}" if size else ""
@@ -67,16 +70,17 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
         if quality:
             lines.append("　🏷️ "+quality)
     if page<pages:
-        lines.append(f"下一页\n{prefix}{name}{' 重量' if by_weight else ''} {page+1}")
-    lines.extend(["","查看可展出的鱼",prefix+"放入图鉴",f"立即出售 #{item} · 当前 {sample['price']} 鱼币。",f"{prefix}卖鱼#{item}"])
+        lines.append(f"【{name}{' 重量' if by_weight else ''} {page+1}】下一页")
+    lines.extend(["","🎒 处理鱼获","【放入图鉴】查看可展出的鱼",f"【卖鱼#{item}】立即出售，到账 {sample['price']} 鱼币"])
     if count>1:
         total=db.execute("SELECT sum(price) FROM fishing_pond WHERE grp=? AND member=? AND storage='bag'",key).fetchone()[0]
-        lines.extend([f"全部出售会清空鱼包 · 共 {count} 条，当前 {total} 鱼币。",prefix+"卖出鱼包"])
+        lines.append(f"【卖出鱼包】清空 {count} 条，共 {total} 鱼币")
     if count > capacity:
         lines.append("原有鱼获已保留，腾出位置或扩容后可继续存鱼。")
     if level < len(TIERS[storage]):
         next_capacity, cost = TIERS[storage][level]
-        lines.extend(["", f"扩到 {next_capacity} 条需 {cost} 鱼币", f"{prefix}升级{name}"])
+        lines.append(f"【升级{name}】扣 {cost} 鱼币，扩到 {next_capacity} 条")
+    lines.extend(["", "💬 "+purpose,step])
     return "\n".join(lines)
 
 
@@ -137,7 +141,7 @@ def move_to_pond(db, key, item, prefix, now):
     db.execute("UPDATE fishing_pond SET storage='pond' WHERE grp=? AND member=? AND id=?", (*key, item))
     status = pond_growth.install(db,key,item,now)
     pond_growth.mark(db,key,now,"store")
-    return f"已将 #{item} {fish[0]} 放入鱼塘（{count+1}/{capacity} 条）。\n{prefix}鱼塘\n{status}"
+    return f"已将 #{item} {fish[0]} 放入鱼塘（{count+1}/{capacity} 条）。\n{status}\n{prefix}鱼塘"
 
 
 def breeding_sale_note(db, key, item=None):
@@ -161,8 +165,7 @@ def sell(db, key, column, value, prefix, now):
     db.execute("DELETE FROM fishing_pond WHERE "+where, params)
     coins = db.execute("UPDATE fishing_wallets SET coins=coins+? WHERE grp=? AND member=? RETURNING coins",
                        (total, *key)).fetchone()[0]
-    return (f"🪙 卖出 {count} 条鱼\n到账 {total} 枚鱼币\n当前余额　{coins} 鱼币\n"
-            f"{prefix}钓鱼信息")
+    return (f"🪙 卖出 {count} 条鱼\n到账 {total} 枚鱼币，当前余额　{coins} 鱼币。")
 
 
 def exhibit(db, key, item, prefix, now):

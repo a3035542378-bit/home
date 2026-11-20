@@ -83,7 +83,7 @@ def poll_guide(db,event,manager,prefix):
             return f"本群暂无投票。发送即创建午餐投票\n{prefix}投票 创建 午餐|饭|面"
         return f"本群暂无投票，可请群管理员发起。查看其他功能\n{prefix}菜单"
     code=f"V{poll['id']:02}"
-    lines=[f"🗳 最近的投票 · {poll['title']}","免费查看选项和票数",f"{prefix}投票 {code}"]
+    lines=[f"🗳 最近的投票 · {poll['title']}",f"【投票 {code}】免费查看选项和票数"]
     if poll["deadline"]>event["arrived"]:
-        lines.extend(["投给第 1 项，发送即计票",f"{prefix}投票 {code} 1"])
+        lines.append(f"【投票 {code} 1】投给第 1 项，发送即计票")
     return "\n".join(lines)

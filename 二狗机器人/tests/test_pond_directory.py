@@ -1,6 +1,7 @@
 import time
 import unicodedata
 import unittest
+from tests.menu_commands import commands
 
 from ergou import breed_metrics, feature_menu, pond_growth
 
@@ -46,14 +47,14 @@ class PondDirectoryTests(unittest.TestCase):
         self.assertNotIn("一键卖鱼",home)
         for line in home.splitlines():
             self.assertLessEqual(sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in line),44,line)
-        self.assertIn("#71 ",self.send(next(l for l in home.splitlines() if l=="二狗鱼塘 2")))
-        guide=self.send(home.splitlines()[-1])
-        detail=self.send(next(l for l in guide.splitlines() if l.startswith("二狗查看鱼#")))
+        self.assertIn("#71 ",self.send(next(l for l in commands(home) if l=="二狗鱼塘 2")))
+        guide=self.send(commands(home)[-1])
+        detail=self.send(next(l for l in commands(guide) if l.startswith("二狗查看鱼#")))
         for field in ("原重","现重","上限","品相加价","原价","现价"):
             self.assertIn(field,detail)
-        self.assertIn("已投喂",self.send(next(l for l in detail.splitlines() if l.startswith("二狗投喂"))))
+        self.assertIn("已投喂",self.send(next(l for l in commands(detail) if l.startswith("二狗投喂"))))
         self.assertIn("饲料还够 3 轮",self.send("二狗鱼塘"))
-        self.assertNotIn("二狗投喂",self.send("二狗查看鱼#82"))
+        self.assertNotIn("【投喂",self.send("二狗查看鱼#82"))
 
     def test_preview_copy_follow_and_event_replay(self):
         self.scenario()
@@ -111,12 +112,11 @@ class PondDirectoryTests(unittest.TestCase):
         self.db.execute("INSERT INTO managers(grp,member) VALUES(?,?)",self.key)
         self.send("二狗投票 创建 午餐|饭|面")
         for cmd in ("互动帮助","游戏帮助","群服务帮助"):
-            lines=self.send("二狗"+cmd).splitlines()
-            for action in (line for line in lines if line.startswith("二狗")):
+            for action in commands(self.send("二狗"+cmd)):
                 reply=self.send(action)
                 self.assertTrue(reply,action)
                 self.assertNotIn("没看懂",reply)
-        help_lines=self.send("二狗鱼塘操作").splitlines()
+        help_lines=commands(self.send("二狗鱼塘操作"))
         for action,result in (("二狗查看鱼#82","原重"),("二狗设为招牌鱼#82","免于被偷"),
                               ("二狗换入成长位#71","已进入成长位"),("二狗升级鱼塘","消耗 60"),
                               ("二狗一键卖鱼","到账 49")):

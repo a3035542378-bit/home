@@ -8,7 +8,7 @@ TOPICS = {
               "昨天我向扫地机器人认错了。它绕开我走了三圈，看样子还在生气。",
               "我报了个早睡打卡群。第一天大家聊怎么早睡，一抬头已经凌晨一点。")),
     "story": (("故事","童话"),
-              ("雨夜，柴犬捡到一把比自己还小的伞。它把伞插在花盆里，第二天伞底下多了一双泥脚印。想听后续就说「二狗然后呢」。",
+              ("雨夜，柴犬捡到一把比自己还小的伞。它把伞插在花盆里，第二天伞底下多了一双泥脚印。\n\n💬 想听后续\n{prefix}然后呢",
                "二狗顺着泥脚印走，遇到一只扛着蒲公英的小青蛙。青蛙说：「昨天借了你的屋顶，今天来给你送一盏灯。」",
                "夜里，萤火虫落在蒲公英上。二狗和青蛙守着小伞，第一次发现，屋檐小一点，也装得下星光。故事讲完啦。")),
     "tired": (("好累","太累","累了","疲惫","加班"),
@@ -22,7 +22,7 @@ TOPICS = {
 }
 
 
-def respond(db,event,text,*,fallback=None):
+def respond(db,event,text,*,fallback=None,prefix="二狗"):
     key=(event["grp"],event["member"],event["binding"])
     rows=db.execute("""SELECT topic,at FROM local_turns WHERE grp=? AND member=? AND binding=?
                        ORDER BY seq DESC LIMIT 16""",key).fetchall()
@@ -41,7 +41,7 @@ def respond(db,event,text,*,fallback=None):
         index=0
         if rows and rows[0]["topic"].startswith(topic+"/"):
             index=(int(rows[0]["topic"].partition("/")[2])+1)%len(phrases)
-        answer=phrases[index]
+        answer=phrases[index].format(prefix=prefix)
         token=f"{topic}/{index}"
     db.execute("INSERT INTO local_turns VALUES(?,?,?,?,?,?)",(event["seq"],*key,event["arrived"],token))
     db.execute("""DELETE FROM local_turns WHERE seq IN

@@ -1,6 +1,7 @@
 import tempfile
 import time
 import unittest
+from tests.menu_commands import commands
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -50,7 +51,7 @@ class MobileRouter(unittest.TestCase):
     def test_fishing_aliases(self):
         menu=self.send("二狗钓鱼菜单")
         self.assertIn("二狗抛竿",menu)
-        self.assertIn(f"{len(FISH)} 种",menu)
+        self.assertIn("【图鉴帮助】",menu)
         self.assertEqual(menu,self.send("二狗怎么钓鱼"))
         self.assertEqual(self.send("二狗看鱼"),self.send("二狗背包"))
         self.assertEqual(self.send("二狗我背包里都有什么鱼呀"),self.send("二狗背包"))
@@ -99,7 +100,8 @@ class MobileRouter(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT count(*) FROM chat_requests").fetchone()[0],len(prompts))
 
     def follow(self,reply):
-        command=next(line for line in reply.splitlines() if line.startswith("二狗"))
+        prefix=engine.group_prefix(self.db,self.api.room)
+        command=next(line for line in reply.splitlines() if line.startswith(prefix))
         return self.send(command)
 
     def test_from_empty_to_full_and_storing_the_suggested_fish(self):
@@ -135,7 +137,7 @@ class MobileRouter(unittest.TestCase):
         self.assertIn("还差 2 币",repair)
         self.assertIn("新手池塘",self.follow(repair))
         starter=self.send("二狗买鱼线")
-        self.assertEqual(starter.splitlines()[1],"二狗抛竿")
+        self.assertEqual(starter.splitlines()[-1],"二狗抛竿")
         self.db.execute("INSERT INTO fishing_pond(id,grp,member,fish,grams,price,storage) VALUES(42,?,?,'鲫鱼',205,4,'bag')",key)
         preview=self.follow(self.send("二狗买鱼线"))
         self.assertIn("#42 鲫鱼 · 4 鱼币，发送即卖出",preview)
@@ -152,9 +154,8 @@ class MobileRouter(unittest.TestCase):
         for storage in ["bag"]*7+["pond"]:
             self.db.execute("INSERT INTO fishing_pond(grp,member,fish,grams,price,storage) VALUES(?,?,'鲫鱼',205,4,?)",(*key,storage))
         bag=self.send("二狗查看鱼包")
-        self.assertIn("共 7 条，当前 28 鱼币",bag)
-        lines=bag.splitlines()
-        bulk=lines[next(i for i,l in enumerate(lines) if l.startswith("全部出售"))+1]
+        self.assertIn("【卖出鱼包】清空 7 条，共 28 鱼币",bag)
+        bulk=next(cmd for cmd in commands(bag) if cmd=="二狗卖出鱼包")
         self.assertIn("到账 28",self.send(bulk))
         self.assertEqual(tuple(self.db.execute("SELECT storage,count(*) FROM fishing_pond GROUP BY storage").fetchone()),("pond",1))
 

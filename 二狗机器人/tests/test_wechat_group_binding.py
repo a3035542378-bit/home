@@ -49,6 +49,14 @@ class GroupBindingTests(unittest.TestCase):
         self.say(self.a,"二狗停用本群",mentioned=False)
         self.assertNotIn(self.a,self.worker.rooms)
 
+    def test_custom_prefix_binding_status(self):
+        self.db.execute("UPDATE groups SET config=json_set(config,'$.prefix','团团') WHERE id=?", (self.a,))
+        self.say(self.a,"团团绑定状态",mentioned=False)
+        row=self.db.execute("SELECT body FROM binding_receipts WHERE source=?", (str(self.cursor),)).fetchone()
+        self.assertIn("已激活",row[0])
+        self.say(self.a,"团团停用本群",sender="stranger",mentioned=False)
+        self.assertIn(self.a,self.worker.rooms)
+
     def test_authority_and_private_traffic(self):
         self.say("friend","@二狗 激活本群")
         self.say(self.b,"@二狗 激活本群",sender="stranger")

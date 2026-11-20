@@ -29,5 +29,5 @@ def board(db,key,prefix):
     ids = [r["id"] for r in candidates if r["fish"] in SPECIES]
     lines.extend(["",mine,f"🎒 你的鱼包里还有 {len(ids)} 种未点亮。"])
     if ids:
-        lines.append(f"✨ {prefix}收入图鉴#{ids[0]}")
+        lines.extend(["✨ 点亮其中一种",f"{prefix}收入图鉴#{ids[0]}"])
     return "\n".join(lines)

@@ -262,13 +262,14 @@ class Listener:
             if message.get("type")==34:
                 from .native_voice import capture
                 capture(self,message,payload.get("source_time"))
+            from .engine import addressed_command, group_prefix
+            prefix = group_prefix(self.db, self.group)
             if (message.get("direction") == "incoming" and message.get("type") == 1 and not message.get("recall")
                     and valid_id(sender) and sender != self.account and number(source) and int(source) > 0
                     and isinstance(payload["text"], str)
-                    and (payload["text"].startswith("二狗") or "mention_account" in payload)
+                    and (payload["text"].startswith((prefix,"二狗")) or "mention_account" in payload)
                     and len(dump(payload).encode()) <= 8192):
-                from .engine import addressed_command
-                cmd=addressed_command(payload["text"],"二狗",payload.get("mention_account")==self.account)
+                cmd=addressed_command(payload["text"],prefix,payload.get("mention_account")==self.account,native=True)
                 from . import roles,wechat_roles,models
                 if payload.get("mention_account") and models.api_first(self.db,self.group):
                     cmd=None

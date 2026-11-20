@@ -227,7 +227,7 @@ class FishingTests(unittest.TestCase):
         menu=self.say("menu","全图鉴",100)
         for kind,count in (("普通",62),("稀有",27),("珍品",16),("史诗",6),("传说",3)):
             cmd=kind+"图鉴"
-            self.assertIn(f"{kind} · {count} 种\n二狗{cmd}",menu)
+            self.assertIn(f"【{cmd}】{count} 种",menu)
             self.assertIn(f"（{kind}）",self.say(cmd,cmd,101))
         self.assertIn("巨物鲤鱼 · 12～25 公斤",menu)
         self.say("wallet","我的鱼竿",102)
@@ -237,7 +237,7 @@ class FishingTests(unittest.TestCase):
                            VALUES(25,'one','player','鲤鱼',13000,57,'bag')""")
         giant=self.say("giant","查看巨物图鉴",103)
         for snippet in ("🐾 巨物鲤鱼","新手池塘 · 12公斤起","已点亮 0/114","已发现 1/114",
-                        "个人纪录 12公斤 · 巨物","鲤鱼换展\n二狗收入图鉴#25","二狗巨物图鉴 2"):
+                        "个人纪录 12公斤 · 巨物","【收入图鉴#25】鲤鱼换展","【巨物图鉴 2】"):
             self.assertIn(snippet,giant)
         self.assertNotIn("1.286公斤",giant)
         self.assertIn("2/19",self.say("next","巨物图鉴第２页",104))
@@ -509,13 +509,13 @@ class FishingTests(unittest.TestCase):
         self.assertIn("205 克｜现价 4 鱼币",single)
         self.assertNotIn("下一页",single)
         self.assertNotIn("一键卖鱼",single)
-        self.assertEqual(single.splitlines()[-1],"二狗鱼塘操作")
+        self.assertIn("【鱼塘操作】",single.splitlines()[-1])
         self.say("upgrade","升级鱼塘",102)
         put(106)
         multi=self.say("multi","鱼塘 重量",103)
         self.assertIn("#1 鲫鱼",multi)
         help_text=self.say("guide","鱼塘操作",103)
-        self.assertIn("整塘出售会清空 2 条，当前共 8 鱼币。\n二狗一键卖鱼",help_text)
+        self.assertIn("【一键卖鱼】清空 2 条，共 8 鱼币",help_text)
         self.assertIn("卖出 2 条",self.say("sell","一键卖鱼",104))
         empty=self.say("empty","查看鱼塘",105)
         self.assertIn("二狗抛竿",empty)
@@ -677,7 +677,7 @@ class FishingTests(unittest.TestCase):
             self.assertEqual(angler.slip_percent(count,False),sea)
         rng=Mock(wraps=random.Random(3))
         rng.random.return_value=0
-        with patch("ergou.fishing.random.Random",return_value=rng):
+        with patch("ergou.fishing.random.Random",return_value=rng), patch("ergou.giant_fish.encounter",return_value=None):
             for i in range(3):
                 self.assertIn("上钩",self.say(str(i),"钓鱼",100+20*i))
             self.say("go","切换水域 外海",145)

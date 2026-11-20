@@ -71,7 +71,7 @@ def guide(db, key, prefix):
             return "\n".join([*lines, f"先腾 {need} 个塘位，保留上面的亲鱼", prefix+"查看鱼塘"])
         spare = min((r for r in fish if r not in pair), key=lambda r: r["price"], default=None)
         if spare:
-            return "\n".join([*lines, f"可卖其他鱼筹币：{prefix}卖鱼#{spare['id']}"])
+            return "\n".join([*lines, f"可卖其他鱼筹币\n{prefix}卖鱼#{spare['id']}"])
         return "\n".join([*lines, catch_step(db, key, prefix, area, area)])
 
     if bag:
@@ -84,7 +84,7 @@ def guide(db, key, prefix):
                               catch_step(db, key, prefix, area, HABITAT[species])])
         if active:
             return "\n".join([*lines, f"🌱 #{active['id']} 正在成长，下轮 {breeding.clock(active['next_at'])[-8:]}",
-                              f"等它成年再选亲鱼：{prefix}繁育配对"])
+                              f"等它成年再选亲鱼\n{prefix}繁育配对"])
         return "\n".join([*lines, "🌱 先让这条鱼在成长位养到成年", f"{prefix}换入成长位#{growing[0]['id']}"])
     if not pair:
         lines.append("🎣 先钓一条鱼，再留一条同种鱼养成亲鱼。")
@@ -94,10 +94,10 @@ def guide(db, key, prefix):
 def catch_step(db, key, prefix, area, target):
     used, capacity, _ = fish_storage.occupancy(db, key, "bag")
     if used >= capacity:
-        return f"鱼包已满，先选鱼腾位：{prefix}查看鱼包"
+        return f"鱼包已满，先选鱼腾位\n{prefix}查看鱼包"
     if area != target:
-        return f"去{target}：{prefix}切换钓场 {target}"
+        return f"去{target}\n{prefix}切换钓场 {target}"
     tackle = db.execute("SELECT broken FROM fishing_tackle WHERE grp=? AND member=?", key).fetchone()
     if tackle and tackle[0] and area != "新手池塘":
-        return f"鱼线已断，先看换线办法：{prefix}鱼线"
-    return f"🎣 在{area}下竿：{prefix}抛竿"
+        return f"鱼线已断，先看换线办法\n{prefix}鱼线"
+    return f"🎣 在{area}下竿\n{prefix}抛竿"

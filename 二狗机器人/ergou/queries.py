@@ -162,7 +162,7 @@ def lookup(kind,arg,request=fetch,*,check=None,forecast_day=None):
             raise ProviderError("快递查询无结果")
         code=data["shipments"][0]["status"]["statusCode"]
         status={"pre-transit":"待揽收","transit":"运输中","delivered":"已送达","failure":"投递异常","unknown":"暂无明确状态"}.get(code,"暂无明确状态")
-        return "DHL · "+status
+        return "📦 DHL · "+status
     except ProviderError:
         raise
     except (KeyError,TypeError,ValueError,IndexError,AttributeError):

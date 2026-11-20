@@ -22,16 +22,16 @@ def directory(best, exhibits, picks, prefix, honors):
     for rarity, icon in RARITY_ICONS.items():
         species = [row for row in FISH if row[-1] == rarity]
         names = [species[i][0] for i in (0,len(species)//2,-1)]
-        lines.extend([f"{icon} {rarity} · {len(species)} 种\n{prefix}{rarity}图鉴",
+        lines.extend([f"【{rarity}图鉴】{len(species)} 种",
                       "　" + "、".join(names)])
-    lines.extend(["", f"🐋 {prefix}巨物图鉴", "　本场每种鱼都可能成为活动目标", "　巨物鲤鱼 · 12～25 公斤",
+    lines.extend(["", "【巨物图鉴】看各鱼种巨物门槛", "　本场每种鱼都可能成为活动目标", "　巨物鲤鱼 · 12～25 公斤",
                   "　"+ "、".join(row[0] for row in sorted(FISH,key=giant_min,reverse=True)[:2]),
-                  "", f"逐条查看\n{prefix}全图鉴 1"])
+                  "", "【全图鉴 1】逐条查看"])
     if picks:
         lines.extend(["", "🎒 手里的鱼"])
         for fish,item in list(picks.items())[:2]:
             action="换展" if fish in exhibits else "点亮"
-            lines.append(f"{fish}{action}\n{prefix}收入图鉴#{item}")
+            lines.append(f"【收入图鉴#{item}】{fish}{action}")
     return "\n".join(lines)
 
 
@@ -99,9 +99,9 @@ def book(db,key,match,current_area,prefix):
         ready=[fish for fish in picks if HABITAT.get(fish)==area][:2]
         for fish in ready:
             action="可换展" if fish in exhibits else "可点亮"
-            lines.extend([f"{fish}{action}",f"{prefix}收入图鉴#{picks[fish]}"])
-        lines.extend(["",f"查看本场　{prefix}图鉴 {area}",f"全部钓场　{prefix}全图鉴",
-                      f"🐋 看巨物图鉴和鱼讯\n{prefix}巨物图鉴\n{prefix}巨物鱼讯"])
+            lines.append(f"【收入图鉴#{picks[fish]}】{fish}{action}")
+        lines.extend(["","🌊 继续探索",f"【图鉴 {area}】查看本场","【全图鉴】全部钓场",
+                      "【巨物图鉴】找巨物鱼种","【巨物鱼讯】看出没时间"])
         return "\n".join(lines)
     visible=catalog[(page-1)*6:page*6]
     if giants and page==1:
@@ -143,7 +143,7 @@ def book(db,key,match,current_area,prefix):
                 lines.append("　最高品级 " + quality)
         if fish in picks:
             action="换展" if fish in exhibits else "点亮"
-            actions.append(f"{fish}{action}\n{prefix}收入图鉴#{picks[fish]}")
+            actions.append(f"【收入图鉴#{picks[fish]}】{fish}{action}")
     if actions:
         lines.extend(["","🎒 可收藏",*actions])
     lines.append("")
@@ -151,8 +151,8 @@ def book(db,key,match,current_area,prefix):
         command=category_title+"图鉴" if category_title else "图鉴" if area else "全图鉴"
         if area:
             command+=" "+area
-        lines.append(f"下页\n{prefix}{command} {page+1}")
-    lines.append(f"巨物出没　{prefix}巨物鱼讯" if giants else f"查钓法\n{prefix}{visible[0][0]}怎么钓？")
+        lines.append(f"【{command} {page+1}】下页")
+    lines.append("【巨物鱼讯】查巨物出没" if giants else f"【{visible[0][0]}怎么钓？】查钓法")
     return "\n".join(lines)
 
 
@@ -182,8 +182,8 @@ def catch_guide(name,prefix):
     if rarity in TROPHY_PERCENT:
         extra+=f"\n免费饵常规咬钩率 {TROPHY_PERCENT[rarity]:g}%\n⚠️ 重鱼可能断线或折竿。"
     return (f"🐟 {name}（{rarity}）\n⚖️ 重量　{weight(low)}～{weight(high)}\n"
-            f"📍 在{area}随机上钩{extra}\n本场可刷到它的巨物　{prefix}巨物鱼讯\n\n前往　{prefix}切换水域 {area}\n开钓　{prefix}抛竿\n"
-            f"🎒 钓到后选鱼点亮　{prefix}查看鱼包")
+            f"📍 在{area}随机上钩{extra}\n\n🎣 去钓这条鱼\n【巨物鱼讯】查本场活动\n"
+            f"【切换水域 {area}】前往钓场\n【抛竿】钓一条鱼\n【查看鱼包】选鱼点亮")
 
 
 def heavy_board(db,key):
@@ -242,11 +242,11 @@ def line_help(db, key, coins, area, prefix, now, heading="鱼线已断"):
         return f"🧵 {heading}。换线扣 3 鱼币，余额 {coins} 鱼币。\n{prefix}买鱼线"
     held = db.execute("SELECT 1 FROM fishing_pond WHERE grp=? AND member=? LIMIT 1",key).fetchone()
     if held:
-        step = f"{prefix}卖鱼\n可先免费查看一条鱼的售价。"
+        step = f"可先免费查看一条鱼的售价。\n{prefix}卖鱼"
     elif area!="新手池塘":
-        step = f"{prefix}切换水域 新手池塘\n回塘免费，备用线能钓普通鱼。"
+        step = f"回塘免费，备用线能钓普通鱼。\n{prefix}切换水域 新手池塘"
     else:
-        step = fish_storage.cast_step(db,key,prefix,now)+"\n备用线能钓新手池塘的普通鱼。"
+        step = "备用线能钓新手池塘的普通鱼。\n"+fish_storage.cast_step(db,key,prefix,now)
     return f"🧵 {heading}。换线需 3 鱼币，余额 {coins}，还差 {3-coins} 币。\n{step}"
 
 
@@ -266,7 +266,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         return ("🏷️ 每条鱼入包时抽一次品级，小鱼也能升传说。\n"
                 "✨ 升品提高售价，刷新本群同种鱼的品级纪录可得积分。\n"
                 "🌊 活动目标额外升一级，有机会出神话。\n"
-                f"📖 看展品和本群喜报　{prefix}图鉴")
+                "【图鉴】看展品和本群喜报")
     if cmd=="鱼饵":
         return fishing_bait.menu(db,key,prefix)
     if help_requested(cmd):
@@ -316,7 +316,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         names=list(WATERS)
         rows=["、".join(names[i:i+3]) for i in range(0,len(names),3)]
         return (f"🗺 钓场地图　{len(names)} 处\n📍 当前：{area}\n免费切换，新手塘常规鱼获免损。\n\n"+"\n".join(rows)
-                +f"\n\n看鱼种　{prefix}水域介绍 外海\n看进度　{prefix}图鉴 外海\n去钓鱼　{prefix}切换水域 外海")
+                +"\n\n🌊 探索外海\n【水域介绍 外海】看鱼种\n【图鉴 外海】看进度\n【切换水域 外海】前往外海")
     if cmd.startswith(("水域介绍 ","海域介绍 ")):
         target=cmd.split(maxsplit=1)[1]
         return guide(target) if target in WATERS else "未找到钓场。发「水域」查看名称。"
@@ -503,6 +503,6 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     used=bag_count+1
     bag_label = "鱼包已满" if used==bag_capacity else "鱼包"
     grade_line = f"\n🏷️ 品级 {badge}" if quality.upgraded or badge!="普通" else ""
-    return (f"🎣 上钩了！#{item} {fish}（{rarity} · {grade}）\n{prefix}查看鱼包\n"
+    return (f"🎣 上钩了！#{item} {fish}（{rarity} · {grade}）\n"
             f"{area}｜{bag_label} {used}/{bag_capacity} · {weight(grams)} · {price} 币"
-            f"{grade_line}{reward}\n{story}{footer}")
+            f"{grade_line}{reward}\n{story}{footer}\n\n🎒 处理鱼获\n{prefix}查看鱼包")

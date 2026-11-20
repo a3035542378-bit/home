@@ -177,10 +177,10 @@ def check_in(db, event, cfg, prefix):
         cost = fishing_bait.BAITS["高级鱼饵"].points
         if points < cost:
             return f"{receipt}\n离高级鱼饵还差 {cost-points} 分。"
-        return f"{receipt}\n够用一次高级鱼饵啦，查看用法\n{prefix}鱼饵"
+        return f"{receipt}够用一次高级鱼饵啦。\n{prefix}鱼饵"
     if db.execute("SELECT 1 FROM reward_offers WHERE grp=? LIMIT 1",(key[0],)).fetchone():
-        return f"{receipt}\n查看本群兑换奖励\n{prefix}兑换列表"
-    return f"{receipt}\n查看本群积分\n{prefix}积分"
+        return f"{receipt}\n{prefix}兑换列表"
+    return f"{receipt}\n{prefix}积分"
 
 
 def redeem(db,event,arg,prefix="二狗"):
@@ -192,7 +192,8 @@ def redeem(db,event,arg,prefix="二狗"):
         available=db.execute("SELECT name,price FROM reward_offers WHERE grp=? ORDER BY price,name",(group,)).fetchall()
         if not available:
             return f"本群暂未上架兑换奖励。先查自己的积分\n{prefix}积分"
-        lines = [f"{r['name']}　{r['price']} 分" for r in available]
+        lines = [f"【兑换 {r['name']}】发送即扣 {r['price']} 分" if r["price"]<=balance
+                 else f"{r['name']}　{r['price']} 分（还差 {r['price']-balance} 分）" for r in available]
         cheapest = available[0]
         if cheapest["price"] > balance:
             next_step = f"还差 {cheapest['price']-balance} 分可兑最便宜的一项。查积分\n{prefix}积分"
@@ -209,12 +210,12 @@ def redeem(db,event,arg,prefix="二狗"):
     if balance<price:
         cheaper=db.execute("SELECT 1 FROM reward_offers WHERE grp=? AND price<=? LIMIT 1",(group,balance)).fetchone()
         if cheaper:
-            step=f"{prefix}兑换列表\n另有积分足够的奖励。"
+            step=f"另有积分足够的奖励。\n{prefix}兑换列表"
         else:
             cfg=json.loads(db.execute("SELECT config FROM groups WHERE id=?",(group,)).fetchone()[0])
-            step=(f"{prefix}游戏列表\n想攒积分，可以看看本群游戏。" if cfg["games"] and cfg["reward"]>0
+            step=(f"想攒积分，可以看看本群游戏。\n{prefix}游戏列表" if cfg["games"] and cfg["reward"]>0
                   else f"{prefix}积分")
-        raise ValueError(f"🎁 「{name}」还差 {price-balance} 分，未扣积分。\n{step}\n需要 {price} 分，你在本群有 {balance} 分。")
+        raise ValueError(f"🎁 「{name}」还差 {price-balance} 分，未扣积分。\n需要 {price} 分，你在本群有 {balance} 分。\n{step}")
     debit=db.execute("""INSERT INTO ledger(grp,member,round,kind,points,rule_version,event,at,reason)
                 VALUES(?,?,0,'兑换',?,'redeem/1',?,?,?)""",(group,member,-price,event["event_id"],event["arrived"],name)).lastrowid
     order=db.execute("INSERT INTO redemptions(grp,member,name,price,seq,ledger_id,created) VALUES(?,?,?,?,?,?,?)",

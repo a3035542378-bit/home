@@ -149,12 +149,12 @@ def interpret(text,cfg):
     return phrase
 
 
-def horoscope(sign,stamp):
+def horoscope(sign,stamp,prefix="二狗"):
     name=sign.strip().removesuffix("座")
     if name not in SIGNS:
-        return "告诉我你的星座，例如「二狗 双鱼座今日运势」。"
+        return f"🌟 星座查询\n把示例换成你的星座\n{prefix}星座 双鱼座"
     day=datetime.fromtimestamp(stamp,BJ).strftime("%Y-%m-%d")
     tips=("和老朋友聊聊近况。","给手头最重要的小事留十分钟。","出门散步时留意一件新鲜事。",
           "把想说的感谢告诉对方。","遇到犹豫的事，先列出两个选择。","给自己的爱好留一点时间。")
     i=hashlib.sha256((day+name).encode()).digest()[0]%len(tips)
-    return f"{name}座 · {day} · 今日趣味签：{tips[i]}（本地娱乐内容）"
+    return f"🌟 {name}座 · {day}\n今日趣味签：{tips[i]}（本地娱乐内容）"

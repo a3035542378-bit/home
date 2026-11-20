@@ -16,7 +16,12 @@ LIMIT = 50000
 UNKNOWN_COMMAND = "🤖 没看懂这个指令。打开菜单选一项吧。\n{prefix}菜单"
 
 
-def addressed_command(text, prefix, mentioned):
+def group_prefix(db, group):
+    row = db.execute("SELECT json_extract(config,'$.prefix') FROM groups WHERE id=?", (group,)).fetchone()
+    return row[0] if row and row[0] else "二狗"
+
+
+def addressed_command(text, prefix, mentioned, *, native=False):
     if mentioned:
         # WeChat terminates a selected display name (including its spaces) with U+2005.
         # Keep ordinary body text on either side of the selected name.
@@ -26,6 +31,8 @@ def addressed_command(text, prefix, mentioned):
         if not count:
             text=re.sub(r"^[@＠][^\s@＠]+(?:\s+|$)","",text,count=1).strip()
             text=re.sub(r"\s+[@＠][^\s@＠]+$","",text,count=1).strip()
+    if native and text.startswith("二狗") and (len(prefix)<2 or not text.startswith(prefix)):
+        prefix = "二狗"
     if text.startswith(prefix):
         return text[len(prefix):].lstrip(" +，,:：")
     return text if mentioned else None
@@ -39,9 +46,9 @@ def asset_members(db, account, group, member, payload, kind, message_type, adapt
     if not setup:
         return ()
     cfg = json.loads(setup[0])
-    prefix = "二狗" if adapter_version in ("agent-wechat-events/2.7.1", native_voice.VERSION) else cfg["prefix"]
+    native = adapter_version in ("agent-wechat-events/2.7.1", native_voice.VERSION)
     mentioned = message_type == "text" and payload.get("mention_account") == account
-    cmd = addressed_command(payload["text"], prefix, mentioned)
+    cmd = addressed_command(payload["text"], cfg["prefix"], mentioned, native=native)
     if not cmd or (mentioned and models.api_first(db, group)):
         return ()
     members = asset_actions.participants(cmd, member, payload.get("pond_target"), cfg)
@@ -154,25 +161,29 @@ def game_list(db,g,e,cfg,prefix,args,manager,governed):
     lines=["🎮 本群游戏"]
     for row in rows if page==1 else ():
         code=row["code"]
-        lines.extend([f"{row['game']} · {code}",f"{prefix}状态 {code}"])
+        lines.extend(["",f"🎲 {row['game']} · {code}",f"【状态 {code}】查看盘面"])
         if row["state"]!="RUNNING":
             continue
-        lines.append(f"{prefix}加入 {code}")
+        lines.append(f"【加入 {code}】参加本局")
         owns=row["owner"]==e["member"]
         if manager or (owns and not governed):
-            lines.extend(["发送即结束这局",f"{prefix}结束 {code}"])
+            lines.append(f"【结束 {code}】立即结束整局")
             if governed or owns or db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone():
-                lines.extend(["发送即重置盘面",f"{prefix}{code} 重置"])
+                lines.append(f"【{code} 重置】立即重置盘面")
     if names:
-        lines.extend(["","可开局的游戏"])
-        lines.extend("、".join(names[i:i+3]) for i in range(0,len(names),3))
-        unopened=next((n for n in names if n not in {r["game"] for r in rows}),None)
-        if unopened and len(rows)<cfg["max_games"]:
-            lines.extend(["想开新局，发送",f"{prefix}开始 {unopened}"])
+        lines.extend(["","🎮 本页游戏"])
+        open_names={row["game"] for row in rows}
+        for name in names:
+            if name in open_names:
+                lines.append(name+" · 已有群友开局")
+            elif len(rows)>=cfg["max_games"]:
+                lines.append(name+" · 本群会话已满")
+            else:
+                lines.append(f"【开始 {name}】立即开局")
     if page<pages:
-        lines.extend([f"下一页（{page}/{pages}）",f"{prefix}游戏列表 {page+1}"])
+        lines.append(f"【游戏列表 {page+1}】下一页（{page}/{pages}）")
     if page==1 and "钓鱼" not in cfg.get("disabled_games",[]):
-        lines.extend(["","想自己钓一条鱼",prefix+"抛竿",prefix+"钓鱼玩法"])
+        lines.extend(["","🎣 自己玩","【抛竿】钓一条鱼","【钓鱼玩法】看钓鱼指南"])
     return "\n".join(lines)
 
 
@@ -201,8 +212,8 @@ def start(db,g,e,name,cfg,prefix):
     db.execute("INSERT INTO players VALUES(?,?,?)",(cur.lastrowid,e["member"],e["arrived"]))
     hint=turn_hint(name,snapshot,board,code,prefix)
     goal=prompt.split(" 起始：")[0].split("词库：")[0].split(" 可行动作：")[0].split(" 题面：")[0]
-    return (f"{code} {name} · 限时 10 分钟，完成者 +{cfg['reward']} 分\n"
-            f"{goal}\n{hint}\n\n群友加入这局\n{prefix}加入 {code}")
+    return (f"🎮 {code} {name} · 限时 10 分钟，完成者 +{cfg['reward']} 分\n"
+            f"{goal}\n【加入 {code}】群友加入这局\n\n{hint}")
 
 
 def play(db,e,action,code,arg,manager,prefix="二狗"):
@@ -237,7 +248,7 @@ def play(db,e,action,code,arg,manager,prefix="二狗"):
             raise ValueError("本局已满 32 人")
         db.execute("INSERT OR IGNORE INTO players VALUES(?,?,?)",(row["id"],e["member"],e["arrived"]))
         hint=turn_hint(row["game"],json.loads(row["rules"]),json.loads(row["board"]),code,prefix)
-        return f"已加入 {code} {row['game']}\n{hint}\n\n仅退出自己\n{prefix}退出 {code}" if e["member"]!=row["owner"] else f"你已在 {code} {row['game']} 中\n{hint}"
+        return f"🎮 已加入 {code} {row['game']}\n【退出 {code}】仅退出自己\n\n{hint}" if e["member"]!=row["owner"] else f"你已在 {code} {row['game']} 中\n{hint}"
     if action=="动作" and not arg:
         hint=turn_hint(row["game"],json.loads(row["rules"]),json.loads(row["board"]),code,prefix)
         return f"{code} {row['game']}\n{hint}" if db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone() else f"先加入这局 {row['game']}\n{prefix}加入 {code}"
@@ -352,13 +363,13 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
         return fishing.play(db,e,cmd,prefix or cfg["prefix"],cfg)
     if first in ("百科","菜谱","点歌","星座") and not args:
         sample={"百科":"百科 大熊猫","菜谱":"菜谱 土豆","点歌":"点歌 茉莉花","星座":"星座 白羊座"}[first]
-        return f"想查哪一个？把示例换成你要查的内容\n{prefix}{sample}"
+        return f"🔎 {first}用法\n把示例换成你要查的内容\n{prefix}{sample}"
     if first=="群规":
         return cfg["rules"]
     if first=="运势":
         return community.fortune(e["member"],e["arrived"])
     if first=="星座":
-        return intents.horoscope(args,e["arrived"])
+        return intents.horoscope(args,e["arrived"],prefix)
     if first in ("兑换","兑换列表"):
         from .group_tools import redeem
         return redeem(db,e,args if first=="兑换" else "",prefix)
@@ -420,7 +431,7 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     fallback = UNKNOWN_COMMAND.format(prefix=prefix)
     if "天气" in cmd:
         fallback = f"🌤 想查天气？把北京换成你的城市。\n{prefix}天气 北京"
-    return respond(db,e,cmd.strip(),fallback=fallback)
+    return respond(db,e,cmd.strip(),fallback=fallback,prefix=prefix)
 
 
 def process(db,g,e):
@@ -485,8 +496,8 @@ def process(db,g,e):
         return "IGNORED",None
     live_listener=e["adapter_version"]=="agent-wechat-events/2.7.1"
     mentioned=not voice and p.get("mention_account")==g["account"]
-    prefix="二狗" if live_listener or voice else cfg["prefix"]
-    cmd=addressed_command(text,prefix,mentioned)
+    prefix=cfg["prefix"]
+    cmd=addressed_command(text,prefix,mentioned,native=live_listener or voice)
     if cmd is None:
         return "CHAT",None
     authorized_control=(mentioned and cmd in ("开启智能对话","关闭智能对话") and db.execute(
@@ -538,8 +549,9 @@ def is_help_event(group,event):
     text=payload.get("text")
     if not isinstance(text,str):
         return False
-    prefix="二狗" if event["adapter_version"]=="agent-wechat-events/2.7.1" or event["message_type"]=="voice" else json.loads(group["config"])["prefix"]
-    cmd=addressed_command(text,prefix,payload.get("mention_account")==group["account"])
+    prefix=json.loads(group["config"])["prefix"]
+    native=event["adapter_version"]=="agent-wechat-events/2.7.1" or event["message_type"]=="voice"
+    cmd=addressed_command(text,prefix,payload.get("mention_account")==group["account"],native=native)
     if cmd is None:
         return False
     canonical=intents.command_alias(cmd).rstrip("。！？!?").strip()

@@ -2,6 +2,7 @@ import sqlite3
 import tempfile
 import time
 import unittest
+from tests.menu_commands import commands
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -78,7 +79,7 @@ class CheckinTests(unittest.TestCase):
             self.say("二狗签到",day-1,group=group)
             self.say("二狗打卡",day,group=group)
         bait = self.say("二狗鱼饵",day)
-        command = next(line for line in bait.splitlines() if line=="二狗抛竿 高级鱼饵")
+        command = next(cmd for cmd in commands(bait) if cmd=="二狗抛竿 高级鱼饵")
         with patch("ergou.fish_grades.award_first_grade_points",return_value=0):
             self.assertIn("扣饵后余 1 分",self.say(command,day))
         self.assertIn("已经签过啦，本群积分 1 分",self.say("二狗签到",day))
@@ -98,7 +99,7 @@ class CheckinTests(unittest.TestCase):
                 self.assertIn("团团兑换列表",reply)
         self.conn.execute("DELETE FROM reward_offers WHERE grp='west'")
         self.assertIn("团团积分",self.say("团团打卡",self.midnight,group="west",member="new"))
-        self.assertIn("团团签到",self.say("团团菜单",self.midnight+86400,group="west"))
+        self.assertIn("【签到】",self.say("团团菜单",self.midnight+86400,group="west"))
 
     def test_wechat_real_mention_and_local_prefix(self):
         api=Fixture()

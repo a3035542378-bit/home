@@ -4,6 +4,7 @@ import os
 import time
 import unicodedata
 import unittest
+from tests.menu_commands import commands
 from unittest.mock import patch
 
 from ergou import breed_metrics, feature_menu, games, pond_growth, queries
@@ -80,7 +81,7 @@ class HelpWalkthrough(unittest.TestCase):
                 self.assertEqual(before,business_state(f.db))
                 self.assertTrue(all(width(line)<=48 for line in body.splitlines()),body)
                 steps=[]
-                for cmd in (l for l in body.splitlines() if l.startswith("二狗")):
+                for cmd in commands(body):
                     result=self.follow(f,cmd)
                     steps.append((cmd,result))
                     if cmd=="二狗放入鱼塘#71":
@@ -97,6 +98,7 @@ class HelpWalkthrough(unittest.TestCase):
                         self.assertIn("意气风发",self.follow(f,action))
                     if cmd=="二狗强化鱼竿" or cmd=="二狗回退强化" or cmd=="二狗重铸 韧性 1":
                         self.assertIn("成功",result)
+                self.assertTrue(any(l.startswith("【") for l in body.splitlines()),body)
                 self.assertTrue(steps,topic.name)
                 self.replays[topic.name]=(command,body,steps)
 
@@ -120,7 +122,9 @@ class HelpWalkthrough(unittest.TestCase):
                 self.assertIn("菜单",body)
         f.say("reader","抽签 报名")
         steps=[]
-        for cmd in (l for l in body.splitlines() if l.startswith("二狗")):
+        for cmd in commands(body):
+            if "@" in cmd or cmd in ("二狗授权群主","二狗取消群主授权"):
+                continue  # 真实提及、授权变更在专门的身份用例中验证。
             result=f.say("parent",cmd.removeprefix("二狗"))
             self.assertNotIn("权限不足",result)
             self.assertNotIn("没看懂",result)
@@ -168,12 +172,12 @@ class HelpWalkthrough(unittest.TestCase):
                     game.move(board,action)
         f=self.player()
         first=self.follow(f,"二狗游戏列表")
-        self.assertIn("二狗游戏列表 2",first)
+        self.assertIn("二狗游戏列表 2",commands(first))
         self.assertIn("下一页",self.follow(f,"二狗游戏列表 2"))
         opened=self.follow(f,"二狗开始 成语接龙")
         self.follow(f,next(l for l in opened.splitlines() if l.startswith("二狗G")))
         f.api.details["senderId"]="neighbor"
-        joined=self.follow(f,next(l for l in opened.splitlines() if l.startswith("二狗加入")))
+        joined=self.follow(f,next(l for l in commands(opened) if l.startswith("二狗加入")))
         action=next(l for l in joined.splitlines() if l.startswith("二狗G"))
         self.assertNotIn("意气风发",action)
         self.assertIn(action.partition(" ")[2],self.follow(f,action))
@@ -194,7 +198,7 @@ class HelpWalkthrough(unittest.TestCase):
         self.assertNotIn("钓鱼帮助",self.follow(f,"二狗菜单"))
         self.assertNotIn("抽签 报名",self.follow(f,"二狗互动帮助"))
         self.assertNotIn("鱼饵",self.follow(f,"二狗积分帮助"))
-        self.assertNotIn("二狗游戏帮助",self.follow(f,"二狗全菜单"))
+        self.assertNotIn("【游戏帮助】",self.follow(f,"二狗全菜单"))
         self.assertEqual(before,business_state(f.db))
         with patch.dict(os.environ,{"ERGOU_KDN_KEY":"","ERGOU_DHL_KEY":""}):
             self.assertNotIn("快递帮助",self.follow(f,"二狗全菜单"))
@@ -216,12 +220,29 @@ class HelpWalkthrough(unittest.TestCase):
             self.assertIn(outcome,self.follow(f,command))
         self.assertIn("没有需要",self.follow(f,"二狗换入成长位"))
 
+    def test_custom_prefix_from_directory_to_receipt(self):
+        f=self.player()
+        f.db.execute("UPDATE groups SET config=json_set(config,'$.prefix','团团')")
+        menu=f.send("二狗菜单")
+        self.assertEqual(menu,f.send("团团菜单"))
+        self.assertIn("团团全菜单",menu.splitlines())
+        for cmd in commands(menu,"团团"):
+            self.assertTrue(self.follow(f,cmd))
+        self.assertIsNone(f.send("天气帮助"))
+        self.assertIsNone(f.send("@二狗　天气帮助",True))
+        help_page=self.follow(f,"团团查天气帮助")
+        self.assertEqual(help_page.splitlines()[-1],"团团天气 抚州")
+        self.assertIn("18",self.follow(f,help_page.splitlines()[-1]))
+        result=self.follow(f,"团团卖鱼")
+        self.assertIn("团团卖鱼#71",result.splitlines())
+        self.assertIn("到账 8",self.follow(f,result.splitlines()[-1]))
+
     def test_smart_switch_instructions(self):
         f=self.player()
         f.db.execute('UPDATE smart_controls SET admins=?',(json.dumps([f.api.details["senderId"]]),))
         body=self.follow(f,"二狗管理帮助")
         for cmd in ("关闭智能对话","开启智能对话"):
-            self.assertIn(cmd,body.splitlines())
+            self.assertIn("@二狗 "+cmd,commands(body))
             result=f.send("@二狗　"+cmd,True)
             self.assertTrue(result)
             self.assertEqual(f.db.execute("SELECT enabled FROM smart_controls").fetchone()[0],int(cmd=="开启智能对话"))

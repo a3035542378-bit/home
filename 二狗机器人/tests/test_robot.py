@@ -152,7 +152,7 @@ class Robot(unittest.TestCase):
         self.assertIn("缓存",self.say("二狗 天气 上海")["body"])
         with patch.dict(os.environ,{"ERGOU_DHL_KEY":"test"}):
             parcel=queries.lookup("快递","123456",lambda *a:{"shipments":[{"status":{"statusCode":"delivered","address":"private"}}]})
-        self.assertEqual("DHL · 已送达",parcel)
+        self.assertEqual("📦 DHL · 已送达",parcel)
         self.say("二狗 天气 北京")
         queries.work(self.db,lambda *a:(_ for _ in ()).throw(queries.ProviderError("供应商配额已用尽")))
         self.assertEqual("FAILED",self.scalar("SELECT state FROM queries ORDER BY id DESC LIMIT 1"))

@@ -139,15 +139,18 @@ class Stream(wx.Listener):
         top=roles.owner(self.db,self.account)
         private=not group.endswith("@chatroom")
         from ergou.models import api_first
+        from ergou.engine import addressed_command, group_prefix
+        prefix=group_prefix(self.db,group) if registered else "二狗"
         chat=registered and wx.mentions_account(msg,self.account) and api_first(self.db,group)
         if not chat and top and msg.get("senderId")==top["owner_user_id"] and (private or registered):
             text=msg.get("body")
-            if isinstance(text,str) and text.startswith("二狗") and wechat_roles.remote(
-                    self.db,self.client,self.account,group,msg,text[2:].strip()):
+            cmd=addressed_command(text,prefix,False,native=True) if isinstance(text,str) else None
+            if cmd and wechat_roles.remote(
+                    self.db,self.client,self.account,group,msg,cmd):
                 return
         if private:
             return
-        action=None if chat else group_binding.command(msg,self.account,bound=registered)
+        action=None if chat else group_binding.command(msg,self.account,bound=registered,prefix=prefix)
         if action:
             group_binding.handle(self.db,self.client,self.stream,group,event["cursor"],msg,action,self.secret)
             if group_binding.administrator(self.db,self.account,msg.get("senderId")):

@@ -38,12 +38,12 @@ def play(db, event, cmd, prefix):
     now = event["arrived"]
     target = json.loads(event["payload"]).get("pond_target")
     if cmd == "偷鱼玩法" or (cmd == "偷鱼" and not target):
-        return (f"🐾 偷鱼玩法\n输入「{prefix}偷鱼」，再用微信 @ 一位群友。\n"
+        return ("🐾 偷鱼玩法\n【偷鱼 @群友】在微信选中一位群友\n"
                 f"每 {COOLDOWN//60} 分钟可试一次。\n"
                 f"🐟 {SUCCESS}% 捞到一条，放进自己的鱼包。\n"
                 f"🪿 {CAUGHT}% 被抓，赔给塘主 2～5 鱼币。\n"
                 f"💨 其余时候空手离开。\n\n"
-                f"鱼包、图鉴和受保护的鱼塘都安全。\n🛡️ 查看护塘\n{prefix}鱼塘保护")
+                f"鱼包、图鉴和受保护的鱼塘都安全。\n\n🛡 查看护塘\n{prefix}鱼塘保护")
     purchase = BUY.fullmatch(cmd)
     if purchase or cmd in ("鱼塘保护","购买保护","鱼塘加固"):
         until = guard_until(db,key)

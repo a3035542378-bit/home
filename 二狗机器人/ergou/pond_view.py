@@ -53,8 +53,7 @@ def card(row, prefix, gain):
     elif not finished(row) and row["food"]:
         lines.append(f"🍤 饲料还够 {row['food']} 轮")
     elif (meal:=feed(row)) and row["coins"]>=meal[1]:
-        lines[-1]+=f"｜喂 {meal[0]} 轮 {meal[1]} 币"
-        lines.append(f"{prefix}投喂#{row['id']}")
+        lines.append(f"【投喂#{row['id']}】喂 {meal[0]} 轮，扣 {meal[1]} 币")
     if gain:
         lines[0]+=f" · 这次长了 {mass(gain)}"
     return lines
@@ -86,8 +85,8 @@ def home(db,key,page,by_weight,prefix,changes,now):
     if pages>1:
         target=page+1 if page<pages else page-1
         direction="下一页" if page<pages else "上一页"
-        lines.extend(["",f"第 {page}/{pages} 页 · {direction}",f"{base} {target}"])
-    lines.extend(["","看单鱼、出售或扩容",prefix+"鱼塘操作"])
+        lines.extend(["",f"【{base.removeprefix(prefix)} {target}】{direction}（{page}/{pages}）"])
+    lines.extend(["","【鱼塘操作】看单鱼、出售或扩容"])
     return "\n".join(lines)
 
 
@@ -106,54 +105,55 @@ def detail(db,key,item,prefix):
     if finished(row):
         lines.append("🏁 已定型")
     if (meal:=feed(row)) and row["coins"]>=meal[1]:
-        lines.extend([f"投喂 {meal[0]} 轮 · 扣 {meal[1]} 鱼币",f"{prefix}投喂#{item}"])
+        lines.append(f"【投喂#{item}】喂 {meal[0]} 轮，扣 {meal[1]} 鱼币")
     if pond and not finished(row) and row["next_at"] is None:
-        lines.extend(["让这条鱼开始长，位满会换下一尾",f"{prefix}换入成长位#{item}"])
+        lines.append(f"【换入成长位#{item}】开始养，位满会换下一尾")
     if pond and not row["flagship"]:
-        lines.extend(["设为招牌鱼，免于被偷",f"{prefix}设为招牌鱼#{item}"])
+        lines.append(f"【设为招牌鱼#{item}】保护这条鱼免偷")
     if not pond:
         used,cap,_=occupancy(db,key,"pond")
         if used<cap:
-            lines.extend(["移入鱼塘",f"{prefix}放入鱼塘#{item}"])
+            lines.append(f"【放入鱼塘#{item}】移入鱼塘")
     note=breeding_sale_note(db,key,item) if pond else ""
     used,cap,_=occupancy(db,key,"bag")
     if not note and row["fish"] in SPECIES and (row["shown"] is None or
             (row["grams"]>row["shown"] and (not pond or used<cap))):
-        lines.extend(["展入图鉴，换下的鱼回包",f"{prefix}放入图鉴#{item}"])
-    lines.extend([f"立即出售 · {row['price']} 鱼币。{note}",f"{prefix}卖鱼#{item}"])
+        lines.append(f"【放入图鉴#{item}】展出，换下的鱼回包")
+    lines.append(f"【卖鱼#{item}】立即出售，到账 {row['price']} 鱼币。{note}")
     return "\n".join(lines)
 
 
 def actions(db,key,prefix):
     from . import fish_storage
     count,_,level=fish_storage.occupancy(db,key,"pond")
-    lines=["看塘和投喂费用",prefix+"鱼塘"]
+    lines=["🌱 管理塘鱼","【鱼塘】看塘和投喂费用"]
     rows=db.execute(STOCK+" AND p.storage='pond' ORDER BY p.id DESC",key).fetchall()
     if rows:
         row=rows[0]
         i=row["id"]
-        lines.extend(["查单鱼详情及当前操作",f"{prefix}查看鱼#{i}"])
+        lines.append(f"【查看鱼#{i}】看单鱼详情和操作")
         if any(not r["flagship"] for r in rows):
             target=next(r["id"] for r in rows if not r["flagship"])
-            lines.extend(["设为招牌鱼，免偷",f"{prefix}设为招牌鱼#{target}"])
+            lines.append(f"【设为招牌鱼#{target}】免偷")
         paused=next((r for r in rows if r["next_at"] is None and not finished(r)),None)
         if paused:
-            lines.extend(["想让另一条开始长，位满时暂停原有一尾",f"{prefix}换入成长位#{paused['id']}"])
-        lines.extend(["选一尾，查看出售报价",prefix+"卖鱼"])
+            lines.append(f"【换入成长位#{paused['id']}】位满时暂停原有一尾")
+        lines.append("【卖鱼】选一尾，免费查报价")
     else:
-        lines.extend(["选鱼放入第一格",prefix+"放入鱼塘","鱼入塘后可设招牌、换成长位或出售。"])
+        lines.append("【放入鱼塘】选鱼放进第一格")
     if level<len(fish_storage.TIERS["pond"]):
         capacity,cost=fish_storage.TIERS["pond"][level]
         coins=db.execute("SELECT coins FROM fishing_wallets WHERE grp=? AND member=?",key).fetchone()
         if (coins[0] if coins else 30)>=cost:
-            lines.extend([f"扩到 {capacity} 条 · 发送扣 {cost} 鱼币",prefix+"升级鱼塘"])
+            lines.append(f"【升级鱼塘】扣 {cost} 鱼币，扩到 {capacity} 条")
         else:
             lines.append(f"扩到 {capacity} 条需 {cost} 鱼币，还差 {cost-(coins[0] if coins else 30)} 鱼币。")
     if rows:
         total=sum(r["price"] for r in rows)
         warning=fish_storage.breeding_sale_note(db,key)
-        lines.extend(["",f"⚠ 整塘出售会清空 {count} 条，当前共 {total} 鱼币。",
-                      *([warning] if warning else []),prefix+"一键卖鱼"])
+        lines.extend(["","⚠ 整塘出售",f"【一键卖鱼】清空 {count} 条，共 {total} 鱼币"])
+        if warning:
+            lines.append(warning)
     return "\n".join(["🐟 我的鱼塘操作",*lines])
 
 

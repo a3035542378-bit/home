@@ -32,7 +32,7 @@ def menu(db, key, prefix):
             lines.append(f"史诗和传说咬钩率 ×{bait.trophy_factor:g}。")
         command = "抛竿 "+name if bait.points else "抛竿"
         if points>=bait.points:
-            lines.extend([prefix+command,""])
+            lines.extend([f"【{command}】"+(f"立即下竿，扣 {bait.points} 分" if bait.points else "免费下竿"),""])
         else:
             lines.extend([f"还差 {bait.points-points} 分。",""])
     lines.extend(["只用一竿，下次默认免费。", "抛出后消耗鱼饵，跑鱼也会扣分。"])

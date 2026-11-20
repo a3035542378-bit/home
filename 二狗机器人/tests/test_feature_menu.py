@@ -89,7 +89,7 @@ class FeatureMenuTests(unittest.TestCase):
         self.assertIn("二狗全菜单",first)
         self.assertNotIn("@ 我",menu)
         self.assertNotIn("G01",menu)
-        self.assertIn("二狗游戏帮助",self.say("二狗全菜单"))
+        self.assertIn("【游戏帮助】",self.say("二狗全菜单"))
 
     def test_fishing_discovery_walkthrough(self):
         for group,prefix in (("room","二狗"),("other","团团")):
@@ -99,15 +99,15 @@ class FeatureMenuTests(unittest.TestCase):
                 self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('other',1,1)")
             def ask(cmd):
                 return self.say(prefix+cmd,group=group)
-            self.assertIn(prefix+"钓鱼帮助",ask("菜单"))
-            self.assertIn(prefix+"抛竿",ask("游戏列表"))
+            self.assertIn("【钓鱼帮助】",ask("菜单"))
+            self.assertIn("【抛竿】",ask("游戏列表"))
             guide=ask("钓鱼玩法")
             self.assertEqual(guide,ask("怎么钓鱼？"))
             for cmd in ("抛竿","鱼包帮助","钓场帮助","护塘帮助","图鉴帮助","装备帮助"):
-                self.assertIn(prefix+cmd,guide)
+                self.assertIn(f"【{cmd}】",guide)
             self.assertIn("升级鱼线",ask("钓鱼进阶"))
             self.assertIsNone(self.db.execute("SELECT 1 FROM fishing_wallets WHERE grp=?",(group,)).fetchone())
-            self.assertEqual(prefix+"查看鱼包",ask("抛竿").splitlines()[1])
+            self.assertEqual(prefix+"查看鱼包",ask("抛竿").splitlines()[-1])
             self.assertIn("1/5",ask("查看鱼包"))
         self.db.execute("UPDATE groups SET config=json_set(config,'$.disabled_games',json_array('钓鱼')) WHERE id='room'")
         self.assertNotIn("钓鱼玩法",self.say("二狗菜单"))
@@ -158,6 +158,6 @@ class FeatureMenuTests(unittest.TestCase):
         self.assertIsNone(emit(13,dict(state="known",self=False,all=False,userIds=["other"])))
         posted=emit(14,dict(state="known",self=True,all=False,userIds=[api.account]))
         self.assertIn("二狗",posted)
-        self.assertNotIn("团团",posted)
+        self.assertIn("团团全菜单",posted)
         self.assertIn("游戏帮助",posted)
         self.assertEqual(self.db.execute("SELECT count(*) FROM outbox WHERE grp=?",(api.room,)).fetchone()[0],1)

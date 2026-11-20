@@ -71,7 +71,7 @@ def sync(db,bot,group,uid,name,*,departed=False,notify=True):
     binding=active(db,bot,group)
     if notify and binding and (uid or departed):
         who=labels(db,group)(uid) if uid else ""
-        text=(f"👑 当前群主 {who} · 待授权\n主人发「二狗授权群主」可开通本群管理权限。" if uid else "👑 原群主已离群，群主授权已失效。")
+        text=(f"👑 当前群主 {who} · 待授权\n【授权群主】主人可开通本群管理权限。" if uid else "👑 原群主已离群，群主授权已失效。")
         db.execute("INSERT INTO role_notices(bot_id,destination,binding,body,expires,mention_user) VALUES(?,?,?,?,?,?)",
                    (bot,group,binding[0],text,now+120,uid))
 
@@ -98,12 +98,12 @@ def handle(db,bot,group,actor,cmd,target=None):
             icon="✅" if r["owner_grant_status"]=="granted" else "⏳"
             lines.append(f"{icon} {r['label']} · {labels(db,r['group_id'])(r['owner_user_id'])} {clock(r['owner_granted_at'])}")
             lines.append(f"　群编号 {db.execute('SELECT rowid FROM group_binding WHERE group_id=?',(r['group_id'],)).fetchone()[0]}")
-        return "\n".join(lines+([f"下页　二狗群主授权列表 {page+1}"] if len(rows)>8 else []))
+        return "\n".join(lines+([f"【群主授权列表 {page+1}】下一页"] if len(rows)>8 else []))
     if action=="全局配置":
         if args:
             choices={"新群游戏 开启":1,"新群游戏 关闭":0}
             if args not in choices:
-                raise ValueError("用法　二狗全局配置 新群游戏 开启 / 关闭")
+                raise ValueError("⚙️ 新群默认设置\n【全局配置 新群游戏 开启】新群默认开启游戏\n【全局配置 新群游戏 关闭】新群默认关闭游戏")
             db.execute("UPDATE bot_owner SET default_games=? WHERE bot_id=?",(choices[args],bot))
         return "新激活群的游戏默认"+("开启" if owner(db,bot)["default_games"] else "关闭")
     if not room or not active(db,bot,group):
@@ -132,7 +132,7 @@ def handle(db,bot,group,actor,cmd,target=None):
         if args:
             parts=args.split()
             if len(parts)!=2 or parts[0] not in switches or parts[1] not in ("开启","关闭"):
-                raise ValueError("例如　二狗本群设置 游戏 关闭")
+                raise ValueError("⚙️ 本群设置\n【本群设置 游戏 关闭】立即关闭本群游戏")
             cfg[switches[parts[0]]]=parts[1]=="开启"
             db.execute("UPDATE groups SET config=?,version=version+1 WHERE id=?",(json.dumps(cfg,ensure_ascii=False),group))
         return "⚙️ 本群设置\n"+"　".join(k+("开" if cfg[v] else "关") for k,v in switches.items())
