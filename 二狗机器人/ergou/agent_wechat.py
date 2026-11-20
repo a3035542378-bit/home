@@ -264,7 +264,9 @@ class Listener:
                 capture(self,message,payload.get("source_time"))
             if (message.get("direction") == "incoming" and message.get("type") == 1 and not message.get("recall")
                     and valid_id(sender) and sender != self.account and number(source) and int(source) > 0
-                    and isinstance(payload["text"], str) and len(dump(payload).encode()) <= 8192):
+                    and isinstance(payload["text"], str)
+                    and (payload["text"].startswith("二狗") or "mention_account" in payload)
+                    and len(dump(payload).encode()) <= 8192):
                 from .engine import addressed_command
                 cmd=addressed_command(payload["text"],"二狗",payload.get("mention_account")==self.account)
                 from . import roles,wechat_roles,models
@@ -279,7 +281,7 @@ class Listener:
                     if isinstance(ids,list) and any(uid!=self.account for uid in ids) and not target:
                         payload["invalid_role_target"]=True
                 from .pond_raids import TARGET
-                if (TARGET.fullmatch((cmd if cmd is not None else payload["text"]).strip())
+                if (cmd and (TARGET.fullmatch(cmd.strip()) or cmd == "偷鱼")
                         and isinstance(mentions,dict) and mentions.get("state")=="known"
                         and mentions.get("all") is not True and isinstance(mentions.get("userIds"),list)):
                     targets=[uid for uid in mentions["userIds"] if uid!=self.account]

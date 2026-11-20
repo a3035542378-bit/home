@@ -36,14 +36,16 @@ class LocalServices(unittest.TestCase):
     def test_moderation_and_welcome(self):
         admin.configure(self.db,self.actor,"a",1,dict(words=["测试匹配词"],moderation="移出群聊",
                         welcome="欢迎 {nickname}",rules_url="https://example.com/rules"))
-        self.event("测试匹配词")
+        self.assertIsNone(self.event("测试匹配词")[1])
+        self.assertFalse(self.db.execute("SELECT 1 FROM hits").fetchone())
+        self.event("二狗测试匹配词")
         self.assertEqual(self.event("二狗积分")[0],"IGNORED")
         self.assertEqual(self.event("二狗积分",group="b")[0],"DONE")
         row=admin.view(self.db,self.actor,"a","规则命中")[0]
         self.assertEqual(row["执行结果"],"模拟执行完成")
-        self.assertEqual(self.event("",kind="join")[1],"欢迎 member\n群规：https://example.com/rules")
+        self.assertEqual(self.event("",kind="join")[1],"欢迎 一位群成员\n群规：https://example.com/rules")
         self.assertIn("积分",self.event("二狗积分")[1])
         admin.configure(self.db,self.actor,"a",2,dict(welcome_window=10))
         self.event("",kind="join",member="new")
         jobs.tick(self.db,time.time()+11)
-        self.assertIn("欢迎 new",self.db.execute("SELECT body FROM outbox WHERE biz LIKE 'welcome/%'").fetchone()[0])
+        self.assertIn("欢迎 一位群成员",self.db.execute("SELECT body FROM outbox WHERE biz LIKE 'welcome/%'").fetchone()[0])

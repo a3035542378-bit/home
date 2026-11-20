@@ -41,6 +41,8 @@ class PondRaids(unittest.TestCase):
         for text in (cmd,"聊天里说"+cmd):
             self.assertIsNone(self.say(text,98))
         self.assertIn("选一位",self.say("二狗"+cmd,99))
+        self.assertIsNone(self.say(cmd,99,target="victim"))
+        cmd="二狗"+cmd
         self.assertIn("自己的",self.say(cmd,99,target="player"))
         with patch("ergou.pond_raids.random.Random") as create_rng:
             create_rng.return_value.randrange.side_effect=[39,0]
@@ -59,7 +61,7 @@ class PondRaids(unittest.TestCase):
         self.assertFalse(self.db.execute("SELECT 1 FROM chat_requests").fetchone())
 
     def test_guard_cost_expiry_and_caught_fine(self):
-        cmd="偷鱼 @穿过暮光的帷幕"
+        cmd="二狗偷鱼 @穿过暮光的帷幕"
         self.assertIn("需要 30 积分",self.say("二狗购买保护 4小时",99,member="victim"))
         self.db.execute("""INSERT INTO ledger(grp,member,round,kind,points,rule_version,event,at,reason)
                            VALUES('one','victim',0,'奖励',30,'test','award',99,'测试')""")
@@ -87,16 +89,16 @@ class PondRaids(unittest.TestCase):
     def test_full_bag_and_disabled_game(self):
         self.db.executemany("""INSERT INTO fishing_pond(grp,member,fish,grams,price,storage)
             VALUES('one','player','白条',30,5,'bag')""",[()]*5)
-        self.assertIn("鱼包已满",self.say("偷鱼@塘主",100,target="victim"))
+        self.assertIn("鱼包已满",self.say("二狗偷鱼@塘主",100,target="victim"))
         self.assertFalse(self.db.execute("SELECT 1 FROM fishing_raids").fetchone())
         self.db.execute("DELETE FROM fishing_pond WHERE grp='one' AND member='victim' AND storage='pond'")
         self.db.execute("INSERT INTO fishing_raids(grp,member,protected_until) VALUES('one','victim',999)")
-        self.assertIn("空空如也",self.say("偷鱼@塘主",101,target="victim"))
+        self.assertIn("空空如也",self.say("二狗偷鱼@塘主",101,target="victim"))
         self.assertFalse(self.db.execute("SELECT 1 FROM fishing_raids WHERE member='player'").fetchone())
         self.db.execute("UPDATE groups SET config=json_set(config,'$.games',0) WHERE id='one'")
-        self.assertIn("关闭",self.say("偷鱼@塘主",110,target="victim"))
+        self.assertIn("关闭",self.say("二狗偷鱼@塘主",110,target="victim"))
 
-    def test_wechat_selected_mention_without_robot_prefix(self):
+    def test_wechat_selected_target_requires_robot_prefix(self):
         api=Fixture()
         secret="x"*40
         aw.link(self.db,api,"测试群",secret)
@@ -119,10 +121,14 @@ class PondRaids(unittest.TestCase):
             self.assertIsNone(emit(13+i,metadata))
         with patch("ergou.pond_raids.random.Random") as rng:
             rng.return_value.randrange.side_effect=[0,0]
-            reply=emit(17,{"state":"known","self":False,"all":False,"userIds":["real-id"]})
+            metadata={"state":"known","self":False,"all":False,"userIds":["real-id"]}
+            self.assertIsNone(emit(17,metadata))
+            self.assertIsNone(self.db.execute("SELECT 1 FROM inbox WHERE grp=?",(api.room,)).fetchone())
+            reply=emit(18,metadata,"二狗偷鱼@穿过暮光的帷幕")
             self.assertIn("已收入你的鱼包",reply[0])
         self.assertEqual(self.db.execute("SELECT member FROM fishing_pond WHERE grp=?",(api.room,)).fetchone()[0],"member")
-        for n,prefix in enumerate(("","二狗"),18):
-            reply=emit(n,{"state":"known","self":False,"all":False,"userIds":["real-id"]},
-                       prefix+"偷鱼\u2005@穿过暮光的帷幕")
-            self.assertIn("鱼塘空空如也",reply[0])
+        reply=emit(19,metadata,"二狗偷鱼\u2005@穿过暮光的帷幕")
+        self.assertIn("鱼塘空空如也",reply[0])
+        reply=emit(20,dict(metadata,self=True,userIds=[api.account,"real-id"]),
+                   "@二狗\u2005偷鱼 @穿过暮光的帷幕\u2005")
+        self.assertIn("鱼塘空空如也",reply[0])

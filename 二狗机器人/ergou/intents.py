@@ -5,6 +5,7 @@ from datetime import datetime
 
 from .db import BJ
 from .games import GAMES
+from .fishing_waters import WATERS
 
 SIGNS="白羊 金牛 双子 巨蟹 狮子 处女 天秤 天蝎 射手 摩羯 水瓶 双鱼".split()
 
@@ -12,7 +13,7 @@ SIGNS="白羊 金牛 双子 巨蟹 狮子 处女 天秤 天蝎 射手 摩羯 水
 ITEM_WORDS = {
     "放入图鉴": ("放入图鉴", "收入图鉴", "收录图鉴", "录入图鉴", "存入图鉴", "加入图鉴", "收藏图鉴", "收藏到图鉴", "收进图鉴", "放进图鉴", "点亮图鉴"),
     "放入鱼塘": ("放入鱼塘", "收入鱼塘", "存入鱼塘", "放进鱼塘", "移入鱼塘", "放到鱼塘", "存塘"),
-    "卖鱼": ("卖鱼", "出售", "出售鱼", "卖出", "卖掉"),
+    "卖鱼": ("卖", "卖鱼", "出售", "出售鱼", "卖出", "卖掉"),
 }
 ITEM_ACTION = {word: action for action, words in ITEM_WORDS.items() for word in words}
 ACTION = "(?:" + "|".join(map(re.escape, ITEM_ACTION)) + ")"
@@ -23,12 +24,17 @@ MOBILE_CHARS = str.maketrans("＃０１２３４５６７８９", "#0123456789")
 
 ACTIONS = {
     "抛杆": "抛竿", "甩竿": "抛竿", "甩杆": "抛竿", "钓一竿": "抛竿",
-    "鱼包扩容": "升级鱼包", "扩容鱼包": "升级鱼包", "鱼塘扩容": "升级鱼塘", "扩容鱼塘": "升级鱼塘",
+    "升级背包": "升级鱼包", "背包扩容": "升级鱼包", "鱼包扩容": "升级鱼包", "扩容鱼包": "升级鱼包", "鱼塘扩容": "升级鱼塘", "扩容鱼塘": "升级鱼塘",
     "鱼竿升级": "升级鱼竿", "鱼线升级": "升级鱼线", "鱼竿强化": "强化鱼竿",
     "抽签报名": "抽签 报名", "报名抽签": "抽签 报名", "退出抽签": "抽签 退出",
 }
 
 WATER_ALIASES = dict.fromkeys(("切换钓场","换钓场","换图","切换水域","切换海域"), "切换水域")
+WATER_REQUEST = re.compile(r"(?:想|我想)?(?:要)?(?:更换|切换|切|换|前往|去)(?:去|到|个|一下)?"
+                           r"(?:一个|别的|新的|其他|高级|下一个)?(?:钓鱼场|钓场|渔场|场地|地图|图|水域|海域|场)"
+                           r"(?:去|到|为)?\s*(.*)")
+HELP_REQUEST = re.compile(r"(?:想看|查看|打开|看看|看下|介绍一下|教我)?(?:一下)?(?:钓鱼.*(?:菜单|帮助|玩法|怎么玩)|(?:怎么玩|怎么|如何)钓鱼)")
+BAG_REQUEST = re.compile(r"(?:我想|想)?(?:查看|看一下|看看|看下|打开|瞅瞅|查查)?(?:一下)?(?:我的)?(?:鱼包|背包)(?:里(?:面)?)?(?:有啥|有什么鱼?|有哪些鱼|都有啥|装了什么)?")
 FISHING_LOOKUPS = {
     **dict.fromkeys(("钓鱼菜单","钓鱼帮助","怎么钓鱼"), "钓鱼玩法"),
     **dict.fromkeys(("鱼包","背包","看鱼","鱼背包"), "查看鱼包"),
@@ -91,7 +97,29 @@ def command_alias(text):
     page = re.fullmatch(r"(鱼包|背包|鱼塘|图鉴|鱼类图鉴|钓鱼图鉴|全图鉴|普通图鉴|稀有图鉴|珍品图鉴|史诗图鉴|传说图鉴|巨物图鉴)\s*(?:第\s*)?([1-9][0-9]{0,3})\s*页?", lookup)
     if page:
         return f"{LOOKUPS[page[1]]} {page[2]}"
+    # 优先保留扩容、整包出售和翻页。口语导航缺少明确地名时只展示选择。
+    water = WATER_REQUEST.fullmatch(action.rstrip("？?").strip())
+    if water:
+        area = water[1].strip()
+        return "切换水域 " + area if area in WATERS else "切换水域"
+    if lookup.startswith("去") and lookup[1:].strip() in WATERS:
+        return "切换水域 " + lookup[1:].strip()
+    if HELP_REQUEST.fullmatch(lookup):
+        return "钓鱼玩法"
+    if BAG_REQUEST.fullmatch(lookup):
+        return "查看鱼包"
     return text
+
+
+def navigation_hint(text):
+    """精确指令全部未命中后，关键词组合只打开只读面板。"""
+    if any(word in text for word in ("换","切","去")) and any(word in text for word in ("场","图","水域")):
+        return "切换水域"
+    if "钓鱼" in text and any(word in text for word in ("菜单","帮助","玩法","怎么玩")):
+        return "钓鱼玩法"
+    if "鱼包" in text or "背包" in text:
+        return "查看鱼包"
+    return None
 
 
 def interpret(text,cfg):

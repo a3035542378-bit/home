@@ -291,7 +291,7 @@ def play(db, event, cmd, prefix, cfg):
     if cmd=="切换水域":
         names=list(WATERS)
         rows=["、".join(names[i:i+3]) for i in range(0,len(names),3)]
-        return "\n".join(["🌊 你想去哪个钓场？",f"📍 当前　{area}","",*rows,"",
+        return "\n".join(["🌊 想去哪里钓鱼？",f"📍 当前　{area}","当前可去",*rows,"",
                           f"发送「{prefix}切换钓场 新手池塘」即可切换。"])
     if cmd=="巨物鱼讯":
         now=event["arrived"]

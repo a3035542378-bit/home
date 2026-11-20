@@ -49,7 +49,7 @@ class FishingReplies(unittest.TestCase):
         self.assertIn("累计 0 竿", profile["body"])
         self.assertIsNone(conn.execute("SELECT 1 FROM fishing_wallets WHERE grp=? AND member='player-b'",
                                        (api.room,)).fetchone())
-        raid = say(16, "player-b", "偷鱼\u2005@甲", {"state":"known","userIds":["player-a"]})
+        raid = say(16, "player-b", "二狗偷鱼\u2005@甲", {"state":"known","userIds":["player-a"]})
         self.assertEqual(raid["mention_sender"], "player-b")
         self.assertIn("空空如也", raid["body"])
         self.assertIsNone(say(17, "player-b", "二狗菜单")["mention_sender"])

@@ -128,7 +128,7 @@ class Listener:
                         or type(at) is not int or not start <= at <= now):
                     continue
                 payload = {"text": msg.get("content")}
-                if isinstance(payload["text"], str) and len(dump(payload).encode()) <= 8192:
+                if isinstance(payload["text"], str) and payload["text"].startswith("二狗") and len(dump(payload).encode()) <= 8192:
                     events.append((at, sender, source, payload))
             if sync.get("hasMore") is False:
                 break

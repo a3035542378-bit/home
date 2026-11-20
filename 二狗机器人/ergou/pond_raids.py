@@ -36,8 +36,9 @@ def expiry(stamp):
 def play(db, event, cmd, prefix):
     key = (event["grp"],event["member"])
     now = event["arrived"]
-    if cmd in ("偷鱼","偷鱼玩法"):
-        return (f"🐾 偷鱼玩法\n输入「偷鱼」，再用微信 @ 一位群友。\n"
+    target = json.loads(event["payload"]).get("pond_target")
+    if cmd == "偷鱼玩法" or (cmd == "偷鱼" and not target):
+        return (f"🐾 偷鱼玩法\n输入「{prefix}偷鱼」，再用微信 @ 一位群友。\n"
                 f"每 {COOLDOWN//60} 分钟可试一次。\n"
                 f"🐟 {SUCCESS}% 捞到一条，放进自己的鱼包。\n"
                 f"🪿 {CAUGHT}% 被抓，赔给塘主 2～5 鱼币。\n"
@@ -65,10 +66,8 @@ def play(db, event, cmd, prefix):
                       ON CONFLICT(grp,member) DO UPDATE SET protected_until=excluded.protected_until""",(*key,until))
         return f"🛡️ 护塘成功　{hours} 小时\n保护至 {expiry(until)}\n消耗 {cost} 积分，余 {points-cost} 分。"
 
-    payload = json.loads(event["payload"])
-    target = payload.get("pond_target")
     if not isinstance(target,str) or not target or target==event["account"]:
-        return "请在微信里输入「偷鱼」，再从 @ 列表选一位群友。"
+        return f"请在微信里输入「{prefix}偷鱼」，再从 @ 列表选一位群友。"
     if target==key[1]:
         return "这是你自己的鱼塘，换位群友试试。"
     if event["adapter_version"]=="agent-wechat-events/2.7.1" and not db.execute(

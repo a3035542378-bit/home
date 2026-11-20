@@ -154,7 +154,9 @@ def exhibit(db, key, item, prefix):
 
 
 def handle(db, key, cmd, prefix):
-    if cmd in ("放入图鉴", "放入鱼塘", "卖鱼"):
+    if cmd == "卖鱼":
+        return f"🎒 你想卖哪条鱼？发送「{prefix}鱼包」查看鱼的编号。\n例如　{prefix}卖鱼#17"
+    if cmd in ("放入图鉴", "放入鱼塘"):
         return (f"🐟 想选哪条鱼？请带上鱼的编号。\n例如　{prefix}{cmd}#17\n"
                 f"查看编号　{prefix}查看鱼包" + ("" if cmd == "放入鱼塘" else f" / {prefix}查看鱼塘"))
     page = PAGE.fullmatch(cmd)

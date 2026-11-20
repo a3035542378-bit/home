@@ -86,7 +86,7 @@ class WeFlow(unittest.TestCase):
         self.listener.poll(self.now)
         self.listener.poll(self.now + 3)
         rows = self.db.execute("SELECT source,member,grp FROM inbox ORDER BY seq")
-        self.assertEqual([("20","member",self.group), ("21","member",self.group)], list(map(tuple, rows)))
+        self.assertEqual([("20","member",self.group)], list(map(tuple, rows)))
         while step(self.db):
             pass
         self.assertEqual(1, self.db.execute("SELECT COUNT(*) FROM games").fetchone()[0])

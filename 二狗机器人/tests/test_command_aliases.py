@@ -13,6 +13,10 @@ class CommandAliasTests(unittest.TestCase):
             "请帮我把１７号鱼收录图鉴": "放入图鉴#17",
             "存入图鉴　＃　１７": "放入图鉴#17",
             "#17放进鱼塘": "放入鱼塘#17",
+            "卖17号鱼": "卖鱼#17", "卖＃１７": "卖鱼#17",
+            "去高级场": "切换水域", "换个地图": "切换水域",
+            "切换钓场到荷花湿地": "切换水域 荷花湿地", "去荷花湿地": "切换水域 荷花湿地",
+            "我想看看我的鱼包里有啥": "查看鱼包", "钓鱼的玩法": "钓鱼玩法",
             "出售17号鱼": "卖鱼#17",
             "出售17号鱼？": "卖鱼",
             "看看我的背包第２页": "查看鱼包 2",
@@ -25,7 +29,7 @@ class CommandAliasTests(unittest.TestCase):
         for phrase, expected in cases.items():
             with self.subTest(phrase=phrase):
                 self.assertEqual(command_alias(phrase), expected)
-        for chat in ("不要收入图鉴#17", "解释一下卖鱼#17", "收入图鉴#17和#18",
+        for chat in ("别卖17号鱼", "卖#17和#18", "不要收入图鉴#17", "解释一下卖鱼#17", "收入图鉴#17和#18",
                      "收入图鉴#0", "收入图鉴#17.5", "我叫它收入图鉴#17", "收入图鉴#１７abc"):
             with self.subTest(chat=chat):
                 self.assertEqual(command_alias(chat), chat)
@@ -63,5 +67,5 @@ class CommandAliasTests(unittest.TestCase):
                     self.assertIsNone(conn.execute("SELECT 1 FROM fishing_pond WHERE id=?", (number,)).fetchone())
                 self.assertIsNone(conn.execute("SELECT 1 FROM chat_requests").fetchone())
                 prompt = "不要收入图鉴#17"
-                self.assertIn("没找到这个指令",say("二狗" + prompt, 20, "two"))
+                self.assertIn("没看懂这个指令",say("二狗" + prompt, 20, "two"))
                 self.assertIsNone(conn.execute("SELECT 1 FROM chat_requests").fetchone())

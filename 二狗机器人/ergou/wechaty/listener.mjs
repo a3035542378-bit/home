@@ -93,8 +93,9 @@ export function groupListener({ account, group, secret, port = 8765, warn = cons
       const sender = message.talker()?.id
       if (sender === account) return
       if (!validId(sender) || !validId(message.id)) { warn('二狗忽略缺少稳定标识的群消息'); return }
-      if (pending >= 512) { warn('二狗监听队列已满，一条消息未入队'); return }
       const payload = { text: message.text() }
+      if (typeof payload.text === 'string' && !payload.text.startsWith('二狗')) return
+      if (pending >= 512) { warn('二狗监听队列已满，一条消息未入队'); return }
       if (typeof payload.text !== 'string' || Buffer.byteLength(JSON.stringify(payload)) > 8192) {
         warn('二狗忽略格式或长度超出接入协议的文本')
         return

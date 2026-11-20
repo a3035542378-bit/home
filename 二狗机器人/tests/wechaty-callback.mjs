@@ -44,7 +44,8 @@ bot.currentUser.id = 'another-account'
 excluded({})
 bot.currentUser.id = account
 bot.emit('message', message)
-bot.emit('message', { ...message, id: 'message-101', text: () => '普通群消息' })
+bot.emit('message', { ...message, id: 'ignored', text: () => '普通群消息' })
+bot.emit('message', { ...message, id: 'message-101', text: () => '二狗积分' })
 const deadline = setTimeout(() => received.reject(new Error('missing callback acknowledgement')), 12000)
 try {
   await received.promise

@@ -13,7 +13,7 @@ from .games import GAMES, RULE_VERSION, start_board, visible_board
 ACTIVE = "('RUNNING','PAUSED','WAITING_PLAYERS')"
 KINDS = {"message","join","baseline","leave","revoke","bot_leave"}
 LIMIT = 50000
-UNKNOWN_COMMAND = "🤖 没找到这个指令哦。发送「{prefix}菜单」查看功能，或发「{prefix}钓鱼玩法」看钓鱼指南。"
+UNKNOWN_COMMAND = "🤖 没看懂这个指令。发「{prefix}菜单」查看我能做什么，或发「{prefix}钓鱼玩法」查看钓鱼指南。"
 
 
 def addressed_command(text, prefix, mentioned):
@@ -298,7 +298,13 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     if len(rows)>1 and first.isdecimal():
         raise ValueError("请指定会话："+summary(rows))
     from .local_chat import respond
-    return respond(db,e,cmd.strip(),fallback=UNKNOWN_COMMAND.format(prefix=prefix))
+    guide = intents.navigation_hint(cmd)
+    if guide:
+        return fishing.play(db,e,guide,prefix,cfg)
+    fallback = UNKNOWN_COMMAND.format(prefix=prefix)
+    if "天气" in cmd:
+        fallback = f"🤖 没看懂这个指令。想查天气，请发「{prefix}天气 北京」。发「{prefix}菜单」查看更多。"
+    return respond(db,e,cmd.strip(),fallback=fallback)
 
 
 def process(db,g,e):
@@ -365,10 +371,8 @@ def process(db,g,e):
     mentioned=not voice and p.get("mention_account")==g["account"]
     prefix="二狗" if live_listener or voice else cfg["prefix"]
     cmd=addressed_command(text,prefix,mentioned)
-    if cmd is None and p.get("pond_target") and e["message_type"]=="text":
-        from .pond_raids import TARGET
-        if TARGET.fullmatch(text.strip()):
-            cmd=text.strip()
+    if cmd is None:
+        return "CHAT",None
     authorized_control=(mentioned and cmd in ("开启智能对话","关闭智能对话") and db.execute(
         """SELECT 1 FROM smart_controls c,json_each(c.admins) m WHERE c.grp=? AND m.value=?""",
         (e["grp"],e["member"])).fetchone())
@@ -383,10 +387,6 @@ def process(db,g,e):
             return "DONE",apply_action(db,g,e,cfg["moderation"])
         if cfg["moderation"]=="提醒" and not authorized_control:
             moderation="请留意本群群规："+cfg["rules"]
-    if cmd is None:
-        if moderation:
-            return "DONE",moderation
-        return "CHAT",None
     if not authorized_control and not allowed(db,dump(["cmd",e["grp"],e["member"]]),cfg.get("command_rate",30),10,e["arrived"]):
         return "RATE_LIMITED",None
     stamp=p.get("source_time")
