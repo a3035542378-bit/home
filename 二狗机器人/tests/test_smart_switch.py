@@ -156,7 +156,9 @@ class SmartSwitchTests(unittest.TestCase):
             api.details.update(body=body,serverId=str(n),mentions=mentions,createdAt=datetime.now(timezone.utc).isoformat())
             seq=listener.consume(dict(cursor=str(n),kind="message.committed",
                         data=dict(threadId=api.room,messageId=api.details["id"],origin="live")))
-            step(self.db)
+            self.assertEqual(step(self.db),seq is not None)
+            if seq is None:
+                return None
             return self.db.execute("SELECT o.body FROM inbox i LEFT JOIN outbox o ON o.biz=i.event_id WHERE i.seq=?",(seq,)).fetchone()[0]
         own=dict(state="known",self=True,all=False,userIds=[api.account])
         self.assertIn("已关闭",emit(13,"＠二 狗\u2005关闭智能对话",own))

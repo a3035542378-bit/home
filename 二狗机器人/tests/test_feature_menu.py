@@ -140,10 +140,10 @@ class FeatureMenuTests(unittest.TestCase):
             event=dict(cursor=str(number),kind="message.committed",data=dict(
                        threadId=api.room,messageId=api.details["id"],origin="live",direction="incoming"))
             seq=listener.consume(event)
-            self.assertTrue(step(self.db))
+            self.assertEqual(step(self.db),seq is not None)
             listener.consume(event)
             self.assertFalse(step(self.db))
-            return self.body(seq)
+            return self.body(seq) if seq is not None else None
         self.assertIsNone(emit(13,dict(state="known",self=False,all=False,userIds=["other"])))
         posted=emit(14,dict(state="known",self=True,all=False,userIds=[api.account]))
         self.assertIn("二狗",posted)
