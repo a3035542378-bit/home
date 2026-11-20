@@ -6,8 +6,9 @@ from . import exhibit_batch, breed_metrics, breeding, exhibit_board, pond_growth
 from .fish_receipts import grid, single
 from .db import DEFAULT
 from . import rod as gear
+from . import tackle_wear as durability
 
-COMMANDS = {"图鉴榜", "切换水域", "鱼获品级", "巨物鱼讯", "钓鱼信息", "钓手等级", "钓鱼等级", "钓鱼", "抛竿", "我的鱼获", "钓鱼玩法", "鱼塘", "鱼市","鱼线","买鱼线","购买鱼线","升级鱼线","水域","切换水域 新手池塘","切换水域 外海","重量榜","重量排行榜","鱼类图鉴","钓鱼图鉴","图鉴", "一键卖鱼", "升级鱼竿", "我的鱼竿","资产榜","资产排行榜"} | gear.COMMANDS
+COMMANDS = {"图鉴榜", "切换水域", "鱼获品级", "巨物鱼讯", "钓鱼信息", "钓手等级", "钓鱼等级", "钓鱼", "抛竿", "我的鱼获", "钓鱼玩法", "鱼塘", "鱼市","鱼线","买鱼线","购买鱼线","修理鱼竿","升级鱼线","水域","切换水域 新手池塘","切换水域 外海","重量榜","重量排行榜","鱼类图鉴","钓鱼图鉴","图鉴", "一键卖鱼", "升级鱼竿", "我的鱼竿","资产榜","资产排行榜"} | gear.COMMANDS
 # 名称、最轻/最重克数、基础价格、每公斤加价、稀有度
 from .fishing_waters import FISH, HABITAT, TROPHY_PERCENT, WATERS, giant_min, guide, size_grade, weight
 RARITY_ICONS = {"普通": "🐟", "稀有": "💎", "珍品": "👑", "史诗": "🔮", "传说": "🌟"}
@@ -213,12 +214,23 @@ def line_capacity(level,rod,levels):
     return LINE_BASE[level-1]+1500*rod+250*sum(r["toughness"] for r in levels)
 
 
-def fight(rng,grams,rod,levels,line_level=1):
+def fight(rng,grams,rod,levels,line_level=1,wear=durability.Wear()):
     line_limit=line_capacity(line_level,rod,levels)
     rod_limit=6000+2200*rod+400*sum(r["hardness"] for r in levels)
-    if grams>rod_limit and rng.random()<min(.55,(grams/rod_limit-1)*.4):
+    rod_max=durability.ROD_LIMITS[rod-1]
+    line_max=durability.LINE_LIMITS[line_level-1]
+    if durability.strain(grams)>=rod_max-wear.rod:
         return "竿"
-    if line_level<len(LINE_BASE) and grams>line_limit and rng.random()<min(.75,(grams/line_limit-1)*.5):
+    if rod<5:
+        overload=max(0.,min(.55,(grams/rod_limit-1)*.4))
+        risk=max(overload,durability.fatigue(wear.rod,rod_max))
+        if risk and rng.random()<risk:
+            return "竿"
+    if durability.line_load(grams,line_level)>=line_max-wear.line:
+        return "线"
+    overload=max(0.,min(.75,(grams/line_limit-1)*.5)) if line_level<len(LINE_BASE) else 0.
+    risk=max(overload,durability.fatigue(wear.line,line_max))
+    if risk and rng.random()<risk:
         return "线"
     return None
 
@@ -240,8 +252,9 @@ def full_bag_notice(count,capacity,prefix):
 
 
 def line_help(db, key, coins, area, prefix, now, heading="鱼线已断"):
-    if coins>=3:
-        return f"🧵 {heading}。换线扣 3 鱼币，余额 {coins} 鱼币。\n{prefix}买鱼线"
+    price=durability.LINE_PRICE
+    if coins>=price:
+        return f"🧵 {heading}。换线扣 {price} 鱼币，余额 {coins} 鱼币。\n{prefix}买鱼线"
     held = db.execute("SELECT 1 FROM fishing_pond WHERE grp=? AND member=? LIMIT 1",key).fetchone()
     if held:
         step = f"可先免费查看一条鱼的售价。\n{prefix}卖鱼"
@@ -249,7 +262,7 @@ def line_help(db, key, coins, area, prefix, now, heading="鱼线已断"):
         step = f"回塘免费，备用线能钓普通鱼。\n{prefix}切换水域 新手池塘"
     else:
         step = "备用线能钓新手池塘的普通鱼。\n"+fish_storage.cast_step(db,key,prefix,now)
-    return f"🧵 {heading}。换线需 3 鱼币，余额 {coins}，还差 {3-coins} 币。\n{step}"
+    return f"🧵 {heading}。换线需 {price} 鱼币，余额 {coins}，还差 {price-coins} 币。\n{step}"
 
 
 def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
@@ -324,7 +337,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     if cmd in ("水域","海域","水域列表","海域列表"):
         names=list(WATERS)
         rows=["、".join(names[i:i+3]) for i in range(0,len(names),3)]
-        return (f"🗺 钓场地图　{len(names)} 处\n📍 当前：{area}\n免费切换，新手塘常规鱼获免损。\n\n"+"\n".join(rows)
+        return (f"🗺 钓场地图　{len(names)} 处\n📍 当前：{area}\n免费切换，新手塘普通鱼只磨损，不断线折竿。\n\n"+"\n".join(rows)
                 +"\n\n🌊 探索外海\n【水域介绍 外海】看鱼种\n【图鉴 外海】看进度\n【切换水域 外海】前往外海")
     if cmd.startswith(("水域介绍 ","海域介绍 ")):
         target=cmd.split(maxsplit=1)[1]
@@ -365,6 +378,9 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     broken=bool(tackle and tackle["broken"])
     saved=db.execute("SELECT level FROM fishing_line_levels WHERE grp=? AND member=?",key).fetchone()
     line_level=saved[0] if saved else 1
+    wear=durability.read(db,key)
+    line_max=durability.LINE_LIMITS[line_level-1]
+    rod_max=durability.ROD_LIMITS[rod-1]
     if cmd=="钓鱼信息":
         bag,bag_limit,_=fish_storage.occupancy(db,key,"bag")
         pond,pond_limit,_=fish_storage.occupancy(db,key,"pond")
@@ -373,12 +389,12 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         growth=angler.profile(db,key,landed,area)
         return (f"📋 我的钓鱼信息\n{growth}\n\n"
                 f"🪙 当前余额　{coins} 鱼币\n🧰 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）　鱼线 {line_level} 级"
-                f"（{'已断' if broken else '完好'}）\n🎒 鱼包 {bag}/{bag_limit} 条　鱼塘 {pond}/{pond_limit} 条\n"
+                f"（{'已断' if broken else '可用'}）\n🧵 线耐久 {0 if broken else durability.percent(wear.line,line_max)}% · 竿耐久 {durability.percent(wear.rod,rod_max)}%\n🎒 鱼包 {bag}/{bag_limit} 条　鱼塘 {pond}/{pond_limit} 条\n"
                 f"🐟 累计钓获　{landed} 条\n🏆 最重纪录　{best}\n\n处理鱼获\n{prefix}查看鱼包")
     if cmd in ("鱼线","升级鱼线"):
         if cmd=="升级鱼线":
             if line_level==len(LINE_COST):
-                return "鱼线已满 5 级，抛竿时不会断线。"
+                return f"鱼线已满 5 级。查看耐久和换线费用\n{prefix}鱼线"
             if broken:
                 return line_help(db,key,coins,area,prefix,event["arrived"])
             cost=LINE_COST[line_level]
@@ -392,21 +408,36 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
             return line_help(db,key,coins,area,prefix,event["arrived"],f"{line_level} 级鱼线已断")
         levels=[r for r in gear.levels(db,key) if r["tier"]<=rod]
         limit=line_capacity(line_level,rod,levels)/1000
-        effect="满级免断线；鱼竿仍可能折断。" if line_level==len(LINE_COST) else (
-            f"安全承重 {limit:g} 公斤\n升级需要 {LINE_COST[line_level]} 鱼币。")
+        effect="满级可抗瞬时过载，磨损后仍会断线。" if line_level==len(LINE_COST) else (
+            f"抗过载承重 {limit:g} 公斤\n升级需要 {LINE_COST[line_level]} 鱼币。")
         paid=f"升级成功，消耗 {cost} 鱼币。\n" if cmd=="升级鱼线" else ""
         remaining=coins-cost if paid else coins
         if line_level<len(LINE_COST) and remaining>=LINE_COST[line_level]:
             effect+=f"\n发送即扣费升级\n{prefix}升级鱼线"
-        return f"{paid}🧵 鱼线 {line_level} 级　完好\n{effect}"
+        effect+=f"\n换新 {durability.LINE_PRICE} 鱼币，保留线级。"
+        if wear.line and remaining>=durability.LINE_PRICE:
+            effect+=f"\n{prefix}买鱼线"
+        return f"{paid}🧵 鱼线 {line_level} 级 · {durability.condition(wear.line,durability.LINE_LIMITS[line_level-1])}\n{effect}"
     if cmd in ("买鱼线","购买鱼线"):
-        if not broken:
-            return "鱼线完好，无需购买。"
-        if coins<3:
+        if not broken and not wear.line:
+            return "鱼线耐久 100%，无需购买。"
+        if coins<durability.LINE_PRICE:
+            if not broken:
+                return fish_storage.shortfall(db,key,durability.LINE_PRICE,prefix,event["arrived"],"换鱼线")
             return line_help(db,key,coins,area,prefix,event["arrived"])
-        db.execute("UPDATE fishing_wallets SET coins=coins-3 WHERE grp=? AND member=?",key)
+        db.execute("UPDATE fishing_wallets SET coins=coins-? WHERE grp=? AND member=?",(durability.LINE_PRICE,*key))
         db.execute("UPDATE fishing_tackle SET broken=0 WHERE grp=? AND member=?",key)
-        return "新鱼线已装好，消耗 3 鱼币。"
+        durability.save(db,key,durability.Wear(0,wear.rod))
+        return f"新鱼线已装好，消耗 {durability.LINE_PRICE} 鱼币。{line_level} 级耐久恢复至 100%。"
+    repair=durability.ROD_PRICES[rod-1]
+    if cmd=="修理鱼竿":
+        if not wear.rod:
+            return "鱼竿耐久 100%，无需修理。"
+        if coins<repair:
+            return fish_storage.shortfall(db,key,repair,prefix,event["arrived"],"修理鱼竿")
+        db.execute("UPDATE fishing_wallets SET coins=coins-? WHERE grp=? AND member=?",(repair,*key))
+        durability.save(db,key,durability.Wear(wear.line,0))
+        return f"🎣 鱼竿已修好，消耗 {repair} 鱼币。{rod} 级耐久恢复至 100%。"
     if cmd in gear.COMMANDS or gear.REFORGE.fullmatch(cmd):
         return gear.change(db,key,cmd,rod,event["event_id"],prefix,event["arrived"])
     upgrade=20*rod
@@ -415,7 +446,13 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         next_level=f"下级 {rod+1} 级（{next_grade}），升级费 {upgrade} 币" if next_grade else "已满级"
         if next_grade and coins>=upgrade:
             next_level+=f"，发送即升级\n{prefix}升级鱼竿"
-        return f"🎣 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）\n🪙 余额 {coins} 鱼币\n{next_level}\n\n"+gear.describe(rod,gear.levels(db,key))
+        maintenance=f"\n修至满耐久 {repair} 鱼币。"
+        if wear.rod and coins>=repair:
+            maintenance+=f"\n{prefix}修理鱼竿"
+        if rod==len(durability.ROD_LIMITS):
+            maintenance+="\n满耐久可承受 3 次最重活动鱼的拉扯。"
+
+        return f"🎣 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）\n{durability.condition(wear.rod,rod_max)}{maintenance}\n🪙 余额 {coins} 鱼币\n{next_level}\n\n"+gear.describe(rod,gear.levels(db,key))
     if cmd=="升级鱼竿":
         if rod+1 not in gear.GRADE_BY_LEVEL:
             return f"鱼竿已满 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）。"
@@ -423,7 +460,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
             return fish_storage.shortfall(db,key,upgrade,prefix,event["arrived"],"升级")
         db.execute("UPDATE fishing_wallets SET coins=coins-?,rod=rod+1 WHERE grp=? AND member=?",(upgrade,*key))
         return (f"🎣 鱼竿升到 {rod+1} 级，品质：{gear.GRADE_BY_LEVEL[rod]} → {gear.GRADE_BY_LEVEL[rod+1]}\n"
-                f"稀有鱼和珍品鱼出现机会提高。\n消耗 {upgrade} 鱼币，剩余 {coins-upgrade} 鱼币。")
+                f"耐久上限 {rod_max} → {durability.ROD_LIMITS[rod]}，保留已用损耗。\n消耗 {upgrade} 鱼币，剩余 {coins-upgrade} 鱼币。")
     bait_name = cmd.partition(" ")[2].strip() or "免费鱼饵"
     bait = fishing_bait.BAITS.get(bait_name)
     if bait is None:
@@ -466,15 +503,29 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
                   DO UPDATE SET last_attempt=excluded.last_attempt""",(*key,now))
     pond_growth.mark(db,key,now,"cast")
     casts = angler.advance(db,key,record["count"] if record else 0)
-    footer = receipt+"\n"+angler.progress(casts)
-    progress_footer=footer
+    progress_footer=receipt+"\n"+angler.progress(casts)
+    notice=""
     if not sighting.taken and sighting.start-giant_fish.LEAD<=now<sighting.start+giant_fish.DURATION:
-        footer+="\n\n"+sighting.notice(now, area)
+        notice="\n\n"+sighting.notice(now, area)
     if broken and grade=="巨物":
-        return line_help(db,key,coins,area,prefix,now,f"巨物{fish}游走了，备用线拉不住它")+footer
+        return line_help(db,key,coins,area,prefix,now,f"巨物{fish}游走了，备用线拉不住它")+progress_footer+notice
     heavy_encounter=grade=="巨物" or rarity in TROPHY_PERCENT
     risk=heavy_encounter or (offshore and record and record["count"]>=2)
-    damage=fight(rng,grams,rod,levels,line_level) if risk else None
+    # 新手塘普通鱼保底；外海初次抛竿时，已有的严重磨损仍参与判定。
+    worn=wear.line+durability.line_load(grams,line_level)>=line_max or wear.rod+durability.strain(grams)>=rod_max
+    fatigue=durability.fatigue(wear.line,line_max) or durability.fatigue(wear.rod,rod_max)
+    damage=fight(rng,grams,rod,levels,line_level,wear) if risk or offshore and (worn or fatigue) else None
+    updated=durability.after_pull(wear,grams,line_level,rod,damage,broken)
+    durability.save(db,key,updated)
+    if damage is None:
+        line_pct=durability.percent(updated.line,line_max)
+        rod_pct=durability.percent(updated.rod,rod_max)
+        progress_footer+=f"\n🧵 线耐久 {line_pct}% · 🎣 竿耐久 {rod_pct}%"
+        if not broken and (line_pct<=30 or updated.line+durability.line_load(grams,line_level)>=line_max):
+            progress_footer+=f"\n换线 {durability.LINE_PRICE} 鱼币"+(f"\n{prefix}买鱼线" if coins>=durability.LINE_PRICE else "，余额不足。")
+        if rod_pct<=30:
+            progress_footer+=f"\n修竿 {repair} 鱼币"+(f"\n{prefix}修理鱼竿" if coins>=repair else "，余额不足。")
+    footer=progress_footer+notice
     if damage=="线":
         db.execute("UPDATE fishing_tackle SET broken=1 WHERE grp=? AND member=?",key)
         return line_help(db,key,coins,area,prefix,now,"鱼线断了")+footer

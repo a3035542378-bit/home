@@ -290,12 +290,17 @@ class FishingTests(unittest.TestCase):
         self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('one',1,1)")
         self.assertIn("没有传说鱼",self.say("empty-tier","传说图鉴 新手池塘",99))
         self.say("travel","切换水域 外海",100)
+        self.say("gear","我的鱼竿",100)
+        self.db.execute("UPDATE fishing_wallets SET rod=5")
+        self.db.execute("INSERT INTO fishing_line_levels VALUES('one','player',5)")
         with patch("ergou.fishing.random.Random") as factory:
             rng=factory.return_value
             rng.choice.side_effect=lambda pool:pool[0]
             rng.triangular.side_effect=lambda low,high,mode:high
             rng.random.return_value=.99
             for i,(tier,name) in enumerate((("史诗","风暴长尾鲨"),("传说","曜金蓝鳍王"))):
+                if i:
+                    self.say("new-line","买鱼线",120)
                 rng.choices.return_value=[tier]
                 stamp=101+20*i
                 msg=self.say(tier,"抛竿",stamp)
@@ -380,7 +385,7 @@ class FishingTests(unittest.TestCase):
         self.assertIn("没找到",self.say("unknown","鱼种查询 不存在的鱼",102))
         self.assertFalse(self.db.execute("SELECT 1 FROM chat_requests").fetchone())
 
-    def test_line_upgrades_and_max_immunity(self):
+    def test_line_upgrades_and_fresh_max_line_overload(self):
         from unittest.mock import Mock
         from ergou.fishing import fight
         self.assertIn("5.5 公斤",self.say("l0","鱼线",99))

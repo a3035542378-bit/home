@@ -301,6 +301,12 @@ CREATE TABLE IF NOT EXISTS fishing_tackle (
 );
 CREATE INDEX IF NOT EXISTS fishing_heaviest ON fishing_records(grp,best_grams DESC,member);
 
+CREATE TABLE IF NOT EXISTS fishing_wear (
+ grp TEXT NOT NULL, member TEXT NOT NULL,
+ line_wear INTEGER NOT NULL CHECK(line_wear>=0), rod_wear INTEGER NOT NULL CHECK(rod_wear>=0),
+ PRIMARY KEY(grp,member), FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
+);
+
 CREATE TABLE IF NOT EXISTS fishing_line_levels (
  grp TEXT NOT NULL, member TEXT NOT NULL, level INTEGER NOT NULL CHECK(level BETWEEN 1 AND 5),
  PRIMARY KEY(grp,member), FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)

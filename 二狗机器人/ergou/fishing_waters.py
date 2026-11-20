@@ -114,5 +114,5 @@ def guide(area):
     pool=WATERS[area]
     names=[f[0] for f in pool]
     listing="\n".join("、".join(names[i:i+3]) for i in range(0,len(names),3))
-    risk="常规鱼获免损，巨物有断线折竿风险" if area=="新手池塘" else "超载有损坏风险"
+    risk="普通鱼只磨损，遇巨物可能断线折竿" if area=="新手池塘" else "超载有损坏风险"
     return f"📍 {area}\n🛡️ {risk}\n⚖️ {weight(min(f[1] for f in pool))}～{weight(max(25000 if f[0]=='鲤鱼' else f[2] for f in pool))}\n\n🐟 可钓 {len(pool)} 种\n{listing}"

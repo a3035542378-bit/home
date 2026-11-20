@@ -7,7 +7,7 @@ from . import breeding, exhibit_batch, fish_storage, fishing_bait, intents, pond
 
 BUSY_REPLY = "操作太快啦，稍等一下哦"
 BUSY_RESULT = "ASSET_BUSY"
-MUTATIONS = {"升级鱼塘", "卖出鱼包", "一键卖鱼", "买鱼线", "购买鱼线",
+MUTATIONS = {"升级鱼塘", "卖出鱼包", "一键卖鱼", "买鱼线", "购买鱼线", "修理鱼竿",
              "升级鱼线", "升级鱼竿", "强化鱼竿", "回退强化"}
 _admitting = {}
 _registry_lock = Lock()
