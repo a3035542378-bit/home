@@ -10,6 +10,7 @@ import re
 from .fish_receipts import grid
 
 COMMANDS={"强化鱼竿","回退强化","强化玩法"}
+GRADE_BY_LEVEL = {1: "普通", 2: "优良", 3: "稀有", 4: "史诗", 5: "传说"}
 REFORGE=re.compile(r"重铸 (韧性|硬度)(?: ([1-5]))?")
 
 
@@ -29,7 +30,7 @@ def describe(rod,rows):
     w=weights(rod,active)
     lines=[f"🔧 强化 {len(active)}/{rod} 阶",f"咬钩机会　稀有 {100*w[3]/sum(w):.2f}%",f"　　　　　珍品 {100*w[4]/sum(w):.2f}%"]
     for r in rows:
-        lines.append(f"\n第 {r['tier']} 阶　各项上限 {r['tier']+2}\n品质 {r['quality']}　韧性 {r['toughness']}　硬度 {r['hardness']}"+(" 暂停" if r["tier"]>rod else ""))
+        lines.append(f"\n第 {r['tier']} 阶　各项上限 {r['tier']+2}\n强化品质 {r['quality']}　韧性 {r['toughness']}　硬度 {r['hardness']}"+(" 暂停" if r["tier"]>rod else ""))
     return "\n".join(lines)
 
 
@@ -64,7 +65,7 @@ def change(db,key,cmd,rod,event_id,prefix="二狗",now=None):
     cap=tier+2
     if cmd=="强化鱼竿":
         values=[rng.randint(1,cap) for _ in range(3)]
-        change=f"新开第 {tier} 阶，品质 {values[0]}、韧性 {values[1]}、硬度 {values[2]}。"
+        change=f"新开第 {tier} 阶，强化品质 {values[0]}、韧性 {values[1]}、硬度 {values[2]}。"
         db.execute("INSERT INTO rod_enhancements VALUES(?,?,?,?,?,?)",(*key,tier,*values))
     elif match:
         column={"韧性":"toughness","硬度":"hardness"}[match[1]]

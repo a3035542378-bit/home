@@ -372,7 +372,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         best=f"{record['best_name']}　{weight(record['best_grams'])}" if record else "暂无鱼获"
         growth=angler.profile(db,key,landed,area)
         return (f"📋 我的钓鱼信息\n{growth}\n\n"
-                f"🪙 当前余额　{coins} 鱼币\n🧰 鱼竿 {rod} 级　鱼线 {line_level} 级"
+                f"🪙 当前余额　{coins} 鱼币\n🧰 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）　鱼线 {line_level} 级"
                 f"（{'已断' if broken else '完好'}）\n🎒 鱼包 {bag}/{bag_limit} 条　鱼塘 {pond}/{pond_limit} 条\n"
                 f"🐟 累计钓获　{landed} 条\n🏆 最重纪录　{best}\n\n处理鱼获\n{prefix}查看鱼包")
     if cmd in ("鱼线","升级鱼线"):
@@ -411,17 +411,19 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         return gear.change(db,key,cmd,rod,event["event_id"],prefix,event["arrived"])
     upgrade=20*rod
     if cmd=="我的鱼竿":
-        next_level=f"下级升级费 {upgrade} 币" if rod<5 else "已满级"
-        if rod<5 and coins>=upgrade:
+        next_grade=gear.GRADE_BY_LEVEL.get(rod+1)
+        next_level=f"下级 {rod+1} 级（{next_grade}），升级费 {upgrade} 币" if next_grade else "已满级"
+        if next_grade and coins>=upgrade:
             next_level+=f"，发送即升级\n{prefix}升级鱼竿"
-        return f"🎣 鱼竿 {rod} 级\n🪙 余额 {coins} 鱼币\n{next_level}\n\n"+gear.describe(rod,gear.levels(db,key))
+        return f"🎣 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）\n🪙 余额 {coins} 鱼币\n{next_level}\n\n"+gear.describe(rod,gear.levels(db,key))
     if cmd=="升级鱼竿":
-        if rod==5:
-            return "鱼竿已满 5 级。"
+        if rod+1 not in gear.GRADE_BY_LEVEL:
+            return f"鱼竿已满 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）。"
         if coins<upgrade:
             return fish_storage.shortfall(db,key,upgrade,prefix,event["arrived"],"升级")
         db.execute("UPDATE fishing_wallets SET coins=coins-?,rod=rod+1 WHERE grp=? AND member=?",(upgrade,*key))
-        return f"鱼竿升到 {rod+1} 级，稀有鱼和珍品鱼出现机会提高。剩余 {coins-upgrade} 鱼币。"
+        return (f"🎣 鱼竿升到 {rod+1} 级，品质：{gear.GRADE_BY_LEVEL[rod]} → {gear.GRADE_BY_LEVEL[rod+1]}\n"
+                f"稀有鱼和珍品鱼出现机会提高。\n消耗 {upgrade} 鱼币，剩余 {coins-upgrade} 鱼币。")
     bait_name = cmd.partition(" ")[2].strip() or "免费鱼饵"
     bait = fishing_bait.BAITS.get(bait_name)
     if bait is None:
@@ -479,7 +481,8 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     if damage=="竿":
         new_level=max(1,rod-1)
         db.execute("UPDATE fishing_wallets SET rod=? WHERE grp=? AND member=?",(new_level,*key))
-        return f"🎣 鱼竿折断！鱼竿 {rod} → {new_level} 级。\n你稳住竿柄，{fish}又猛地一挣，游走了。"+("\n高阶强化已封存，升回原等级可恢复。" if new_level<rod else "")+footer+f"\n{prefix}我的鱼竿"
+        grade=gear.GRADE_BY_LEVEL[new_level]
+        return f"🎣 鱼竿折断！鱼竿 {rod} → {new_level} 级（{grade}）。\n你稳住竿柄，{fish}又猛地一挣，游走了。"+("\n高阶强化已封存，升回原等级可恢复。" if new_level<rod else "")+footer+f"\n{prefix}我的鱼竿"
     chance = angler.slip_percent(casts-1, not offshore, heavy_encounter)
     if chance and rng.random() < chance/100:
         story=f"水面翻起一大片浪花，巨物{fish}甩开了钩。" if grade=="巨物" else rng.choice(angler.SLIPPED)

@@ -100,6 +100,22 @@ class FishingTests(unittest.TestCase):
         self.assertIn("10 条",self.say("e","我的鱼获",104))
         self.assertEqual(self.db.execute("SELECT count(*) FROM chat_requests").fetchone()[0],0)
 
+    def test_rod_grade_follows_level_without_enhancement(self):
+        self.assertIn("鱼竿 1 级（普通）", self.say("initial", "钓鱼信息", 100))
+        self.say("gear", "我的鱼竿", 101)
+        self.db.execute("UPDATE fishing_wallets SET coins=200 WHERE grp='one' AND member='player'")
+        for level, (old, new) in enumerate(zip(("普通", "优良", "稀有", "史诗"),
+                                               ("优良", "稀有", "史诗", "传说")), start=1):
+            with self.subTest(level=level):
+                now = 102 + 3*level
+                self.assertIn(f"下级 {level+1} 级（{new}）", self.say(f"look-{level}", "我的鱼竿", now))
+                result = self.say(f"up-{level}", "鱼竿升级", now+1)
+                self.assertIn(f"品质：{old} → {new}", result)
+                self.assertIn(f"鱼竿 {level+1} 级（{new}）", self.say(f"info-{level}", "钓鱼信息", now+2))
+        self.assertIn("已满 5 级（传说）", self.say("max", "升级鱼竿", 130))
+        self.assertEqual(tuple(self.db.execute("SELECT rod,coins FROM fishing_wallets").fetchone()), (5,0))
+        self.assertEqual(self.db.execute("SELECT count(*) FROM rod_enhancements").fetchone()[0], 0)
+
     def test_enhance_reforge_and_rollback(self):
         self.say("a","我的鱼竿",100)
         self.db.execute("UPDATE fishing_wallets SET coins=100,rod=2")
@@ -182,10 +198,11 @@ class FishingTests(unittest.TestCase):
         self.assertIn("无需购买",self.say("f","买鱼线",224))
         self.assertIn("秒后",self.say("g","抛竿",225))
         with patch("ergou.fishing.fight",return_value="竿"):
-            self.assertIn("鱼竿 2 → 1 级",self.say("h","抛竿",280))
+            self.assertIn("鱼竿 2 → 1 级（普通）",self.say("h","抛竿",280))
         self.assertEqual(tuple(self.db.execute("SELECT rod,coins FROM fishing_wallets").fetchone()),(1,97))
         self.assertEqual(self.db.execute("SELECT count(*) FROM fishing_pond").fetchone()[0],2)
         self.assertIn("2 条",self.say("i","我的鱼获",281))
+        self.assertIn("品质：普通 → 优良", self.say("restore", "升级鱼竿", 282))
 
     def test_collection_and_weight_board_survive_sale(self):
         self.say("a","钓鱼",100)
