@@ -64,6 +64,12 @@ def switch(db,group,on,now):
         refresh(db,(group,member),now)
 
 
+def record_query(db,key,now):
+    db.execute("""INSERT OR IGNORE INTO breed_queries(grp,member,first_at)
+                  SELECT grp,?,? FROM breed_pilots WHERE grp=? AND enabled=1
+                  AND ?>=started AND ?<started+?""",(key[1],now,key[0],now,now,WEEK))
+
+
 def week(db,group,now):
     pilot=db.execute("SELECT started FROM breed_pilots WHERE grp=?",(group,)).fetchone()
     if not pilot:
@@ -90,9 +96,15 @@ def week(db,group,now):
         AND b.started<? AND EXISTS (SELECT 1 FROM breed_pairs p WHERE p.grp=b.grp AND p.member=b.member
         AND p.id<b.id AND p.claimed_at<=b.started)""",args)
     sales=scalar("SELECT coalesce(sum(price),0) FROM breed_sales WHERE grp=? AND at>=? AND at<?",args)
+    unqualified=scalar("""SELECT count(*) FROM breed_queries q WHERE q.grp=? AND q.first_at>=? AND q.first_at<?
+        AND NOT EXISTS(SELECT 1 FROM breed_eligible e WHERE e.grp=q.grp AND e.member=q.member
+        AND e.ready>=? AND e.ready<?)""",(*args,start,end))
+    unpaired=scalar("""SELECT count(*) FROM breed_eligible e WHERE e.grp=? AND e.ready>=? AND e.ready<?
+        AND NOT EXISTS(SELECT 1 FROM breed_pairs p WHERE p.grp=e.grp AND p.member=e.member
+        AND p.started>=? AND p.started<?)""",(*args,start,end))
     return {"有两条同种成年塘鱼":eligible,"首次发起配对":first,"成功后领取":claimed,"留下首尾幼鱼":retained,
             "发起第二次配对":second,"首领后再次配对":after_claim,"实际配对费":fees,"育苗售鱼到账":sales,
-            "实际鱼币净回收":fees-sales}
+            "实际鱼币净回收":fees-sales,"查询过配对但尚无资格":unqualified,"已有资格却未发起配对":unpaired}
 
 
 def sale(db,where,params,now):

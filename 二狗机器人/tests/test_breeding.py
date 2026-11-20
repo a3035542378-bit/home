@@ -265,7 +265,7 @@ class BreedingTests(unittest.TestCase):
         assert "已点亮" in g.say(f"收入图鉴#{item}",2001)
         g.confirm(a,b,2002)
         data=breed_metrics.week(g.con,"east",2002)
-        assert list(data.values())==[1,1,1,1,1,1,12,0,12]
+        assert list(data.values())==[1,1,1,1,1,1,12,0,12,0,0]
         # 展品换回包，保留第一尾；次周出售不会改写首周留存或净回收。
         g.say(f"收入图鉴#{a}",3000)
         g.say("卖出鱼包",8*86400)
@@ -293,3 +293,118 @@ class BreedingTests(unittest.TestCase):
         assert breed_metrics.week(g.con,"east",2100)["有两条同种成年塘鱼"]==2
         g.say(f"卖鱼#{x}",2099,member="q")
         assert breed_metrics.week(g.con,"east",2100)["有两条同种成年塘鱼"]==1
+
+    def test_first_pair_moves_real_bag_fish_then_quotes_for_free(self):
+        g=self.game
+        a,b=g.fish(),g.fish()
+        g.con.execute("UPDATE fishing_pond SET storage='bag' WHERE id=?", (b,))
+        g.fish(member="q")
+        g.fish(group="west")
+        reply=g.say("繁育配对",10)
+        self.assertIn(f"塘里 #{a}（成年）",reply)
+        self.assertIn(f"包里 #{b}（成年）",reply)
+        self.assertEqual(reply.splitlines()[-1],f"二狗放入鱼塘#{b}")
+        self.assertIn("已将",g.say(f"放入鱼塘#{b}",11))
+        guide=g.say("繁育配对",12)
+        self.assertEqual(guide.splitlines()[-1],f"二狗繁育配对#{a} #{b}")
+        self.assertIn("确认配对",g.say(f"繁育配对#{a} #{b}",13))
+        self.assertEqual(g.balance(),100)
+
+    def test_first_pond_upgrade_balance_and_full_pond(self):
+        g=self.game
+        a,b=g.fish(),g.fish()
+        g.con.execute("UPDATE fishing_pond SET storage='bag' WHERE id=?", (b,))
+        g.con.execute("DELETE FROM fishing_storage_levels")
+        g.con.execute("UPDATE fishing_wallets SET coins=7 WHERE member='p'")
+        spare=g.fish("泥鳅")
+        g.con.execute("UPDATE fishing_pond SET storage='bag' WHERE id=?", (spare,))
+        reply=g.say("繁育配对",10)
+        for word in ("1/1","20 鱼币","余额 7",f"卖鱼#{spare}"):
+            self.assertIn(word,reply)
+        self.assertLessEqual(len(reply.splitlines()),5)
+        self.assertNotIn("放入鱼塘",reply)
+        self.assertEqual(g.balance(),7)
+        g.say(f"卖鱼#{spare}",11)
+        self.assertIn("二狗升级鱼塘",g.say("繁育配对",12))
+        self.assertIn("可放 4 条",g.say("升级鱼塘",13))
+        for name in ("泥鳅","白条","鳊鱼"):
+            g.fish(name)
+        g.con.execute("UPDATE fishing_wallets SET coins=0 WHERE member='p'")
+        reply=g.say("繁育配对",14)
+        self.assertIn("先腾 1 个塘位",reply)
+        self.assertNotIn("放入鱼塘",reply)
+        self.assertLessEqual(len(reply.splitlines()),5)
+
+    def test_first_pair_single_fish_uses_its_habitat_and_own_stock(self):
+        g=self.game
+        a=g.fish("虹鳟",1000)
+        g.fish("虹鳟",1000,member="q")
+        g.fish("虹鳟",1000,group="west")
+        reply=g.say("繁育配对",10)
+        for word in (f"塘里 #{a}（成年）","还缺一条","山涧溪流","二狗切换钓场 山涧溪流"):
+            self.assertIn(word,reply)
+        g.say("切换钓场 山涧溪流",11)
+        self.assertIn("二狗抛竿",g.say("繁育配对",12))
+
+    def test_first_pair_fry_needs_growth_then_becomes_eligible_offline(self):
+        g=self.game
+        a,b=g.fish(),g.fish(grams=250,adult=False)
+        g.con.execute("INSERT INTO breed_fry VALUES(?,250,500,'p',1)",(b,))
+        reply=g.say("繁育配对",10)
+        self.assertIn(f"#{b}（幼鱼）",reply)
+        self.assertIn(f"二狗换入成长位#{b}",reply)
+        self.assertIn("进入成长位",g.say(f"换入成长位#{b}",11))
+        self.assertIn("正在成长",g.say("繁育配对",12))
+        self.assertNotIn(f"繁育配对#{a} #{b}",g.say("繁育配对",1810))
+        self.assertIn(f"繁育配对#{a} #{b}",g.say("繁育配对",1811))
+        self.assertEqual(g.balance(),100)
+
+    def test_week_query_cohorts_change_on_eligibility_and_confirmation(self):
+        g=self.game
+        def cohorts(t,group="east"):
+            data=breed_metrics.week(g.con,group,t)
+            return data["查询过配对但尚无资格"], data["已有资格却未发起配对"]
+        g.say("繁育配对",10)
+        g.say("繁育配对",11)
+        g.say("繁育状态",12,member="q")
+        g.say("繁育配对",12,group="west")
+        self.assertEqual(cohorts(12),(1,0))
+        a,b=g.fish(),g.fish()
+        breed_metrics.refresh(g.con,("east","p"),13)
+        self.assertEqual(cohorts(13),(0,1))
+        g.say(f"繁育配对#{a} #{b}",14)
+        self.assertEqual(cohorts(14),(0,1))
+        g.say(f"确认配对#{a} #{b}",15)
+        self.assertEqual(cohorts(15),(0,0))
+        for _ in range(2):
+            g.fish(member="q")
+        breed_metrics.refresh(g.con,("east","q"),16)
+        breed_metrics.switch(g.con,"west",True,16)
+        g.say("繁育配对",17,group="west")
+        self.assertEqual(cohorts(18,"west"),(1,0))
+        self.assertEqual(cohorts(18),(0,1))
+        g.say("繁育配对",breed_metrics.WEEK, member="outside")
+        self.assertEqual(cohorts(breed_metrics.WEEK+1),(0,1))
+        self.assertFalse(g.con.execute("SELECT 1 FROM breed_queries WHERE member='outside'").fetchone())
+
+    def test_new_player_can_follow_first_level_quote_without_query_debit(self):
+        g=self.game
+        reply=g.say("繁育配对",10,member="new")
+        self.assertIn("余额 30 鱼币",reply)
+        self.assertIn("0/1",reply)
+        self.assertFalse(g.con.execute("SELECT 1 FROM fishing_wallets WHERE member='new'").fetchone())
+        self.assertIn("消耗 20 鱼币",g.say("升级鱼塘",11,member="new"))
+        self.assertIn("二狗抛竿",g.say("繁育配对",12,member="new"))
+
+    def test_two_bag_fish_with_only_one_free_slot(self):
+        g=self.game
+        a,b=g.fish(),g.fish()
+        g.con.execute("UPDATE fishing_pond SET storage='bag' WHERE id IN (?,?)",(a,b))
+        for fish in ("泥鳅","白条","虹鳟"):
+            g.fish(fish)
+        reply=g.say("繁育配对",10)
+        self.assertIn(f"包里 #{a}",reply)
+        self.assertIn(f"包里 #{b}",reply)
+        self.assertIn("升级鱼塘",reply)
+        self.assertNotIn("放入鱼塘",reply)
+        self.assertEqual(g.balance(),100)

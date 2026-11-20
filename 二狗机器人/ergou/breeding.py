@@ -129,19 +129,15 @@ def play(db,key,event,cmd,prefix):
         if status!="pending":
             return "当前没有待领幼鱼。"
         return claim(db,key,current,now,prefix)
+    if cmd.startswith("繁育配对"):
+        from . import breed_metrics
+        breed_metrics.record_query(db,key,now)
     if status in ("active","pending"):
         return f"已有一对繁育中或有幼鱼待领。查看　{prefix}繁育状态"
     match=PAIR.fullmatch(cmd)
     if not match:
-        seen={}
-        for parent in parents_for(db,key):
-            fish=parent["fish"]
-            if fish in seen:
-                return (f"🐟 可配对 · {fish} #{seen[fish]} 和 #{parent['item']}\n"
-                        f"查看报价　{prefix}繁育配对#{seen[fish]} #{parent['item']}")
-            seen[fish]=parent["item"]
-        return (f"🌱 先把两条同种鱼养到成年，野生亲鱼需已定型。一级塘可先升级扩到 4 格。\n"
-                f"每次 {FEE} 鱼币 · 成功率 {SUCCESS:.0%} · 30 分钟\n查看亲鱼　{prefix}鱼塘")
+        from . import breed_guide
+        return breed_guide.guide(db,key,prefix)
     action=match[1]
     ids=tuple(sorted((int(match[2]),int(match[3]))))
     parents=parents_for(db,key,ids)

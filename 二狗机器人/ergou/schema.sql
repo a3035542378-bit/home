@@ -401,6 +401,10 @@ CREATE TABLE IF NOT EXISTS breed_previews (
  grp TEXT NOT NULL,member TEXT NOT NULL,p1 INTEGER NOT NULL,p2 INTEGER NOT NULL,expires REAL NOT NULL,
  PRIMARY KEY(grp,member)
 );
+CREATE TABLE IF NOT EXISTS breed_queries (
+ grp TEXT NOT NULL REFERENCES breed_pilots(grp), member TEXT NOT NULL, first_at REAL NOT NULL,
+ PRIMARY KEY(grp,member)
+);
 CREATE TABLE IF NOT EXISTS breed_eligible (
  grp TEXT NOT NULL, member TEXT NOT NULL, ready REAL NOT NULL, PRIMARY KEY(grp,member)
 );
