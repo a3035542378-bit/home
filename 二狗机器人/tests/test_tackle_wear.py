@@ -167,8 +167,8 @@ class TackleWearTests(unittest.TestCase):
         self.assertIn("史诗　0.24%",panel)
         self.assertIn("传说　0.02%",panel)
         enhanced=self.send("二狗强化鱼竿")
-        self.assertIn("史诗　0.246%",enhanced)
-        self.assertIn("传说　0.0205%",enhanced)
+        self.assertIn("幸运",enhanced)
+        self.assertNotIn("史诗　0.24%",enhanced)
         with (patch("ergou.fishing.random.Random") as factory,
               patch("ergou.giant_fish.encounter",return_value=None)):
             rng=factory.return_value

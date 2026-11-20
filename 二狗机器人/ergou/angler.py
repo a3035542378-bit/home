@@ -28,11 +28,13 @@ def slip_floor(starter):
     return 2 if starter else 5
 
 
-def slip_percent(previous_casts, starter, giant=False):
+def slip_percent(previous_casts, starter, giant=False, hardness=0):
     if previous_casts < PROTECTED_CASTS and not giant:
         return 0
     base = 5 if starter else 12
-    return max(slip_floor(starter), base - (level(previous_casts) - 1))
+    floor = slip_floor(starter)
+    remaining = max(0, base - (level(previous_casts) - 1) - floor)
+    return floor + remaining * (1 - hardness)
 
 
 def advance(db, key, historical_catches):
@@ -54,7 +56,12 @@ def profile(db, key, historical_catches, area):
     casts = row[0] if row else historical_catches
     remaining = CASTS_PER_LEVEL - casts % CASTS_PER_LEVEL
     starter = area == "新手池塘"
-    chance = slip_percent(casts, starter)
+    from . import rod, rod_stats
+    wallet = db.execute("SELECT rod FROM fishing_wallets WHERE grp=? AND member=?",key).fetchone()
+    rows = rod_stats.active_levels(wallet[0],rod.levels(db,key)) if wallet else ()
+    hardness = rod_stats.power(rows,"hardness")
+    chance = slip_percent(casts, starter, False, hardness)
+    giant = slip_percent(casts, starter, True, hardness)
     return (f"🎣 钓手 {level(casts)} 级\n累计 {casts} 竿　再抛 {remaining} 竿升级\n"
-            f"📍 {area}　下竿脱钩率 {chance}%\n🌊 巨物脱钩率 {slip_percent(casts,starter,True)}%\n"
+            f"📍 {area}　下竿脱钩率 {chance:.4g}%\n🌊 巨物脱钩率 {giant:.4g}%\n"
             f"每 {CASTS_PER_LEVEL} 竿升一级，跑鱼也算一竿。")

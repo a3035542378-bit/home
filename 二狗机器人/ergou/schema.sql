@@ -277,14 +277,6 @@ CREATE TABLE IF NOT EXISTS fishing_exhibits (
  FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
 );
 
-CREATE TABLE IF NOT EXISTS rod_enhancements (
- grp TEXT NOT NULL, member TEXT NOT NULL, tier INTEGER NOT NULL CHECK(tier BETWEEN 1 AND 5),
- quality INTEGER NOT NULL CHECK(quality BETWEEN 1 AND tier+2),
- toughness INTEGER NOT NULL CHECK(toughness BETWEEN 1 AND tier+2),
- hardness INTEGER NOT NULL CHECK(hardness BETWEEN 1 AND tier+2),
- PRIMARY KEY(grp,member,tier), FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
-);
-
 CREATE TABLE IF NOT EXISTS asset_display_names(
  grp TEXT NOT NULL REFERENCES groups, binding INTEGER NOT NULL, member TEXT NOT NULL,
  name TEXT NOT NULL, checked REAL NOT NULL, PRIMARY KEY(grp,binding,member)

@@ -1,4 +1,5 @@
 """本群成员的钓鱼记录；随入站消息在同一事务提交。"""
+from . import rod_stats
 import math
 import random
 import re
@@ -210,23 +211,25 @@ LINE_COST=(0,25,60,140,300)
 LINE_BASE=(4000,8000,15000,25000,40000)
 
 
-def line_capacity(level,rod,levels):
-    return LINE_BASE[level-1]+1500*rod+250*sum(r["toughness"] for r in levels)
+def line_capacity(level,rod):
+    return LINE_BASE[level-1]+1500*rod
 
 
-def fight(rng,grams,rod,levels,line_level=1,wear=durability.Wear()):
-    line_limit=line_capacity(line_level,rod,levels)
-    rod_limit=6000+2200*rod+400*sum(r["hardness"] for r in levels)
+def fight(rng,grams,rod,levels,line_level=1,wear=durability.Wear(),load=None):
+    if load is None:
+        load=durability.pull_load(grams,line_level,rod_stats.power(levels,"toughness"),0)
+    line_limit=line_capacity(line_level,rod)
+    rod_limit=6000+2200*rod
     rod_max=durability.ROD_LIMITS[rod-1]
     line_max=durability.LINE_LIMITS[line_level-1]
-    if durability.strain(grams)>=rod_max-wear.rod:
+    if load.rod>=rod_max-wear.rod:
         return "竿"
     if rod<5:
         overload=max(0.,min(.55,(grams/rod_limit-1)*.4))
         risk=max(overload,durability.fatigue(wear.rod,rod_max))
         if risk and rng.random()<risk:
             return "竿"
-    if durability.line_load(grams,line_level)>=line_max-wear.line:
+    if load.line>=line_max-wear.line:
         return "线"
     overload=max(0.,min(.75,(grams/line_limit-1)*.5)) if line_level<len(LINE_BASE) else 0.
     risk=max(overload,durability.fatigue(wear.line,line_max))
@@ -416,8 +419,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
                           DO UPDATE SET level=excluded.level""",(*key,line_level))
         if broken:
             return line_help(db,key,coins,area,prefix,event["arrived"],f"{line_level} 级鱼线已断")
-        levels=[r for r in gear.levels(db,key) if r["tier"]<=rod]
-        limit=line_capacity(line_level,rod,levels)/1000
+        limit=line_capacity(line_level,rod)/1000
         effect="满级可抗瞬时过载，磨损后仍会断线。" if line_level==len(LINE_COST) else (
             f"抗过载承重 {limit:g} 公斤\n升级需要 {LINE_COST[line_level]} 鱼币。")
         paid=f"升级成功，消耗 {cost} 鱼币。\n" if cmd=="升级鱼线" else ""
@@ -466,7 +468,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         if pending_rod:
             maintenance+="\n再抛竿就会折竿降级。"
 
-        return f"🎣 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）\n{durability.condition(wear.rod,rod_max)}{maintenance}\n🪙 余额 {coins} 鱼币\n{next_level}\n\n"+gear.describe(rod,gear.levels(db,key),area)
+        return f"🎣 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）\n{durability.condition(wear.rod,rod_max)}{maintenance}\n🪙 余额 {coins} 鱼币\n{next_level}\n\n"+gear.describe(db,key,rod,area)
     if cmd=="升级鱼竿":
         if rod+1 not in gear.GRADE_BY_LEVEL:
             return f"鱼竿已满 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）。"
@@ -514,7 +516,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         receipt = f"\n🪱 {bait_name}　−{bait.points} 积分，扣饵后余 {available-bait.points} 分"
     progress_footer=receipt+"\n"+angler.progress(casts)
     rng = random.Random(event["event_id"])
-    levels=[row for row in gear.levels(db,key) if row["tier"]<=rod]
+    levels=rod_stats.active_levels(rod,gear.levels(db,key))
     weights=gear.weights(rod,levels)
     rarity=fishing_bait.choose_rarity(rng,WATERS[area],weights,bait,gear.trophy_bonus(rod,levels))
     pool=[item for item in WATERS[area] if item[-1]==rarity]
@@ -536,18 +538,21 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     heavy_encounter=grade=="巨物" or rarity in TROPHY_PERCENT
     risk=heavy_encounter or (offshore and record and record["count"]>=2)
     # 新手塘普通鱼保底；外海初次抛竿时，已有的严重磨损仍参与判定。
-    worn=wear.line+durability.line_load(grams,line_level)>=line_max or wear.rod+durability.strain(grams)>=rod_max
+    toughness=rod_stats.power(levels,"toughness")
+    rounding=random.Random("wear/"+event["event_id"]).random() if toughness else 0
+    load=durability.pull_load(grams,line_level,toughness,rounding)
+    worn=wear.line+load.line>=line_max or wear.rod+load.rod>=rod_max
     fatigue=durability.fatigue(wear.line,line_max) or durability.fatigue(wear.rod,rod_max)
-    damage=fight(rng,grams,rod,levels,line_level,wear) if risk or offshore and (worn or fatigue) else None
+    damage=fight(rng,grams,rod,levels,line_level,wear,load) if risk or offshore and (worn or fatigue) else None
     crown_landing=rod==5 and fish=="星渊冠鲨" and grams==giant_fish.giant_max(giant_fish.SPECIES[fish])
-    chance=angler.slip_percent(casts-1,not offshore,heavy_encounter)
+    chance=angler.slip_percent(casts-1,not offshore,heavy_encounter,rod_stats.power(levels,"hardness"))
     slipped=(damage is None or crown_landing) and chance and rng.random()<chance/100
     deferred=None
     if crown_landing and damage:
         if not slipped:
             deferred=damage
         damage=None
-    updated=durability.after_pull(wear,grams,line_level,rod,damage,broken)
+    updated=durability.after_pull(wear,load,line_level,rod,damage,broken)
     if deferred=="竿":
         updated=durability.Wear(updated.line,rod_max)
     elif deferred=="线":
@@ -559,7 +564,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         progress_footer+=f"\n🧵 线耐久 {line_pct}% · 🎣 竿耐久 {rod_pct}%"
         if deferred:
             progress_footer+=f"\n⚠️ 鱼{deferred}撑到了收竿，下次有效抛竿会断。"
-        if not broken and (line_pct<=30 or updated.line+durability.line_load(grams,line_level)>=line_max):
+        if not broken and (line_pct<=30 or updated.line+load.line>=line_max):
             progress_footer+=f"\n换线 {durability.LINE_PRICE} 鱼币"+(f"\n{prefix}买鱼线" if coins>=durability.LINE_PRICE else "，余额不足。")
         if rod_pct<=30:
             progress_footer+=f"\n修竿 {repair} 鱼币"+(f"\n{prefix}修理鱼竿" if coins>=repair else "，余额不足。")
@@ -571,7 +576,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         new_level=max(1,rod-1)
         db.execute("UPDATE fishing_wallets SET rod=? WHERE grp=? AND member=?",(new_level,*key))
         grade=gear.GRADE_BY_LEVEL[new_level]
-        return f"🎣 鱼竿折断！鱼竿 {rod} → {new_level} 级（{grade}）。\n你稳住竿柄，{fish}又猛地一挣，游走了。"+("\n高阶强化已封存，升回原等级可恢复。" if new_level<rod else "")+footer+f"\n{prefix}我的鱼竿"
+        return f"🎣 鱼竿折断！鱼竿 {rod} → {new_level} 级（{grade}）。\n你稳住竿柄，{fish}又猛地一挣，游走了。"+("\n高阶强化已封存，升回原等级可恢复。" if len(levels)>new_level*rod_stats.STAGES_PER_GRADE else "")+footer+f"\n{prefix}我的鱼竿"
     if slipped:
         story=f"水面翻起一大片浪花，巨物{fish}甩开了钩。" if grade=="巨物" else rng.choice(angler.SLIPPED)
         if rarity in TROPHY_PERCENT:

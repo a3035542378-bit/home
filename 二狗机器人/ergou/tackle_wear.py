@@ -45,18 +45,26 @@ def line_load(grams, line_level):
     return min(strain(grams), LINE_LIMITS[line_level-1] * 2 // 3)
 
 
+def pull_load(grams, line_level, toughness, rounding):
+    # 双方使用同一次取整；小鱼也能按长期比例节省磨损。
+    factor = 1 - .5 * toughness
+    def adjusted(raw):
+        return max(1, int(raw * factor + rounding))
+    return Wear(adjusted(line_load(grams, line_level)), adjusted(strain(grams)))
+
+
 def fatigue(spent, limit):
     # 剩余 30% 以下开始增加断裂概率，磨损越深风险越高。
     return min(.85, max(0., (spent / limit - .70) * 3))
 
 
-def after_pull(wear, grams, line_level, rod, damage, broken):
+def after_pull(wear, load, line_level, rod, damage, broken):
     line_limit = LINE_LIMITS[line_level-1]
     if broken or damage == "线":
         line = line_limit
     else:
-        line = min(line_limit-1, wear.line + line_load(grams, line_level))
-    rod_wear = 0 if damage == "竿" else min(ROD_LIMITS[rod-1]-1, wear.rod + strain(grams))
+        line = min(line_limit-1, wear.line + load.line)
+    rod_wear = 0 if damage == "竿" else min(ROD_LIMITS[rod-1]-1, wear.rod + load.rod)
     return Wear(line, rod_wear)
 
 

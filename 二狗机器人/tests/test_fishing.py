@@ -125,12 +125,14 @@ class FishingTests(unittest.TestCase):
         def rows():
             return list(map(tuple,self.db.execute("SELECT tier,quality,toughness,hardness FROM rod_enhancements ORDER BY tier")))
         old=rows()
-        self.assertIn("上限",self.say("d","强化鱼竿",104))
+        panel=self.say("d","我的鱼竿",104)
+        self.assertIn("当前强化 2/40 阶",panel)
+        self.assertNotIn("第 1 阶",panel)
         self.say("e","重铸 硬度 1",105)
         changed=rows()
         self.assertEqual(old[0][:3],changed[0][:3])
         self.assertEqual(old[1],changed[1])
-        self.assertTrue(all(1<=x<=3 for x in changed[0][1:]))
+        self.assertTrue(all(1<=x<=10 for x in changed[0][1:]))
         from ergou.rod import levels,weights
         w=weights(2,levels(self.db,("one","player")))
         self.assertAlmostEqual(sum(w),110)

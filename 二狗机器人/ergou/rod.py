@@ -1,4 +1,4 @@
-"""逐阶强化：基础品质随强化确定，两项附属性可分别重铸。"""
+"""逐阶强化：基础品质随强化确定，三项附属性可分别重铸。"""
 import time
 import http.client
 import logging
@@ -7,13 +7,13 @@ import json
 import random
 import re
 
-from . import fishing_bait
+from . import angler, fishing_bait, rod_stats
 from .fishing_waters import WATERS
 from .fish_receipts import grid
 
 COMMANDS={"强化鱼竿","回退强化","强化玩法"}
 GRADE_BY_LEVEL = {1: "普通", 2: "优良", 3: "稀有", 4: "史诗", 5: "传说"}
-REFORGE=re.compile(r"重铸 (韧性|硬度)(?: ([1-5]))?")
+REFORGE=re.compile(r"重铸 (韧性|硬度|幸运)(?: ([1-9][0-9]{0,2}))?")
 
 
 def levels(db,key):
@@ -22,27 +22,41 @@ def levels(db,key):
 
 def weights(rod,rows):
     # 保持总权重不变，将普通鱼的部分权重转给稀有、珍品。
-    rare=sum(r["quality"]+r["toughness"] for r in rows)*0.2
-    prized=sum(r["hardness"] for r in rows)*0.2
+    luck=rod_stats.power(rows,"luck")
+    rare=12*(rod_stats.power(rows,"quality")+luck)
+    prized=8*luck
     return (40-rare-prized,30,20,8*rod+rare,2*rod+prized)
 
 
 def trophy_bonus(rod, active):
-    return 1 + .25*(rod-1) + .05*len(active)
+    return 1 + .25*(rod-1) + .05*len(active) + 2*rod_stats.power(active,"luck")
 
 
-def describe(rod,rows,area):
-    active=[r for r in rows if r["tier"]<=rod]
+def describe(db,key,rod,area):
+    rows=levels(db,key)
+    active=rod_stats.active_levels(rod,rows)
     bonus=trophy_bonus(rod,active)
     chances=fishing_bait.distribution(WATERS[area],weights(rod,active),fishing_bait.BAITS["免费鱼饵"],bonus)
-    lines=[f"🔧 强化 {len(active)}/{rod} 阶",f"🎣 常规咬钩率 · {area} · 免费饵"]
+    lines=[f"🔧 当前强化 {len(active)}/{rod*rod_stats.STAGES_PER_GRADE} 阶"]
+    if active:
+        current=active[-1]
+        low,high=rod_stats.bounds(current["tier"])
+        casts=db.execute("""SELECT COALESCE(
+            (SELECT casts FROM fishing_experience WHERE grp=? AND member=?),
+            (SELECT count FROM fishing_records WHERE grp=? AND member=?),0)""",(*key,*key)).fetchone()[0]
+        slip=angler.slip_percent(casts,area=="新手池塘",False,rod_stats.power(active,"hardness"))
+        lines.extend([f"本阶属性范围 {low}～{high}",
+                      f"品质 {current['quality']}　幸运 {current['luck']}",
+                      f"韧性 {current['toughness']}　硬度 {current['hardness']}",
+                      f"累计少磨损 {50*rod_stats.power(active,'toughness'):.3f}%",
+                      f"下竿常规鱼脱钩率 {slip:.4g}%"])
+    if len(rows)>len(active):
+        lines.append(f"封存 {len(rows)-len(active)} 阶，恢复竿级后生效。")
+    lines.extend(["",f"🎣 常规咬钩率 · {area} · 免费饵"])
     for tier in ("普通","稀有","珍品","史诗","传说"):
         chance=chances.get(tier)
         value=f"{chance:.4f}".rstrip("0").rstrip(".")+"%" if chance is not None else "本场无此鱼种"
         lines.append(f"{tier}　{value}")
-    lines.append(f"史诗、传说倍率 ×{bonus:g}（竿级和已生效强化）")
-    for r in rows:
-        lines.append(f"\n第 {r['tier']} 阶　各项上限 {r['tier']+2}\n强化品质 {r['quality']}　韧性 {r['toughness']}　硬度 {r['hardness']}"+(" 暂停" if r["tier"]>rod else ""))
     return "\n".join(lines)
 
 
@@ -53,17 +67,14 @@ def change(db,key,cmd,rod,event_id,prefix,now,area):
     tier=int(match[2]) if match and match[2] else depth
     rng=random.Random(event_id)
     if cmd=="强化玩法":
-        return ("🔧 鱼竿强化\n鱼竿每升一级，可多强化一阶。\n第 N 阶每项随机 1～N+2 点。\n"
-                "品质、韧性提高稀有鱼概率。\n硬度提高珍品概率。\n\n"
-                "🔨 开新阶　强化鱼竿\n花费：10 × 新阶数 鱼币\n\n"
-                "🎲 重抽一项属性\n重铸 韧性 1\n重铸 硬度 1\n花费：4 × 阶数 鱼币\n数值可能降低，省略阶数选最高阶。\n\n"
-                "↩️ 移除最高阶　回退强化\n花费：3 × 最高阶数 鱼币\n低阶保留，重新强化可重抽品质。")
-    if depth>rod:
+        from .feature_menu import TOPICS
+        return next(topic.body for topic in TOPICS if topic.name=="强化")
+    if depth>rod*rod_stats.STAGES_PER_GRADE:
         return "折竿后高阶强化已封存，先恢复竿等级再调整强化。"
     if cmd=="强化鱼竿":
         tier=depth+1
-        if tier>rod:
-            return "强化已达到当前竿等级上限。可重铸附属性，或先升级鱼竿。"
+        if tier>rod*rod_stats.STAGES_PER_GRADE:
+            return "已达本竿强化上限，可重铸当前阶的属性。"
         cost=10*tier
     elif not 1<=tier<=depth:
         return "该强化阶尚未开启。"
@@ -74,22 +85,22 @@ def change(db,key,cmd,rod,event_id,prefix,now,area):
     if not paid.rowcount:
         from .fish_storage import shortfall
         return shortfall(db,key,cost,prefix,now or time.time(),"本次强化")
-    cap=tier+2
+    low,cap=rod_stats.bounds(tier)
     if cmd=="强化鱼竿":
-        values=[rng.randint(1,cap) for _ in range(3)]
-        change=f"新开第 {tier} 阶，强化品质 {values[0]}、韧性 {values[1]}、硬度 {values[2]}。"
-        db.execute("INSERT INTO rod_enhancements VALUES(?,?,?,?,?,?)",(*key,tier,*values))
+        values=[rng.randint(low,cap) for _ in rod_stats.FIELDS]
+        change=f"已开启第 {tier} 阶。"
+        db.execute("INSERT INTO rod_enhancements VALUES(?,?,?,?,?,?,?)",(*key,tier,*values))
     elif match:
-        column={"韧性":"toughness","硬度":"hardness"}[match[1]]
+        column={"韧性":"toughness","硬度":"hardness","幸运":"luck"}[match[1]]
         old=next(r[column] for r in rows if r["tier"]==tier)
-        value=rng.randint(1,cap)
+        value=rng.randint(low,cap)
         db.execute(f"UPDATE rod_enhancements SET {column}=? WHERE grp=? AND member=? AND tier=?",
                    (value,*key,tier))
         change=f"第 {tier} 阶{match[1]}：{old} → {value}。"
     else:
         change=f"已移除第 {tier} 阶，剩余 {tier-1} 阶。"
         db.execute("DELETE FROM rod_enhancements WHERE grp=? AND member=? AND tier=?",(*key,tier))
-    return f"{cmd}成功，消耗 {cost} 鱼币。\n{change}\n"+describe(rod,levels(db,key),area)
+    return f"{cmd}成功，消耗 {cost} 鱼币。\n{change}\n"+describe(db,key,rod,area)
 
 
 ASSET_RANKS = """WITH pond AS (SELECT member,sum(price) value FROM fishing_pond WHERE grp=? GROUP BY member),
