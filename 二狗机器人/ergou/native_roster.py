@@ -131,6 +131,10 @@ def apply_snapshot(db,group,account,binding,server_id,continuity,policy,operatio
                         (group,account,server_id,binding)).fetchone()
         if not link or not policy or policy!=member_policy.active(db,group,account,binding):
             return False
+        from . import roles
+        room=db.execute("SELECT owner_user_id,label FROM group_binding WHERE group_id=? AND bot_id=?",(group,account)).fetchone()
+        if room and room["owner_user_id"] and room["owner_user_id"] not in members:
+            roles.sync(db,account,group,None,room["label"],departed=True)
         last=db.execute("SELECT * FROM native_rosters WHERE grp=?",(group,)).fetchone()
         if (last and (last["account"],last["binding"],last["server_id"],last["continuity"])==
                 (account,binding,server_id,continuity) and 0<=now-last["observed"]<=POLL_INTERVAL*2):

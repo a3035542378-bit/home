@@ -261,6 +261,15 @@ class Listener:
                     and isinstance(payload["text"], str) and len(dump(payload).encode()) <= 8192):
                 from .engine import addressed_command
                 cmd=addressed_command(payload["text"],"二狗",payload.get("mention_account")==self.account)
+                from . import roles,wechat_roles
+                if cmd and roles.owner(self.db,self.account) and (roles.parse(cmd) or roles.GAME_CONTROL.fullmatch(cmd)):
+                    wechat_roles.refresh_owner(self.db,self.client,self.account,self.group)
+                    target=wechat_roles.target_member(self.db,self.client,self.account,self.group,message)
+                    if target:
+                        payload["role_target"]=target
+                    ids=mentions.get("userIds",[]) if isinstance(mentions,dict) else []
+                    if isinstance(ids,list) and any(uid!=self.account for uid in ids) and not target:
+                        payload["invalid_role_target"]=True
                 from .pond_raids import TARGET
                 if (TARGET.fullmatch((cmd if cmd is not None else payload["text"]).strip())
                         and isinstance(mentions,dict) and mentions.get("state")=="known"

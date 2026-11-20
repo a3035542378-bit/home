@@ -2,7 +2,7 @@
 from datetime import datetime
 import time
 
-from . import bridge
+from . import bridge, roles
 from .agent_wechat import number, valid_id
 from .db import audit, transaction
 from .engine import addressed_command
@@ -11,6 +11,9 @@ COMMANDS = {"激活本群": "activate", "停用本群": "pause", "绑定状态":
 
 
 def administrator(db, account, member):
+    top=roles.owner(db,account)
+    if top:
+        return top["owner_user_id"]==member
     return db.execute("SELECT 1 FROM binding_admins WHERE account=? AND member=?", (account,member)).fetchone()
 
 
@@ -53,6 +56,9 @@ def change(db, stream, group, cursor, action, secret, now):
         return "本群已由后台暂停或撤销授权，请在后台核对。"
     if not row:
         bridge.enroll_in_transaction(db,account,group,secret,listen_only=True)
+        top=roles.owner(db,account)
+        if top and not top["default_games"]:
+            db.execute("UPDATE groups SET config=json_set(config,'$.games',json('false')) WHERE id=?",(group,))
         db.execute("INSERT INTO agent_wechat_links VALUES(?,?,?,?,?)",
                    (stream["slot"],account,group,stream["server_id"],cursor))
     db.execute("UPDATE groups SET paused=0 WHERE id=?", (group,))
@@ -80,6 +86,9 @@ def handle(db, client, stream, group, cursor, message, action, secret):
         if not db.execute("SELECT 1 FROM account WHERE id=? AND state!='SUSPENDED'",(account,)).fetchone():
             return
         body=change(db,stream,group,cursor,action,secret,now)
+        if action=="activate" and roles.owner(db,account) and roles.active(db,account,group):
+            db.execute("""INSERT OR IGNORE INTO group_binding(group_id,bot_id,bound_by,bound_at,label,checked)
+                          VALUES(?,?,?,?,?,0)""",(group,account,sender,now,"微信群"))
         db.execute("INSERT INTO binding_receipts(account,source,grp,member,body,expires) VALUES(?,?,?,?,?,?)",
                    (account,source,group,sender,body,stamp.timestamp()+120))
         audit(db,sender,group,"微信绑定管理",body)

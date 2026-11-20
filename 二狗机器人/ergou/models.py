@@ -274,7 +274,13 @@ def switch(db, event, enabled, mentioned):
             (event["event_id"],time.time()-120)).fetchone()):
         raise ValueError("需要当前已授权群内的新点名消息")
     row=db.execute("SELECT admins,enabled,generation FROM smart_controls WHERE grp=?",(group,)).fetchone()
-    if not row or event["member"] not in json.loads(row["admins"]):
+    from . import roles
+    if roles.owner(db,event["account"]):
+        roles.require(db,event["account"],group,event["member"],4)
+        if row is None:
+            db.execute("INSERT INTO smart_controls(grp,enabled) VALUES(?,0)",(group,))
+            row=db.execute("SELECT * FROM smart_controls WHERE grp=?",(group,)).fetchone()
+    elif not row or event["member"] not in json.loads(row["admins"]):
         raise ValueError("仅本群后台指定的智能对话管理员可以切换")
     if enabled and not db.execute("SELECT 1 FROM chat_models WHERE grp=? AND verified IS NOT NULL AND credential IS NOT NULL",(group,)).fetchone():
         raise ValueError("请运营人员先在本群后台测试并保存模型和密钥")

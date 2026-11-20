@@ -3,7 +3,7 @@ import hashlib
 import time
 from urllib.parse import quote
 
-from ergou import agent_wechat as wx, bridge, group_binding
+from ergou import agent_wechat as wx, bridge, group_binding, roles, wechat_roles
 from ergou.db import audit, transaction
 from ergou.native_roster import Monitor
 
@@ -85,6 +85,8 @@ class Stream(wx.Listener):
         for group,version in groups(self.db,self.stream).items():
             try:
                 if self.client.member(group,self.account):
+                    if roles.owner(self.db,self.account):
+                        wechat_roles.refresh_owner(self.db,self.client,self.account,group)
                     rooms[group]=version
             except (ConnectionError,ValueError) as exc:
                 if str(exc) not in ("Agent WeChat HTTP 403","Agent WeChat HTTP 404"):
@@ -108,7 +110,9 @@ class Stream(wx.Listener):
         data=event.get("data") or {}
         if event.get("kind")=="message.committed" and isinstance(data,dict):
             group=data.get("threadId")
-            if (wx.valid_id(group) and group.endswith("@chatroom") and data.get("origin")=="live"
+            top=roles.owner(self.db,self.account)
+            private=bool(top and group==top["owner_user_id"])
+            if (wx.valid_id(group) and (group.endswith("@chatroom") or private) and data.get("origin")=="live"
                     and data.get("direction") in (None,"incoming")):
                 self.route(event,data,group)
         self.advance(cursor)
@@ -119,7 +123,7 @@ class Stream(wx.Listener):
             sender=data.get("senderId")
             if sender and not group_binding.administrator(self.db,self.account,sender):
                 return
-            if not self.db.execute("SELECT 1 FROM binding_admins WHERE account=? LIMIT 1",(self.account,)).fetchone():
+            if not roles.owner(self.db,self.account) and not self.db.execute("SELECT 1 FROM binding_admins WHERE account=? LIMIT 1",(self.account,)).fetchone():
                 return
         mid=data.get("messageId")
         if not isinstance(mid,str) or not 0<len(mid)<=8192:
@@ -132,6 +136,15 @@ class Stream(wx.Listener):
             raise
         if (msg.get("accountId"),msg.get("threadId"),msg.get("id"))!=(self.client.slot,group,mid):
             raise ValueError("微信消息与事件身份不符")
+        top=roles.owner(self.db,self.account)
+        private=not group.endswith("@chatroom")
+        if top and msg.get("senderId")==top["owner_user_id"] and (private or registered):
+            text=msg.get("body")
+            if isinstance(text,str) and text.startswith("二狗") and wechat_roles.remote(
+                    self.db,self.client,self.account,group,msg,text[2:].strip()):
+                return
+        if private:
+            return
         action=group_binding.command(msg,self.account)
         if action:
             group_binding.handle(self.db,self.client,self.stream,group,event["cursor"],msg,action,self.secret)
@@ -181,14 +194,32 @@ def send_receipt(db,client,stream,token):
     return True
 
 
+def send_notice(db,client,stream,token):
+    bot=stream["account"]
+    row=db.execute("SELECT * FROM role_notices WHERE bot_id=? AND expires>? ORDER BY id LIMIT 1",
+                   (bot,time.time())).fetchone()
+    if not row:
+        return False
+    dest=row["destination"]
+    binding=roles.active(db,bot,dest)
+    top=roles.owner(db,bot)
+    permitted=(dest==top["owner_user_id"] if top and row["binding"] is None
+               else binding and binding[0]==row["binding"] and client.member(dest,bot))
+    if permitted and client.identity()==bot and client.get("/v1/status").get("serverId")==stream["server_id"]:
+        wx.send_direct(client,token,dict(grp=dest,body=row["body"],biz="role-"+str(row["id"])))
+    db.execute("UPDATE role_notices SET body='',expires=-abs(expires) WHERE id=?",(row["id"],))
+    return True
+
+
 def replies(db,client,secret,token,stream):
     with wx.listener_lock(db,client.slot+"-binding-router"):
         next_cleanup=0
         while db.execute("SELECT 1 FROM account WHERE id=? AND state!='SUSPENDED'",(stream["account"],)).fetchone():
             if time.monotonic()>=next_cleanup:
                 db.execute("DELETE FROM binding_receipts WHERE account=? AND expires<?",(stream["account"],time.time()-86400))
+                db.execute("DELETE FROM role_notices WHERE abs(expires)<?",(time.time()-86400,))
                 next_cleanup=time.monotonic()+3600
-            busy=send_receipt(db,client,stream,token)
+            busy=send_notice(db,client,stream,token) or send_receipt(db,client,stream,token)
             pending=db.execute("""SELECT DISTINCT grp FROM outbox WHERE account=? AND state IN ('PENDING','RETRY_WAIT','SENDING')""",
                                (stream["account"],))
             for group in set(r[0] for r in pending) & groups(db,stream).keys():

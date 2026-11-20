@@ -176,6 +176,8 @@ def main():
     admins=sub.add_parser("binding-admin",help="按稳定微信 ID 管理独立的跨群绑定名单")
     admins.add_argument("operation",choices=("grant","revoke"))
     admins.add_argument("member")
+    adopt=sub.add_parser("adopt",help="一次性绑定首任主人；后续通过主人转移指令交接")
+    adopt.add_argument("member")
     sub.add_parser("listen")
     sub.add_parser("replies")
     args = parser.parse_args()
@@ -183,10 +185,24 @@ def main():
         if not args.db.is_file():
             raise ValueError("未找到迁移数据库")
         with closing_db(args.db) as db:
+            if args.action=="adopt":
+                with transaction(db):
+                    stream=db.execute("SELECT account FROM binding_streams WHERE slot=?",(SLOT,)).fetchone()
+                    if not stream or not wx.valid_id(args.member) or args.member==stream["account"]:
+                        raise ValueError("需要一个独立微信用户的稳定 ID")
+                    if db.execute("SELECT 1 FROM bot_owner WHERE bot_id=? OR owner_user_id=?",(stream["account"],args.member)).fetchone():
+                        raise ValueError("领养关系已存在，请由当前主人办理转移")
+                    db.execute("INSERT INTO bot_owner(bot_id,owner_user_id,bound_at) VALUES(?,?,?)",
+                               (stream["account"],args.member,time.time()))
+                    audit(db,"local-cli",None,"首次领养",args.member)
+                print("首任主人已绑定")
+                return
             if args.action=="binding-admin":
                 stream=db.execute("SELECT account FROM binding_streams WHERE slot=?", (SLOT,)).fetchone()
                 if not stream or not wx.valid_id(args.member) or args.member==stream["account"]:
                     raise ValueError("需要已登记账号和独立微信用户的稳定 ID")
+                if db.execute("SELECT 1 FROM bot_owner WHERE bot_id=?",(stream["account"],)).fetchone():
+                    raise ValueError("该账号已领养，跨群绑定由主人管理")
                 with transaction(db):
                     if args.operation=="grant":
                         db.execute("INSERT OR IGNORE INTO binding_admins VALUES(?,?)",(stream["account"],args.member))

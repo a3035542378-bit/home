@@ -121,6 +121,11 @@ def start(db,g,e,name,cfg):
 
 
 def play(db,e,action,code,arg,manager):
+    from . import roles
+    governed=roles.owner(db,e["account"])
+    if governed and (action=="结束" or (action=="动作" and arg=="重置")):
+        roles.require(db,e["account"],e["grp"],e["member"],3)
+        manager=True
     row=db.execute("SELECT * FROM games WHERE grp=? AND code=?",(e["grp"],code)).fetchone()
     if not row:
         raise ValueError("会话不存在")
@@ -147,7 +152,7 @@ def play(db,e,action,code,arg,manager):
             raise ValueError("本局已满 32 人")
         db.execute("INSERT OR IGNORE INTO players VALUES(?,?,?)",(row["id"],e["member"],e["arrived"]))
         return f"已加入 {code}"
-    if not db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone():
+    if not (governed and manager and arg=="重置") and not db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone():
         raise ValueError(f"请先加入 {code}")
     rules=json.loads(row["rules"])
     if rules["version"]!=RULE_VERSION:
@@ -192,6 +197,23 @@ def ranking(db,group,period,now):
 def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     from . import feature_menu, fishing, intents, leisure, models, reply_rules
     cmd=cmd.strip()
+    from . import roles
+    governed=roles.owner(db,e["account"])
+    if governed:
+        level=roles.role(db,e["account"],e["grp"],e["member"])
+        if level=="guest":
+            raise ValueError("受限成员暂不能使用本群指令。")
+        if roles.parse(cmd):
+            if not db.execute("SELECT 1 FROM directed_events WHERE biz=? AND source_time>?",(e["event_id"],time.time()-120)).fetchone():
+                raise ValueError("请在当前微信群重新发送权限指令。")
+            payload=json.loads(e["payload"])
+            if payload.get("invalid_role_target"):
+                raise ValueError("请在微信中只选择一位当前群成员。")
+            return roles.handle(db,e["account"],e["grp"],e["member"],cmd,payload.get("role_target"))
+        game=roles.GAME_CONTROL.fullmatch(cmd)
+        if game:
+            return play(db,e,"结束" if game[1] else "动作",(game[1] or game[2]).upper(),
+                        "" if game[1] else "重置",False)
     if cmd in ("开启智能对话","关闭智能对话"):
         return models.switch(db,e,cmd=="开启智能对话",mentioned)
     canonical=intents.command_alias(cmd)
@@ -218,6 +240,8 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     if first in ("帮助",""):
         return feature_menu.render(db,g,e,cfg,prefix or cfg["prefix"])
     manager=bool(db.execute("SELECT 1 FROM managers WHERE grp=? AND member=?",(e["grp"],e["member"])).fetchone())
+    if governed:
+        manager=roles.LEVEL[level]>=3
     if fishing.matches(cmd):
         return fishing.play(db,e,cmd,prefix or cfg["prefix"],cfg)
     if first=="群规":
@@ -308,6 +332,12 @@ def process(db,g,e):
         db.execute("UPDATE outbox SET state='CANCELLED' WHERE grp=? AND state IN ('PENDING','RETRY_WAIT')",(e["grp"],))
         return "DONE",None
     if e["kind"]=="leave":
+        from . import roles
+        room=db.execute("SELECT label FROM group_binding WHERE bot_id=? AND group_id=? AND owner_user_id=?",
+                        (g["account"],g["id"],e["member"])).fetchone()
+        if room:
+            roles.sync(db,g["account"],g["id"],None,room["label"],departed=True)
+        db.execute("DELETE FROM group_member_role WHERE group_id=? AND user_id=?",(g["id"],e["member"]))
         db.execute("DELETE FROM welcomes WHERE grp=? AND member=?",(e["grp"],e["member"]))
         present=db.execute("SELECT 1 FROM known_members WHERE grp=? AND member=?",(e["grp"],e["member"])).fetchone()
         for table in ("known_members","candidates","managers"):
@@ -338,6 +368,9 @@ def process(db,g,e):
     authorized_control=(mentioned and cmd in ("开启智能对话","关闭智能对话") and db.execute(
         """SELECT 1 FROM smart_controls c,json_each(c.admins) m WHERE c.grp=? AND m.value=?""",
         (e["grp"],e["member"])).fetchone())
+    from . import roles
+    if mentioned and cmd in ("开启智能对话","关闭智能对话") and roles.owner(db,e["account"]):
+        authorized_control=roles.LEVEL[roles.role(db,e["account"],e["grp"],e["member"])]>=4
     moderation=None
     if e["member"] not in cfg["allowlist"] and (text in cfg.get("exact_words",[]) or any(word in text for word in cfg["words"])):
         db.execute("INSERT INTO hits(grp,seq,version,result) VALUES(?,?,?,?)",(e["grp"],e["seq"],g["version"],cfg["moderation"]))
