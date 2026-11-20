@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 
-from ergou import db, engine, fish_grades
+from ergou import db, engine, fish_grades, giant_fish
 
 
 def without_slips(test):
@@ -22,6 +22,28 @@ class FishingTests(unittest.TestCase):
         seq=engine.receive(self.db,"sim-account",group,member,source,{"text":"二狗 "+text},now=now)
         engine.step(self.db)
         return self.db.execute("SELECT body FROM outbox JOIN inbox ON biz=event_id WHERE seq=?",(seq,)).fetchone()[0]
+
+    def test_giant_notice_only_prompts_starter_pond(self):
+        for index, area in enumerate(giant_fish.WATERS):
+            hour = (index + 1) * 3600
+            event = giant_fish.window("one", area, hour)
+            starter = area == "新手池塘"
+            with self.subTest(area=area):
+                self.say(f"move-{index}", f"切换水域 {area}", hour)
+                if area in ("新手池塘", "外海"):
+                    cast = self.say(f"cast-{index}", "抛竿", event.start - 600)
+                    self.assertIn("还有 10 分钟", cast)
+                    self.assertEqual(giant_fish.WARNING in cast, starter)
+                for offset, timing in ((-600, "还有 10 分钟"), (0, "正在出没")):
+                    notice = self.say(f"news-{index}-{offset}", "巨物鱼讯", event.start + offset)
+                    self.assertIn(area, notice)
+                    self.assertIn(timing, notice)
+                    self.assertEqual(giant_fish.WARNING in notice, starter)
+                    self.assertEqual("二狗抛竿" in notice, starter)
+                self.db.execute("INSERT INTO fishing_giant_claims VALUES('one',?,?)", (area, event.start))
+                gone = self.say(f"gone-{index}", "巨物鱼讯", event.start + 1)
+                self.assertIn("下次随机出没", gone)
+                self.assertEqual(giant_fish.WARNING in gone, starter)
 
     def test_catches_are_isolated_and_idempotent(self):
         self.assertIn("空",self.say("a","我的鱼获",100))

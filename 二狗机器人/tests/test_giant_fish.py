@@ -14,8 +14,8 @@ class GiantFishing(unittest.TestCase):
         self.assertIn(event.fish, [row[0] for row in WATERS["新手池塘"]])
         for stamp in (event.start-600,event.start-1,event.start,event.start+179):
             self.assertEqual(event,giant_fish.window("room","新手池塘",stamp))
-        self.assertIn("还有 10 分钟",event.notice(event.start-600))
-        self.assertIn("正在出没",event.notice(event.start))
+        self.assertIn("还有 10 分钟",event.notice(event.start-600, "新手池塘"))
+        self.assertIn("正在出没",event.notice(event.start, "新手池塘"))
         self.assertFalse(event.active(event.start+180))
         self.assertGreater(giant_fish.window("room","新手池塘",event.start+180).start,event.start+180)
         self.assertEqual(size_grade("鲤鱼",4000),"大型")
@@ -60,7 +60,7 @@ class GiantFishing(unittest.TestCase):
                     rng.choice.side_effect = pick_fish
                     sighting = giant_fish.window("group", area, 0)
                     self.assertEqual(sighting.fish, fish)
-                    self.assertIn(fish, sighting.notice(sighting.start-600))
+                    self.assertIn(fish, sighting.notice(sighting.start-600, area))
                     rng.randrange.return_value = 0
                     low = giant_min(species)
                     rng.triangular.return_value = low

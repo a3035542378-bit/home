@@ -311,7 +311,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         sighting=giant_fish.current(db,key[0],area,now)
         if sighting.taken:
             return giant_fish.departure(key[0],area,sighting)
-        return f"📍 {area} · 本场每种鱼都可能出没\n{sighting.notice(now)}\n下竿\n{prefix}抛竿"
+        return f"📍 {area} · 本场每种鱼都可能出没\n{sighting.notice(now, area, prefix=prefix)}"
     if cmd in ("水域","海域","水域列表","海域列表"):
         names=list(WATERS)
         rows=["、".join(names[i:i+3]) for i in range(0,len(names),3)]
@@ -458,7 +458,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     footer = receipt+"\n"+angler.progress(casts)
     progress_footer=footer
     if not sighting.taken and sighting.start-giant_fish.LEAD<=now<sighting.start+giant_fish.DURATION:
-        footer+="\n"+sighting.notice(now)
+        footer+="\n"+sighting.notice(now, area)
     if broken and grade=="巨物":
         return line_help(db,key,coins,area,prefix,now,f"巨物{fish}游走了，备用线拉不住它")+footer
     heavy_encounter=grade=="巨物" or rarity in TROPHY_PERCENT

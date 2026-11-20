@@ -15,6 +15,15 @@ ACTIVE_PER_THOUSAND = 20
 WARNING = "⚠️ 新手塘也可能断线、折竿，请谨慎抛竿。"
 
 
+def starter_hint(area, prefix=None):
+    if area != "新手池塘":
+        return ""
+    hint = "\n" + WARNING
+    if prefix is not None:
+        hint += f"\n下竿\n{prefix}抛竿"
+    return hint
+
+
 class Sighting(NamedTuple):
     fish: str
     start: int
@@ -23,7 +32,7 @@ class Sighting(NamedTuple):
     def active(self, now):
         return not self.taken and self.start <= now < self.start + DURATION
 
-    def notice(self, now):
+    def notice(self, now, area, *, prefix=None):
         if self.active(now):
             seconds = math.ceil(self.start + DURATION - now)
             timing = f"🌊 巨物{self.fish}正在出没\n剩 {seconds//60} 分 {seconds%60} 秒，钓走即消失。"
@@ -31,7 +40,7 @@ class Sighting(NamedTuple):
             clock = datetime.fromtimestamp(self.start, BJ).strftime("%H:%M")
             minutes = math.ceil((self.start - now) / 60)
             timing = f"🌊 巨物{self.fish}还有 {minutes} 分钟出没\n北京时间 {clock} 开始，只停留 3 分钟。"
-        return timing + f"\n活动咬钩率 {ACTIVE_PER_THOUSAND/10:g}%，先钓走先得。\n{WARNING}"
+        return timing + f"\n活动咬钩率 {ACTIVE_PER_THOUSAND/10:g}%，先钓走先得。" + starter_hint(area, prefix)
 
 
 def window(group, area, now):
@@ -57,7 +66,7 @@ def current(db, group, area, now):
 def departure(group, area, sighting):
     upcoming = window(group, area, sighting.start + DURATION)
     clock = datetime.fromtimestamp(upcoming.start, BJ).strftime("%H:%M")
-    return f"🏁 本轮巨物已被钓走。\n下次随机出没　{clock}（北京时间）\n{WARNING}"
+    return f"🏁 本轮巨物已被钓走。\n下次随机出没　{clock}（北京时间）" + starter_hint(area)
 
 
 def encounter(sighting, area, now, event_id):
