@@ -61,13 +61,14 @@ class SmartSwitchTests(unittest.TestCase):
         self.assertTrue(models.control_settings(self.db,self.operator,"room")["enabled"])
         self.assertEqual(self.db.execute("SELECT count(*) FROM audit WHERE action='群内切换智能对话'").fetchone()[0],2)
 
-    def test_explicit_api_mode_preempts_local_commands_until_admin_closes(self):
+    def test_verified_mention_preempts_local_commands_until_admin_closes(self):
         self.verified()
         self.assertIn("管理员",self.say("开启智能对话","member"))
-        self.assertIn("本群积分",self.say("积分","member"))
+        self.assertIn("本群积分",self.say("二狗积分","member",mentioned=False))
         self.assertIn("已开启",self.say("开启智能对话"))
         self.assertIn("管理员",self.say("关闭智能对话","member"))
         with patch("ergou.models.protect",return_value=b"fixture"),patch("ergou.models.complete",return_value="模型回答") as send:
+            self.assertIn("本群积分",self.say("二狗积分","member",mentioned=False))
             self.assertIsNone(self.say("积分","member"))
             self.assertTrue(models.ChatWorker().work(self.db))
             self.assertEqual(send.call_args.args[-1][-1]["content"],"积分")
@@ -175,12 +176,12 @@ class SmartSwitchTests(unittest.TestCase):
         self.say("今天聊点什么")
         with patch("ergou.models.protect",return_value=b"secret"),patch("ergou.models.complete",side_effect=models.ModelError("密钥验证失败","raw secret should stay private")):
             models.ChatWorker().work(self.db)
-        self.say("天气 北京")
+        self.say("二狗天气 北京",mentioned=False)
         def unavailable(*args):
             raise queries.ProviderError("供应商鉴权失败")
         queries.work(self.db,unavailable)
         self.db.execute("INSERT INTO reply_rule_sets VALUES('room',1,'invalid-rule-contents')")
-        self.assertIn("运营人员",self.say("部分私密文字"))
+        self.assertIn("运营人员",self.say("二狗部分私密文字",mentioned=False))
         logs=group_tools.settings(self.db,self.operator,"room")["errors"]
         self.assertEqual({(r["kind"],r["detail"]) for r in logs},
                          {("模型请求","密钥验证失败"),("天气","供应商鉴权失败"),("回复规则","规则格式异常")})

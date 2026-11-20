@@ -76,17 +76,18 @@ class ModelTests(unittest.TestCase):
         self.assertIsNone(say("1","a","大家在聊二狗"))
         self.assertIn("本群积分",say("2","a","二狗积分")[0])
         self.assertFalse(self.transport.called)
-        say("3","a","二狗今天天气真好呀")
-        say("4","b","二狗+下班啦")
+        say("3","a","@群昵称\u2005今天天气真好呀",mention_account="sim-account")
+        say("4","b","@群昵称\u2005下班啦",mention_account="sim-account")
         self.assertEqual(len(self.transport.call_args.args[-1]),2)
         say("5","a","@群昵称\u2005接着聊",mention_account="sim-account")
         messages=self.transport.call_args.args[-1]
+        self.assertIn(models.PLAY_INSTRUCTION,messages[0]["content"])
         self.assertEqual([item["content"] for item in messages[1:]],["今天天气真好呀","模型回答","接着聊"])
         for i in range(20):
-            say(str(i+10),"a","二狗继续")
+            say(str(i+10),"a","@群昵称\u2005继续",mention_account="sim-account")
         self.assertEqual(len(self.transport.call_args.args[-1]),34)
         with patch("ergou.models.time.time",return_value=time.time()+1801):
-            say("40","a","二狗过会儿再聊")
+            say("40","a","@群昵称\u2005过会儿再聊",mention_account="sim-account")
             self.assertEqual(len(self.transport.call_args.args[-1]),2)
         self.assertFalse(self.db.execute("SELECT 1 FROM chat_requests WHERE prompt IS NOT NULL").fetchone())
 
@@ -111,7 +112,7 @@ class ModelTests(unittest.TestCase):
                                  temperature_2m_max=[8,9],precipitation_probability_max=[10,80]))
         with patch("ergou.bulletins.weather_request",side_effect=[location,forecast]) as fetch:
             for i,text in enumerate(["明天要带伞吗","北京"]):
-                seq=receive(self.db,"sim-account","room","member",str(i),dict(text="二狗 "+text))
+                seq=receive(self.db,"sim-account","room","member",str(i),dict(text="@群昵称\u2005"+text,mention_account="sim-account"))
                 step(self.db)
                 self.assertTrue(worker.work(self.db))
             self.assertIn("想查哪个城市",self.transport.call_args.args[-1][-2]["content"])
@@ -186,7 +187,7 @@ class ModelTests(unittest.TestCase):
             response.read.return_value=b'{"choices":[{"message":{"content":"ok"}}]}'
             state,_=call("/api/chat-model",dict(self.fields,group="room"))
             self.assertTrue(state["active"]["verified"])
-            call("/api/simulate",dict(group="room",text="二狗一起聊天",key="from-http"))
+            call("/api/simulate",dict(group="room",text="@群昵称\u2005一起聊天",mention=True,key="from-http"))
             step(self.db)
             models.ChatWorker().work(self.db)
             result,_=call("/api/simulation-result?seq=1&group=room")
@@ -224,7 +225,7 @@ class ModelTests(unittest.TestCase):
             active,_=call("/api/chat-model",dict(list_fields,model=selected,action="verify",version=0))
             self.assertEqual((active["active"]["provider"],active["active"]["model"]),("openai",selected))
             self.assertTrue(active["active"]["verified"])
-            call("/api/simulate",dict(group="room",text="二狗一起聊天",key="openai-http"))
+            call("/api/simulate",dict(group="room",text="@群昵称\u2005一起聊天",mention=True,key="openai-http"))
             step(self.db)
             models.ChatWorker().work(self.db)
             reply,_=call("/api/simulation-result?seq=1&group=room")

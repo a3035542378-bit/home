@@ -33,6 +33,13 @@ def valid_id(value):
     return isinstance(value, str) and 0 < len(value) <= 160 and value.strip() == value
 
 
+def mentions_account(message,account):
+    mentions=message.get("mentions")
+    return (isinstance(mentions,dict) and mentions.get("state")=="known" and mentions.get("self") is True
+            and mentions.get("all") is not True and isinstance(mentions.get("userIds"),list)
+            and account in mentions["userIds"])
+
+
 def number(value):
     return isinstance(value, str) and 0 < len(value) <= 20 and value.isascii() and value.isdecimal()
 
@@ -244,8 +251,7 @@ class Listener:
             sender, source = message.get("senderId"), message.get("serverId")
             payload = {"text": message.get("body")}
             mentions = message.get("mentions") or {}
-            if (isinstance(mentions,dict) and mentions.get("state")=="known" and mentions.get("self") is True
-                    and isinstance(mentions.get("userIds"),list) and self.account in mentions["userIds"]):
+            if mentions_account(message,self.account):
                 payload["mention_account"]=self.account
             try:
                 stamp=datetime.fromisoformat(message["createdAt"])
@@ -261,7 +267,9 @@ class Listener:
                     and isinstance(payload["text"], str) and len(dump(payload).encode()) <= 8192):
                 from .engine import addressed_command
                 cmd=addressed_command(payload["text"],"二狗",payload.get("mention_account")==self.account)
-                from . import roles,wechat_roles
+                from . import roles,wechat_roles,models
+                if payload.get("mention_account") and models.api_first(self.db,self.group):
+                    cmd=None
                 if cmd and roles.owner(self.db,self.account) and (roles.parse(cmd) or roles.GAME_CONTROL.fullmatch(cmd)):
                     wechat_roles.refresh_owner(self.db,self.client,self.account,self.group)
                     target=wechat_roles.target_member(self.db,self.client,self.account,self.group,message)

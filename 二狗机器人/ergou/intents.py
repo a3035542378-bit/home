@@ -28,12 +28,19 @@ ACTIONS = {
     "抽签报名": "抽签 报名", "报名抽签": "抽签 报名", "退出抽签": "抽签 退出",
 }
 
+WATER_ALIASES = dict.fromkeys(("切换钓场","换钓场","换图","切换水域","切换海域"), "切换水域")
+FISHING_LOOKUPS = {
+    **dict.fromkeys(("钓鱼菜单","钓鱼帮助","怎么钓鱼"), "钓鱼玩法"),
+    **dict.fromkeys(("鱼包","背包","看鱼","鱼背包"), "查看鱼包"),
+}
+
 LOOKUPS = {
+    **FISHING_LOOKUPS,
     "升品玩法": "鱼获品级", "鱼获品级": "鱼获品级",
     "巨物预告": "巨物鱼讯", "巨物事件": "巨物鱼讯", "巨物鱼讯": "巨物鱼讯", "全图鉴": "全图鉴",
     "钓鱼信息": "钓鱼信息", "个人钓鱼信息": "钓鱼信息", "钓鱼档案": "钓鱼信息",
     "钓鱼状态": "钓鱼信息", "鱼币余额": "钓鱼信息",
-    "鱼包": "鱼包", "背包": "鱼包", "鱼背包": "鱼包", "鱼塘": "鱼塘",
+    "鱼塘": "鱼塘",
     "史诗图鉴": "史诗图鉴", "传说图鉴": "传说图鉴",
     "巨物图鉴": "巨物图鉴", "珍品图鉴": "珍品图鉴", "稀有图鉴": "稀有图鉴", "普通图鉴": "普通图鉴",
     "图鉴": "图鉴", "鱼类图鉴": "图鉴", "钓鱼图鉴": "图鉴", "鱼获": "我的鱼获",
@@ -53,6 +60,11 @@ def command_alias(text):
     phrase = text.strip().translate(MOBILE_CHARS)
     phrase = re.sub(r"^(?:请帮我|麻烦帮我|帮我|请)\s*", "", phrase)
     action = phrase.rstrip("。！!").strip()
+    if not action:
+        return text
+    verb, *args = action.split(maxsplit=1)
+    if verb in WATER_ALIASES:
+        return " ".join([WATER_ALIASES[verb], *args])
     if action in ACTIONS:
         return ACTIONS[action]
     if action in ACTIONS.values():
@@ -72,6 +84,8 @@ def command_alias(text):
         return ITEM_ACTION[action]
     lookup = re.sub(r"^(?:查看|查询|看看|看下|查一下|打开)?\s*(?:我的|本群)?\s*", "",
                     phrase.rstrip("。！!？?").strip())
+    if lookup in WATER_ALIASES:
+        return WATER_ALIASES[lookup]
     if lookup in LOOKUPS:
         return LOOKUPS[lookup]
     page = re.fullmatch(r"(鱼包|背包|鱼塘|图鉴|鱼类图鉴|钓鱼图鉴|全图鉴|普通图鉴|稀有图鉴|珍品图鉴|史诗图鉴|传说图鉴|巨物图鉴)\s*(?:第\s*)?([1-9][0-9]{0,3})\s*页?", lookup)

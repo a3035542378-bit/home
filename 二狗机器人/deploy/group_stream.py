@@ -138,14 +138,16 @@ class Stream(wx.Listener):
             raise ValueError("微信消息与事件身份不符")
         top=roles.owner(self.db,self.account)
         private=not group.endswith("@chatroom")
-        if top and msg.get("senderId")==top["owner_user_id"] and (private or registered):
+        from ergou.models import api_first
+        chat=registered and wx.mentions_account(msg,self.account) and api_first(self.db,group)
+        if not chat and top and msg.get("senderId")==top["owner_user_id"] and (private or registered):
             text=msg.get("body")
             if isinstance(text,str) and text.startswith("二狗") and wechat_roles.remote(
                     self.db,self.client,self.account,group,msg,text[2:].strip()):
                 return
         if private:
             return
-        action=group_binding.command(msg,self.account)
+        action=None if chat else group_binding.command(msg,self.account,bound=registered)
         if action:
             group_binding.handle(self.db,self.client,self.stream,group,event["cursor"],msg,action,self.secret)
             if group_binding.administrator(self.db,self.account,msg.get("senderId")):

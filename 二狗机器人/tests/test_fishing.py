@@ -44,7 +44,7 @@ class FishingTests(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT count(*) FROM chat_requests").fetchone()[0],0)
         engine.receive(self.db,"sim-account","one","player","l",{"text":"二狗 钓鱼有什么技巧？"},now=104)
         engine.step(self.db)
-        self.assertEqual(self.db.execute("SELECT prompt FROM chat_requests").fetchone()[0],"钓鱼有什么技巧？")
+        self.assertIsNone(self.db.execute("SELECT 1 FROM chat_requests").fetchone())
         self.db.execute("""UPDATE groups SET config=json_set(config,'$.disabled_games',json_array('钓鱼')) WHERE id='one'""")
         self.assertIn("关闭",self.say("m","抛竿",165))
 

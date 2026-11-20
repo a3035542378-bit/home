@@ -13,6 +13,7 @@ from .games import GAMES, RULE_VERSION, start_board, visible_board
 ACTIVE = "('RUNNING','PAUSED','WAITING_PLAYERS')"
 KINDS = {"message","join","baseline","leave","revoke","bot_leave"}
 LIMIT = 50000
+UNKNOWN_COMMAND = "🤖 没找到这个指令哦。发送「{prefix}菜单」查看功能，或发「{prefix}钓鱼玩法」看钓鱼指南。"
 
 
 def addressed_command(text, prefix, mentioned):
@@ -203,6 +204,11 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
         level=roles.role(db,e["account"],e["grp"],e["member"])
         if level=="guest":
             raise ValueError("受限成员暂不能使用本群指令。")
+    if cmd in ("开启智能对话","关闭智能对话"):
+        return models.switch(db,e,cmd=="开启智能对话",mentioned)
+    if mentioned and models.api_first(db,e["grp"]):
+        return models.submit(db,e,cmd or "群成员点名了你，请简短回应。")
+    if governed:
         if roles.parse(cmd):
             if not db.execute("SELECT 1 FROM directed_events WHERE biz=? AND source_time>?",(e["event_id"],time.time()-120)).fetchone():
                 raise ValueError("请在当前微信群重新发送权限指令。")
@@ -214,17 +220,15 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
         if game:
             return play(db,e,"结束" if game[1] else "动作",(game[1] or game[2]).upper(),
                         "" if game[1] else "重置",False)
-    if cmd in ("开启智能对话","关闭智能对话"):
-        return models.switch(db,e,cmd=="开启智能对话",mentioned)
+    prefix=prefix or cfg["prefix"]
     canonical=intents.command_alias(cmd)
-    if canonical.rstrip("。！？!?").strip() in ("菜单","功能菜单","全部功能"):
-        return feature_menu.render(db,g,e,cfg,prefix or cfg["prefix"])
-    if cmd and models.api_first(db,e["grp"]):
-        if canonical=="游戏列表" and cfg["games"] and "钓鱼" not in cfg.get("disabled_games",[]):
-            return "智能对话中可直接玩：\n"+fishing.game_list_entry(prefix or cfg["prefix"])
-        if fishing.matches(canonical):
-            return fishing.play(db,e,canonical,prefix or cfg["prefix"],cfg)
-        return models.submit(db,e,cmd)
+    menu=canonical.rstrip("。！？!?").strip()
+    if menu in ("全菜单","全部功能"):
+        return feature_menu.full_menu(db,g,e,cfg,prefix)
+    if menu in ("菜单","功能菜单"):
+        return feature_menu.render(db,g,e,cfg,prefix)
+    if canonical in ("钓鱼玩法","切换水域","查看鱼包") or canonical.startswith("切换水域 "):
+        return fishing.play(db,e,canonical,prefix,cfg)
     try:
         matched=reply_rules.match(db,e,cmd)
     except (ValueError,TypeError,KeyError,IndexError,AttributeError):
@@ -293,8 +297,8 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     rows=sessions(db,g["id"])
     if len(rows)>1 and first.isdecimal():
         raise ValueError("请指定会话："+summary(rows))
-    from .models import submit
-    return submit(db,e,cmd.strip())
+    from .local_chat import respond
+    return respond(db,e,cmd.strip(),fallback=UNKNOWN_COMMAND.format(prefix=prefix))
 
 
 def process(db,g,e):

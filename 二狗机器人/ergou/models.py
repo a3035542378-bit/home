@@ -21,6 +21,8 @@ PROVIDERS = {
     "openai": ("ChatGPT（OpenAI API）", "api.openai.com", "/v1/chat/completions", "/v1/models"),
 }
 MODEL_ID = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.:/-]{0,255}")
+PLAY_HELP = "请发送 二狗菜单 或 二狗钓鱼玩法 查看哦。"
+PLAY_INSTRUCTION = "用户询问二狗怎么玩、怎么钓鱼或有什么功能时，必须回复「"+PLAY_HELP+"」，不要自行编造玩法、指令、费用或奖励。"
 PERSONA = "你是微信群里的柴犬机器人二狗。用简短自然的中文回答，可以幽默。如果不知道就直说。"
 
 
@@ -289,7 +291,7 @@ def switch(db, event, enabled, mentioned):
         cancel_chat(db,group)
         db.execute("DELETE FROM local_turns WHERE grp=?",(group,))
         audit(db,event["member"],group,"群内切换智能对话","开启" if enabled else "关闭")
-    return "本群已开启智能对话。点名聊天优先由大模型回答。" if enabled else "本群已关闭智能对话。二狗仍可接关键词、查天气、玩游戏和讲笑话。"
+    return "本群已开启智能对话。请在微信里 @二狗 聊天。" if enabled else "本群已关闭智能对话。二狗仍可接关键词、查天气、玩游戏和讲笑话。"
 
 
 def configure(db, user, group, fields):
@@ -333,9 +335,8 @@ def configure(db, user, group, fields):
 
 
 def api_first(db, group):
-    # 第零代保留仅在后台验证模型时的默认路由，群内显式开启后优先使用模型。
-    return db.execute("""SELECT 1 FROM smart_controls c JOIN chat_models m ON m.grp=c.grp
-                         WHERE c.grp=? AND c.enabled=1 AND c.generation>0
+    return db.execute("""SELECT 1 FROM chat_models m LEFT JOIN smart_controls c ON c.grp=m.grp
+                         WHERE m.grp=? AND COALESCE(c.enabled,1)=1
                          AND m.verified IS NOT NULL AND m.credential IS NOT NULL""",(group,)).fetchone() is not None
 
 
@@ -436,7 +437,7 @@ class ChatWorker:
             if not current():
                 db.execute("UPDATE chat_requests SET state='CANCELLED',prompt=NULL WHERE seq=? AND state='RUNNING'",(row["seq"],))
                 return True
-            messages = [{"role":"system","content":f"{PERSONA} 北京时间 {datetime.fromtimestamp(now,BJ):%Y-%m-%d}。{WEATHER_INSTRUCTION}"}]
+            messages = [{"role":"system","content":f"{PERSONA} 北京时间 {datetime.fromtimestamp(now,BJ):%Y-%m-%d}。{WEATHER_INSTRUCTION} {PLAY_INSTRUCTION}"}]
             for turn in turns:
                 messages.extend(({"role":"user","content":turn.user},{"role":"assistant","content":turn.assistant}))
             reply = complete(row["provider"],row["model"],key,[*messages,prompt])

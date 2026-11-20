@@ -15,7 +15,7 @@ class CommandAliasTests(unittest.TestCase):
             "#17放进鱼塘": "放入鱼塘#17",
             "出售17号鱼": "卖鱼#17",
             "出售17号鱼？": "卖鱼",
-            "看看我的背包第２页": "鱼包 2",
+            "看看我的背包第２页": "查看鱼包 2",
             "查看本群财富榜": "资产榜",
             "鱼包扩容": "升级鱼包",
             "甩杆高级饵": "抛竿 高级鱼饵",
@@ -63,5 +63,5 @@ class CommandAliasTests(unittest.TestCase):
                     self.assertIsNone(conn.execute("SELECT 1 FROM fishing_pond WHERE id=?", (number,)).fetchone())
                 self.assertIsNone(conn.execute("SELECT 1 FROM chat_requests").fetchone())
                 prompt = "不要收入图鉴#17"
-                self.assertIsNone(say("二狗" + prompt, 20, "two"))
-                self.assertEqual(conn.execute("SELECT prompt FROM chat_requests").fetchone()[0], prompt)
+                self.assertIn("没找到这个指令",say("二狗" + prompt, 20, "two"))
+                self.assertIsNone(conn.execute("SELECT 1 FROM chat_requests").fetchone())

@@ -6,7 +6,7 @@ from . import angler, fish_grades, fish_storage, fishing_bait, giant_fish, pond_
 from .db import DEFAULT
 from . import rod as gear
 
-COMMANDS = {"鱼获品级", "巨物鱼讯", "钓鱼信息", "钓手等级", "钓鱼等级", "钓鱼", "抛竿", "我的鱼获", "钓鱼玩法", "鱼塘", "鱼市","鱼线","买鱼线","购买鱼线","升级鱼线","水域","切换水域 新手池塘","切换水域 外海","重量榜","重量排行榜","鱼类图鉴","钓鱼图鉴","图鉴", "一键卖鱼", "升级鱼竿", "我的鱼竿","资产榜","资产排行榜"} | gear.COMMANDS
+COMMANDS = {"切换水域", "鱼获品级", "巨物鱼讯", "钓鱼信息", "钓手等级", "钓鱼等级", "钓鱼", "抛竿", "我的鱼获", "钓鱼玩法", "鱼塘", "鱼市","鱼线","买鱼线","购买鱼线","升级鱼线","水域","切换水域 新手池塘","切换水域 外海","重量榜","重量排行榜","鱼类图鉴","钓鱼图鉴","图鉴", "一键卖鱼", "升级鱼竿", "我的鱼竿","资产榜","资产排行榜"} | gear.COMMANDS
 # 名称、最轻/最重克数、基础价格、每公斤加价、稀有度
 from .fishing_waters import FISH, HABITAT, TROPHY_PERCENT, WATERS, giant_min, guide, size_grade, weight
 RARITY_ICONS = {"普通": "🐟", "稀有": "💎", "珍品": "👑", "史诗": "🔮", "传说": "🌟"}
@@ -222,6 +222,22 @@ def help_requested(cmd):
     return cmd.rstrip("。！？!?").strip() in HELP_COMMANDS
 
 
+FISHING_MENU = """🎣 二狗钓鱼指南
+{prefix}抛竿　免费饵每 {cooldown} 秒一竿
+🎒 {prefix}查看鱼包　存塘或卖鱼
+📋 {prefix}钓鱼信息　看装备和余额
+🪱 {prefix}鱼饵　查用法和积分价格
+🌊 {prefix}切换钓场　选目的地
+🐋 {prefix}巨物鱼讯　看出没时间
+🐾 {prefix}偷鱼 @群友
+📖 {prefix}图鉴　/　{prefix}全图鉴（{species} 种）
+🧭 {prefix}钓鱼进阶"""
+
+
+def fishing_menu(prefix,cooldown):
+    return FISHING_MENU.format(prefix=prefix,cooldown=cooldown,species=len(FISH))
+
+
 def game_list_entry(prefix):
     return f"🎣 {prefix}抛竿 钓第一条鱼\n📖 {prefix}钓鱼玩法 看指令"
 
@@ -255,17 +271,7 @@ def play(db, event, cmd, prefix, cfg):
     if cmd=="鱼饵":
         return fishing_bait.menu(db,key,prefix)
     if help_requested(cmd):
-        return (f"🎣 第一竿\n{prefix}抛竿 或 {prefix}钓鱼\n"
-                f"免费饵不限次，每 {cooldown} 秒一竿。\n起始 30 鱼币，新手塘常规鱼获免损。\n🪱 查看积分饵　{prefix}鱼饵\n\n"
-                f"🎒 钓到后　{prefix}查看鱼包\n"
-                "选一个编号，例如 #12：\n"
-                f"存鱼塘　{prefix}放入鱼塘#12\n"
-                f"进图鉴　{prefix}放入图鉴#12\n"
-                f"卖这条　{prefix}卖鱼#12\n\n"
-                f"🎣 每 {angler.CASTS_PER_LEVEL} 竿升一级　{prefix}钓手等级\n"
-                f"🌊 查巨物出没　{prefix}巨物鱼讯\n"
-                f"📋 看余额和进度　{prefix}钓鱼信息\n"
-                f"🧭 换钓场、升装备　{prefix}钓鱼进阶")
+        return fishing_menu(prefix,cooldown)
     if cmd=="钓鱼进阶":
         return (f"🎣 钓鱼进阶\n每条指令前加「{prefix}」。\n\n"
                 f"🎣 钓手等级\n常规鱼获前 {angler.PROTECTED_CASTS} 竿免脱钩。\n巨物、史诗和传说都可能跑鱼。\n装备扛住后再判脱钩。\n每升一级，脱钩率降 1 个百分点。\n池塘最低 2%，其他钓场最低 5%。\n\n"
@@ -282,6 +288,11 @@ def play(db, event, cmd, prefix, cfg):
         return fish_storage.handle(db,key,cmd,prefix)
     location=db.execute("SELECT area FROM fishing_waters WHERE grp=? AND member=?",key).fetchone()
     area=location[0] if location else "新手池塘"
+    if cmd=="切换水域":
+        names=list(WATERS)
+        rows=["、".join(names[i:i+3]) for i in range(0,len(names),3)]
+        return "\n".join(["🌊 你想去哪个钓场？",f"📍 当前　{area}","",*rows,"",
+                          f"发送「{prefix}切换钓场 新手池塘」即可切换。"])
     if cmd=="巨物鱼讯":
         now=event["arrived"]
         sighting=giant_fish.current(db,key[0],area,now)

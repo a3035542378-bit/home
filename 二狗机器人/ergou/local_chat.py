@@ -22,7 +22,7 @@ TOPICS = {
 }
 
 
-def respond(db,event,text):
+def respond(db,event,text,*,fallback=None):
     key=(event["grp"],event["member"],event["binding"])
     rows=db.execute("""SELECT topic,at FROM local_turns WHERE grp=? AND member=? AND binding=?
                        ORDER BY seq DESC LIMIT 16""",key).fetchall()
@@ -33,6 +33,8 @@ def respond(db,event,text):
     if topic is None and rows and re.fullmatch(r"(再来(一个|一条|一段)?|换一个|还有(吗|呢)?|然后呢?|接着(说|讲)?|继续(讲|说)?|后来呢?|嗯嗯?|是啊)[呀啊吧。！？?!~～ ]*",text.strip()):
         topic=rows[0]["topic"].partition("/")[0]
     answer="汪，我可以讲笑话、讲个小故事，或者陪你聊聊今天的心情。想玩游戏也可以叫我。"
+    if topic is None and fallback is not None:
+        return fallback
     token="other"
     if topic in TOPICS:
         phrases=TOPICS[topic][1]

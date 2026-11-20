@@ -17,11 +17,15 @@ def administrator(db, account, member):
     return db.execute("SELECT 1 FROM binding_admins WHERE account=? AND member=?", (account,member)).fetchone()
 
 
-def command(message, account):
+def command(message, account, *, bound=False):
     mentions = message.get("mentions")
     body = message.get("body")
     if (message.get("direction") != "incoming" or message.get("type") != 1 or message.get("recall")
-            or not isinstance(body,str) or len(body)>512 or not isinstance(mentions,dict)
+            or not isinstance(body,str) or len(body)>512):
+        return None
+    if bound and body.strip().startswith("二狗") and not (isinstance(mentions,dict) and mentions.get("self") is True):
+        return COMMANDS.get(addressed_command(body.strip(),"二狗",False))
+    if (not isinstance(mentions,dict)
             or mentions.get("state")!="known" or mentions.get("self") is not True
             or mentions.get("all") is True or mentions.get("userIds") != [account]):
         return None

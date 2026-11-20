@@ -39,6 +39,16 @@ class GroupBindingTests(unittest.TestCase):
         self.worker.consume(event)
         return event
 
+    def test_smart_mode_mentions_do_not_pause_group(self):
+        self.db.execute("INSERT INTO chat_models VALUES(?,1,'glm','configured',?,?)",
+                        (self.a,b'fixture',time.time()))
+        self.say(self.a,"@二狗 停用本群")
+        engine.step(self.db)
+        self.assertIn(self.a,self.worker.rooms)
+        self.assertEqual(self.db.execute("SELECT prompt FROM chat_requests").fetchone()[0],"停用本群")
+        self.say(self.a,"二狗停用本群",mentioned=False)
+        self.assertNotIn(self.a,self.worker.rooms)
+
     def test_authority_and_private_traffic(self):
         self.say("friend","@二狗 激活本群")
         self.say(self.b,"@二狗 激活本群",sender="stranger")
