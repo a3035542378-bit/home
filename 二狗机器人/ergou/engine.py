@@ -6,7 +6,7 @@ import uuid
 from contextlib import nullcontext
 from datetime import datetime
 
-from . import community, plugins, retention
+from . import asset_actions, community, plugins, retention
 from .db import BJ, allowed, audit, closing_db, dump, transaction, window
 from .games import GAMES, RULE_VERSION, start_board, visible_board
 
@@ -31,13 +31,38 @@ def addressed_command(text, prefix, mentioned):
     return text if mentioned else None
 
 
+def asset_members(db, account, group, member, payload, kind, message_type, adapter_version):
+    from . import models, native_voice, reply_rules
+    if kind != "message" or message_type not in ("text", "voice") or not isinstance(payload.get("text"), str):
+        return ()
+    setup = db.execute("SELECT config FROM groups WHERE id=?", (group,)).fetchone()
+    if not setup:
+        return ()
+    cfg = json.loads(setup[0])
+    prefix = "二狗" if adapter_version in ("agent-wechat-events/2.7.1", native_voice.VERSION) else cfg["prefix"]
+    mentioned = message_type == "text" and payload.get("mention_account") == account
+    cmd = addressed_command(payload["text"], prefix, mentioned)
+    if not cmd or (mentioned and models.api_first(db, group)):
+        return ()
+    members = asset_actions.participants(cmd, member, payload.get("pond_target"), cfg)
+    if members:
+        try:
+            if reply_rules.matching_rule(db, group, cmd) is not None:
+                return ()
+        except (ValueError,TypeError,KeyError,IndexError,AttributeError):
+            # 指令执行时会沿用原路由记录无效群规则。
+            return ()
+    return members
+
+
 def receive(db, account, group, member, source, payload, *, kind="message", message_type="text", adapter_version="sim/1", now=None):
     if not all(isinstance(s,str) and 0 < len(s) <= 160 for s in (account,group,member,source,adapter_version)):
         raise ValueError("INVALID_ARGUMENT 缺少稳定标识或标识过长")
     body = dump(payload)
     if not isinstance(payload,dict) or len(body.encode())>8192 or kind not in KINDS:
         raise ValueError("INVALID_ARGUMENT 事件格式或大小无效")
-    with nullcontext() if db.in_transaction else transaction(db):
+    members = asset_members(db, account, group, member, payload, kind, message_type, adapter_version)
+    with asset_actions.admission(db, group, members, (account, source)) as overlap, (nullcontext() if db.in_transaction else transaction(db)):
         old = db.execute("SELECT seq FROM inbox WHERE account=? AND source=?",(account,source)).fetchone()
         if old:
             return old[0]
@@ -49,11 +74,32 @@ def receive(db, account, group, member, source, payload, *, kind="message", mess
             raise ValueError("RATE_LIMITED 入站队列已满，请稍后重试")
         event = uuid.uuid4().hex
         state = "PENDING" if binding["account"]==account and not binding["paused"] else "IGNORED"
+        busy = state == "PENDING" and (overlap or asset_actions.pending(db, group, members))
         seq=db.execute("""INSERT INTO inbox(event_id,source,account,grp,member,kind,message_type,arrived,binding,
-                       adapter_version,trace,payload,state) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                       adapter_version,trace,payload,state,result) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                        (event,source,account,group,member,kind,message_type,time.time() if now is None else now,
-                        binding["binding"],adapter_version,event,body if state=="PENDING" else None,state)).lastrowid
+                        binding["binding"],adapter_version,event,body if state=="PENDING" else None,state,asset_actions.BUSY_RESULT if busy else None)).lastrowid
+        if busy and message_type == "text" and payload.get("mention_account") != account:
+            # 直接用原有鉴权与发件箱回复，避免失败的连点继续堆在业务队列。
+            rejected = db.execute("SELECT * FROM inbox WHERE seq=?", (seq,)).fetchone()
+            settle(db, binding, rejected)
+        elif members and state == "PENDING" and not busy:
+            asset_actions.reserve(db, group, members, seq)
         return seq
+
+
+def reserve_requeued(db, event):
+    """旧队列迁移或运营重试时，在调用方写事务内恢复占用。"""
+    if event["result"] == asset_actions.BUSY_RESULT or not event["payload"]:
+        return
+    if db.execute("SELECT 1 FROM asset_action_holds WHERE seq=?", (event["seq"],)).fetchone():
+        return
+    members = asset_members(db, event["account"], event["grp"], event["member"],
+                           json.loads(event["payload"]), event["kind"], event["message_type"], event["adapter_version"])
+    if asset_actions.pending(db, event["grp"], members):
+        db.execute("UPDATE inbox SET result=? WHERE seq=?", (asset_actions.BUSY_RESULT, event["seq"]))
+    elif members:
+        asset_actions.reserve(db, event["grp"], members, event["seq"])
 
 
 def queue(db, group, key, body, now, ttl=120):
@@ -208,6 +254,8 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
         return models.switch(db,e,cmd=="开启智能对话",mentioned)
     if mentioned and models.api_first(db,e["grp"]):
         return models.submit(db,e,cmd or "群成员点名了你，请简短回应。")
+    if e["result"] == asset_actions.BUSY_RESULT:
+        return asset_actions.BUSY_REPLY
     if governed:
         if roles.parse(cmd):
             if not db.execute("SELECT 1 FROM directed_events WHERE biz=? AND source_time>?",(e["event_id"],time.time()-120)).fetchone():
@@ -387,7 +435,8 @@ def process(db,g,e):
             return "DONE",apply_action(db,g,e,cfg["moderation"])
         if cfg["moderation"]=="提醒" and not authorized_control:
             moderation="请留意本群群规："+cfg["rules"]
-    if not authorized_control and not allowed(db,dump(["cmd",e["grp"],e["member"]]),cfg.get("command_rate",30),10,e["arrived"]):
+    rate_key = "asset-busy" if e["result"] == asset_actions.BUSY_RESULT else "cmd"
+    if not authorized_control and not allowed(db,dump([rate_key,e["grp"],e["member"]]),cfg.get("command_rate",30),10,e["arrived"]):
         return "RATE_LIMITED",None
     stamp=p.get("source_time")
     if live_listener and type(stamp) in (int,float) and e["arrived"]-120<stamp<=e["arrived"]+5:
@@ -401,7 +450,10 @@ def process(db,g,e):
     try:
         if moderation:
             return "DONE",moderation
-        return "DONE",command(db,g,e,cmd,cfg,mentioned,prefix=prefix)
+        reply = command(db,g,e,cmd,cfg,mentioned,prefix=prefix)
+        if e["result"] == asset_actions.BUSY_RESULT and reply == asset_actions.BUSY_REPLY:
+            return "RATE_LIMITED",reply
+        return "DONE",reply
     except ValueError as exc:
         db.execute("ROLLBACK TO addressed_command")
         notify=allowed(db,dump(["errors",e["grp"],e["member"]]),3,10,e["arrived"])
@@ -417,26 +469,31 @@ def step(db):
             return False
         g=db.execute("SELECT * FROM groups WHERE id=?",(e["grp"],)).fetchone()
         expire(db,e["grp"],e["arrived"])
-        db.execute("SAVEPOINT business")
-        try:
-            state,msg=process(db,g,e)
-            if msg:
-                queue(db,g,e["event_id"],msg,e["arrived"])
-        except ValueError as exc:
-            db.execute("ROLLBACK TO business")
-            state,msg="REJECTED",str(exc)
-            if allowed(db,dump(["errors",e["grp"],e["member"]]),3,10,e["arrived"]):
-                queue(db,g,e["event_id"],msg,e["arrived"])
-        except (KeyError,TypeError,IndexError,RuntimeError):
-            db.execute("ROLLBACK TO business")
-            db.execute("UPDATE inbox SET retries=retries+1,result='BUSINESS_ERROR',state=CASE WHEN retries>=2 THEN 'FAILED' ELSE 'PENDING' END WHERE seq=?",(e["seq"],))
-            return True
+        return settle(db,g,e)
+
+
+def settle(db,g,e):
+    db.execute("SAVEPOINT business")
+    try:
+        state,msg=process(db,g,e)
+        if msg:
+            queue(db,g,e["event_id"],msg,e["arrived"])
+    except ValueError as exc:
+        db.execute("ROLLBACK TO business")
+        state,msg="REJECTED",str(exc)
+        if allowed(db,dump(["errors",e["grp"],e["member"]]),3,10,e["arrived"]):
+            queue(db,g,e["event_id"],msg,e["arrived"])
+    except (KeyError,TypeError,IndexError,RuntimeError):
+        db.execute("ROLLBACK TO business")
         db.execute("RELEASE business")
-        if e["kind"]=="message" and e["message_type"]=="text" and state not in ("IGNORED","FAILED"):
-            if db.execute("SELECT 1 FROM retention WHERE grp=? AND since<=?",(e["grp"],e["arrived"])).fetchone():
-                original=json.loads(e["payload"]).get("text")
-                if isinstance(original,str):
-                    retention.CACHE.put((e["grp"],e["account"],e["source"]),original,e["arrived"])
-        db.execute("UPDATE inbox SET state=?,payload=NULL,result=? WHERE seq=?",(state,state,e["seq"]))
+        db.execute("UPDATE inbox SET retries=retries+1,result=CASE WHEN result='ASSET_BUSY' THEN result ELSE 'BUSINESS_ERROR' END,state=CASE WHEN retries>=2 THEN 'FAILED' ELSE 'PENDING' END WHERE seq=?",(e["seq"],))
         return True
+    db.execute("RELEASE business")
+    if e["kind"]=="message" and e["message_type"]=="text" and state not in ("IGNORED","FAILED"):
+        if db.execute("SELECT 1 FROM retention WHERE grp=? AND since<=?",(e["grp"],e["arrived"])).fetchone():
+            original=json.loads(e["payload"]).get("text")
+            if isinstance(original,str):
+                retention.CACHE.put((e["grp"],e["account"],e["source"]),original,e["arrived"])
+    db.execute("UPDATE inbox SET state=?,payload=NULL,result=? WHERE seq=?",(state,state,e["seq"]))
+    return True
 

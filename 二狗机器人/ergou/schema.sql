@@ -21,6 +21,14 @@ CREATE TABLE IF NOT EXISTS inbox (
 );
 CREATE INDEX IF NOT EXISTS inbox_pending ON inbox(state,seq);
 CREATE INDEX IF NOT EXISTS inbox_time ON inbox(grp,arrived);
+CREATE TABLE IF NOT EXISTS asset_action_holds (
+ grp TEXT NOT NULL, member TEXT NOT NULL, seq INTEGER NOT NULL REFERENCES inbox(seq) ON DELETE CASCADE,
+ PRIMARY KEY(grp,member)
+);
+CREATE INDEX IF NOT EXISTS asset_action_event ON asset_action_holds(seq);
+CREATE TRIGGER IF NOT EXISTS asset_action_finished AFTER UPDATE OF state ON inbox
+ WHEN OLD.state='PENDING' AND NEW.state!='PENDING'
+ BEGIN DELETE FROM asset_action_holds WHERE seq=NEW.seq; END;
 CREATE TABLE IF NOT EXISTS games (
  id INTEGER PRIMARY KEY, grp TEXT NOT NULL REFERENCES groups, code TEXT NOT NULL, game TEXT NOT NULL,
  owner TEXT NOT NULL, state TEXT NOT NULL, rules TEXT NOT NULL, board TEXT NOT NULL, started REAL NOT NULL,

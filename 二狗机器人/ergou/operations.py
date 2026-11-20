@@ -77,6 +77,8 @@ def act(db,u,g,d):
         elif op=="重试入站":
             changed=db.execute("UPDATE inbox SET state='PENDING',retries=0 WHERE seq=? AND grp=? AND state='FAILED' AND payload IS NOT NULL AND arrived>?",(d["target"],g,time.time()-120)).rowcount
             if not changed:raise ValueError("事件已过期或状态不适用")
+            from .engine import reserve_requeued
+            reserve_requeued(db, db.execute("SELECT * FROM inbox WHERE seq=?", (d["target"],)).fetchone())
             result="已重新入队"
         else:
             raise ValueError("未知管理操作")

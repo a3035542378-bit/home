@@ -100,23 +100,26 @@ def matches(text, rule):
     return previous[-1] <= tolerance
 
 
-def match(db, event, cmd):
-    row = db.execute("SELECT rules FROM reply_rule_sets WHERE grp=?", (event["grp"],)).fetchone()
+def matching_rule(db, group, cmd):
+    row = db.execute("SELECT rules FROM reply_rule_sets WHERE grp=?", (group,)).fetchone()
     if not row:
         return None
     text = normalize(cmd)
-    if not text:
+    if text:
+        return next((rule for rule in json.loads(row[0]) if matches(text, rule)), None)
+
+
+def match(db, event, cmd):
+    rule = matching_rule(db, event["grp"], cmd)
+    if rule is None:
         return None
-    for rule in json.loads(row[0]):
-        if matches(text, rule):
-            db.execute("INSERT OR IGNORE INTO reply_rule_hits VALUES(?,?)", (event["seq"], rule["keyword"]))
-            if rule["kind"] == "image" and urlsplit(rule["content"]).scheme == "https":
-                db.execute("""INSERT OR IGNORE INTO simulation_reply_images(seq,url)
-                              SELECT i.seq,? FROM inbox i JOIN account a ON a.id=i.account
-                              WHERE i.seq=? AND i.grp=? AND a.mode='simulation'""",
-                           (rule["content"], event["seq"], event["grp"]))
-            return ("图片：" if rule["kind"] == "image" else "") + rule["content"]
-    return None
+    db.execute("INSERT OR IGNORE INTO reply_rule_hits VALUES(?,?)", (event["seq"], rule["keyword"]))
+    if rule["kind"] == "image" and urlsplit(rule["content"]).scheme == "https":
+        db.execute("""INSERT OR IGNORE INTO simulation_reply_images(seq,url)
+                      SELECT i.seq,? FROM inbox i JOIN account a ON a.id=i.account
+                      WHERE i.seq=? AND i.grp=? AND a.mode='simulation'""",
+                   (rule["content"], event["seq"], event["grp"]))
+    return ("图片：" if rule["kind"] == "image" else "") + rule["content"]
 
 
 def simulation_media(db, group, seq):

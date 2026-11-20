@@ -79,10 +79,16 @@ INSERT OR IGNORE INTO fishing_species(grp,member,fish,best_grams)
             db.execute("PRAGMA legacy_alter_table=ON")
             migrate += "ALTER TABLE agent_wechat_links RENAME TO single_group_links;\n"
             backfill += "INSERT INTO agent_wechat_links SELECT * FROM single_group_links; DROP TABLE single_group_links;"
+        upgrade_holds = not db.execute("SELECT 1 FROM sqlite_schema WHERE name='asset_action_holds'").fetchone()
         db.executescript("\n".join(("BEGIN IMMEDIATE;",migrate,SCHEMA.read_text(encoding="utf-8"),
                                     SCHEMA.with_name("permissions.sql").read_text(encoding="utf-8"),
                                     group_tools_schema,moderation_schema,bulletin_schema,policy_schema,roster_schema,
-                                    deliveries_schema,voice_policy_schema,voice_events_schema,backfill,"COMMIT;")))
+                                    deliveries_schema,voice_policy_schema,voice_events_schema,backfill)))
+        if upgrade_holds:
+            from .engine import reserve_requeued
+            for pending in db.execute("SELECT * FROM inbox WHERE state='PENDING' ORDER BY seq"):
+                reserve_requeued(db, pending)
+        db.commit()
 
 
 @contextmanager
