@@ -139,7 +139,8 @@ class DirectedListener(wx.Listener):
 
 def run(db, action, private, group=None):
     active = current(db,SLOT)
-    if action != "take-over" and not active:
+    stream=db.execute("SELECT * FROM binding_streams WHERE slot=?", (SLOT,)).fetchone()
+    if action != "take-over" and not active and not stream:
         return "当前没有可恢复的服务器点名授权"
     read = (private/"ergou-read-token").read_text(encoding="ascii").strip()
     if not read:
@@ -153,10 +154,15 @@ def run(db, action, private, group=None):
     if action == "take-over":
         changed = take_over(db,client,secret,group)
         return "已接管点名文字回复，请启动监听与回复服务" if changed else "当前群已接管，既有游标与授权保留"
+    from . import group_stream
+    if not stream:
+        db.execute("""INSERT OR IGNORE INTO binding_streams SELECT slot,account,server_id,cursor
+                      FROM agent_wechat_links WHERE slot=? AND grp=?""",(SLOT,active["grp"]))
+        stream=db.execute("SELECT * FROM binding_streams WHERE slot=?",(SLOT,)).fetchone()
     if action == "listen":
-        DirectedListener(db,client,secret,private,active["binding"]).run()
+        group_stream.Stream(db,client,secret,private,stream).run()
     else:
-        wx.replies(db,client,secret,sender)
+        group_stream.replies(db,client,secret,sender,stream)
     return "工作进程已停止"
 
 
@@ -167,6 +173,9 @@ def main():
     sub = parser.add_subparsers(dest="action",required=True)
     transfer = sub.add_parser("take-over",help="旧实例收发工作进程已停止后，首次接管指定群")
     transfer.add_argument("--group-id",help="从迁移时已获点名授权的群中选择")
+    admins=sub.add_parser("binding-admin",help="按稳定微信 ID 管理独立的跨群绑定名单")
+    admins.add_argument("operation",choices=("grant","revoke"))
+    admins.add_argument("member")
     sub.add_parser("listen")
     sub.add_parser("replies")
     args = parser.parse_args()
@@ -174,6 +183,18 @@ def main():
         if not args.db.is_file():
             raise ValueError("未找到迁移数据库")
         with closing_db(args.db) as db:
+            if args.action=="binding-admin":
+                stream=db.execute("SELECT account FROM binding_streams WHERE slot=?", (SLOT,)).fetchone()
+                if not stream or not wx.valid_id(args.member) or args.member==stream["account"]:
+                    raise ValueError("需要已登记账号和独立微信用户的稳定 ID")
+                with transaction(db):
+                    if args.operation=="grant":
+                        db.execute("INSERT OR IGNORE INTO binding_admins VALUES(?,?)",(stream["account"],args.member))
+                    else:
+                        db.execute("DELETE FROM binding_admins WHERE account=? AND member=?",(stream["account"],args.member))
+                    audit(db,"local-cli",None,"绑定管理员名单变更",args.operation+" "+args.member)
+                print("绑定权限名单已更新")
+                return
             print(run(db,args.action,args.private_dir,getattr(args,"group_id",None)))
     except (OSError,ValueError,RuntimeError,sqlite3.Error,http.client.HTTPException) as exc:
         parser.exit(1,f"微信工作进程未启动：{exc}\n")

@@ -181,7 +181,7 @@ CREATE TABLE IF NOT EXISTS fishing_reply_mentions (
 CREATE TABLE IF NOT EXISTS agent_wechat_links (
  slot TEXT NOT NULL, account TEXT NOT NULL REFERENCES listener_nodes(account),
  grp TEXT NOT NULL REFERENCES groups(id), server_id TEXT NOT NULL, cursor TEXT NOT NULL,
- PRIMARY KEY(slot,grp), UNIQUE(account)
+ PRIMARY KEY(slot,grp), UNIQUE(account,grp)
 );
 CREATE TABLE IF NOT EXISTS live_notices (
  schedule INTEGER PRIMARY KEY REFERENCES schedules, grp TEXT NOT NULL, account TEXT NOT NULL,
@@ -321,3 +321,18 @@ CREATE TABLE IF NOT EXISTS fishing_grade_news (
  grams INTEGER NOT NULL, grade INTEGER NOT NULL CHECK(grade IN (4,5)),
  upgraded INTEGER NOT NULL, legends INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS binding_streams (
+ slot TEXT PRIMARY KEY, account TEXT UNIQUE NOT NULL REFERENCES listener_nodes, server_id TEXT NOT NULL, cursor TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS binding_admins (
+ account TEXT NOT NULL REFERENCES listener_nodes, member TEXT NOT NULL, PRIMARY KEY(account,member)
+);
+CREATE TABLE IF NOT EXISTS binding_pauses (
+ grp TEXT PRIMARY KEY REFERENCES groups, binding INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS binding_receipts (
+ account TEXT NOT NULL, source TEXT NOT NULL, grp TEXT NOT NULL, member TEXT NOT NULL, body TEXT NOT NULL,
+ expires REAL NOT NULL, state TEXT NOT NULL DEFAULT 'PENDING', PRIMARY KEY(account,source)
+);
+CREATE INDEX IF NOT EXISTS binding_receipt_pending ON binding_receipts(account,state,expires);

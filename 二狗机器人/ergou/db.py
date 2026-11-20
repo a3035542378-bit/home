@@ -73,6 +73,12 @@ INSERT OR IGNORE INTO fishing_species(grp,member,fish,best_grams)
                 migrate += f"ALTER TABLE {table} ADD COLUMN {field}_upgraded INTEGER NOT NULL DEFAULT 0;\n"
             if field not in fields:
                 backfill += f"UPDATE {table} SET {field}=fish_base_grade(fish,{grams}) WHERE {field} IS NULL;\n"
+        old_link = db.execute("SELECT sql FROM sqlite_master WHERE name='agent_wechat_links'").fetchone()
+        if old_link and "UNIQUE(account)" in old_link[0]:
+            db.execute("PRAGMA foreign_keys=OFF")
+            db.execute("PRAGMA legacy_alter_table=ON")
+            migrate += "ALTER TABLE agent_wechat_links RENAME TO single_group_links;\n"
+            backfill += "INSERT INTO agent_wechat_links SELECT * FROM single_group_links; DROP TABLE single_group_links;"
         db.executescript("\n".join(("BEGIN IMMEDIATE;",migrate,SCHEMA.read_text(encoding="utf-8"),
                                     group_tools_schema,moderation_schema,bulletin_schema,policy_schema,roster_schema,
                                     deliveries_schema,voice_policy_schema,voice_events_schema,backfill,"COMMIT;")))

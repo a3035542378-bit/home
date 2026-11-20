@@ -188,10 +188,13 @@ def link(db, client, name, secret, after=None):
 
 
 class Listener:
-    def __init__(self, db, client, secret, private=None):
+    def __init__(self, db, client, secret, private=None, *, group=None):
         self.db, self.client, self.secret = db, client, secret
         self.private = private
-        row = db.execute("SELECT * FROM agent_wechat_links WHERE slot=?", (client.slot,)).fetchone()
+        if group is None and db.execute("SELECT 1 FROM agent_wechat_links WHERE slot=? LIMIT 1 OFFSET 1",
+                                        (client.slot,)).fetchone():
+            raise ValueError("多群账号请使用服务器群路由")
+        row = db.execute("SELECT * FROM agent_wechat_links WHERE slot=? AND (? IS NULL OR grp=?)", (client.slot,group,group)).fetchone()
         if not row:
             raise ValueError("请先登记目标群")
         self.account, self.group, self.server, self.cursor = (row[k] for k in ("account","grp","server_id","cursor"))
@@ -217,7 +220,7 @@ class Listener:
             raise ValueError("服务、账号或群成员身份已改变")
         self.heartbeat("LISTENING")
 
-    def consume(self, event):
+    def consume(self, event, message=None):
         cursor = event.get("cursor")
         if not number(cursor) or event.get("accountId", self.client.slot) != self.client.slot:
             raise ValueError("事件账号或游标错误")
@@ -234,7 +237,8 @@ class Listener:
                 raise ValueError("缺少上游消息标识")
             if not self.linked():
                 raise LinkRemoved()
-            message = self.client.get(self.client.base + "/messages/" + quote(mid, safe=""))
+            if message is None:
+                message = self.client.get(self.client.base + "/messages/" + quote(mid, safe=""))
             if (message.get("threadId"), message.get("accountId"), message.get("id")) != (self.group, self.client.slot, mid):
                 raise ValueError("事件与消息详情身份不符")
             sender, source = message.get("senderId"), message.get("serverId")
@@ -332,14 +336,18 @@ class Listener:
             self.cursor=checkpoint[0]
             self._listen()
 
-    def _listen(self):
+    def roster_monitor(self):
         from .native_roster import Monitor
         roster=Monitor(self)
+        roster.thread.start()
+        return roster
+
+    def _listen(self):
+        roster=self.roster_monitor()
         from .native_voice import Monitor as VoiceMonitor
         voice=VoiceMonitor(self,self.private) if self.private is not None else None
         if voice:
             voice.thread.start()
-        roster.thread.start()
         try:
             while True:
                 try:
@@ -451,7 +459,7 @@ def send_direct(client, token, task):
     return inspect_text_send(client,token,task)
 
 
-def recovery_plan(db,slot):
+def recovery_plan(db,slot,group=None):
     """Describe workers that can resume without granting a new permission."""
     row=db.execute("""SELECT l.grp, (p.grp IS NOT NULL OR EXISTS(SELECT 1 FROM active_native_member_notices c
         WHERE c.grp=g.id AND c.account=g.account AND c.binding=g.binding) OR EXISTS(SELECT 1 FROM active_native_voice v
@@ -461,14 +469,14 @@ def recovery_plan(db,slot):
         JOIN node_grants n ON n.grp=l.grp AND n.account=l.account
         LEFT JOIN group_profile cfg ON cfg.grp=l.grp
         LEFT JOIN directed_groups p ON p.grp=g.id AND p.account=g.account AND p.binding=g.binding
-        WHERE l.slot=? AND NOT g.paused AND json_extract(g.config,'$.enabled')=1
+        WHERE l.slot=? AND (? IS NULL OR l.grp=?) AND NOT g.paused AND json_extract(g.config,'$.enabled')=1
         AND a.state!='SUSPENDED' AND NOT COALESCE(cfg.detached,0)""",
-        (slot,)).fetchone()
+        (slot,group,group)).fetchone()
     return dict(listen=bool(row),replies=bool(row and row["replies"]))
 
 
-def replies(db,client,node_secret,token,name=None):
-    listener=Listener(db,client,node_secret)
+def replies(db,client,node_secret,token,name=None,*,group=None,once=False):
+    listener=Listener(db,client,node_secret,group=group)
     if name is not None and client.resolve(name)[0]!=listener.group:
         raise ValueError("申请回复的群与已绑定群不一致")
     def verify_identity():
@@ -479,16 +487,16 @@ def replies(db,client,node_secret,token,name=None):
         if name is not None:
             verify_identity()
             with transaction(db):
-                if not listener.linked() or not recovery_plan(db,client.slot)["listen"]:
+                if not listener.linked() or not recovery_plan(db,client.slot,listener.group)["listen"]:
                     raise ValueError("群绑定已改变")
                 group=db.execute("SELECT binding FROM groups WHERE id=?",(listener.group,)).fetchone()
                 db.execute("""INSERT INTO directed_groups VALUES(?,?,?,?) ON CONFLICT(grp) DO UPDATE
                             SET account=excluded.account,binding=excluded.binding,since=excluded.since
                             WHERE directed_groups.account!=excluded.account OR directed_groups.binding!=excluded.binding""",
                            (listener.group,listener.account,group["binding"],time.time()))
-        elif not recovery_plan(db,client.slot)["replies"]:
+        elif not recovery_plan(db,client.slot,listener.group)["replies"]:
             raise ValueError("当前群绑定没有可恢复的回复授权")
-        while listener.linked() and recovery_plan(db,client.slot)["replies"]:
+        while listener.linked() and recovery_plan(db,client.slot,listener.group)["replies"]:
             task=jobs.claim(db,listener.account,directed_group=listener.group)
             if isinstance(task,dict):
                 try:
@@ -508,7 +516,7 @@ def replies(db,client,node_secret,token,name=None):
                             JOIN directed_groups p ON p.grp=i.grp AND p.account=i.account AND p.binding=i.binding
                             WHERE d.biz=? AND i.grp=? AND i.account=? AND i.binding=? AND d.source_time>=p.since""",
                             (task["biz"],listener.group,listener.account,task["binding"])).fetchone()
-                    if not listener.linked() or not recovery_plan(db,client.slot)["replies"] or stale or unconfirmed:
+                    if not listener.linked() or not recovery_plan(db,client.slot,listener.group)["replies"] or stale or unconfirmed:
                         state,detail="FAILED","群绑定、通知授权或智能对话状态已变化"
                     elif time.time()>=task["expires"]:
                         state,detail="FAILED","点名消息已过期"
@@ -538,7 +546,9 @@ def replies(db,client,node_secret,token,name=None):
                 except (ValueError,OSError,http.client.HTTPException):
                     state,detail="UNKNOWN","插件状态待核对"
                 jobs.finish(db,listener.account,task["id"],task["attempt"],state,detail)
-            else:
+            if once:
+                return bool(task)
+            if not task:
                 time.sleep(.5)
 
 
