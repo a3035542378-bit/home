@@ -155,20 +155,22 @@ def configure(db,user,group,data):
     return settings(db,user,group)
 
 
-def redeem(db,event,arg):
+def redeem(db,event,arg,prefix="二狗"):
     """Runs inside the inbox transaction together with the reply and ledger debit."""
     group,member=event["grp"],event["member"]
     name=arg.strip()
     if not name:
         available=db.execute("SELECT name,price FROM reward_offers WHERE grp=? ORDER BY price,name",(group,)).fetchall()
-        return ("🎁 本群可兑换\n\n"+ "\n".join(f"{r['name']}　{r['price']} 分" for r in available)
-                +"\n\n发送「兑换 奖励名」时请先点名。") if available else "本群暂未上架兑换奖励。"
+        if not available:
+            return "本群暂未上架兑换奖励。"
+        lines = [f"{r['name']}　{r['price']} 分" for r in available]
+        return "\n".join(["🎁 本群可兑换", *lines, "", "选好后这样发（会扣积分）：", f"{prefix}兑换 {available[0]['name']}"])
     existing=db.execute("SELECT * FROM redemptions WHERE seq=?",(event["seq"],)).fetchone()
     if existing:
         return f"兑换单 #{existing['id']} · {existing['name']} · {existing['price']} 分"
     offer=db.execute("SELECT price FROM reward_offers WHERE grp=? AND name=?",(group,name)).fetchone()
     if not offer:
-        raise ValueError("本群没有这项奖励，可查看「二狗兑换列表」。")
+        raise ValueError(f"本群没有这项奖励。查看可兑换的奖励：\n{prefix}兑换列表")
     balance=db.execute("SELECT COALESCE(SUM(points),0) FROM ledger WHERE grp=? AND member=?",(group,member)).fetchone()[0]
     price=offer[0]
     if balance<price:
@@ -177,4 +179,4 @@ def redeem(db,event,arg):
                 VALUES(?,?,0,'兑换',?,'redeem/1',?,?,?)""",(group,member,-price,event["event_id"],event["arrived"],name)).lastrowid
     order=db.execute("INSERT INTO redemptions(grp,member,name,price,seq,ledger_id,created) VALUES(?,?,?,?,?,?,?)",
                      (group,member,name,price,event["seq"],debit,event["arrived"])).lastrowid
-    return f"🎁 兑换单 #{order}\n{name}\n已扣 {price} 分，剩余 {balance-price} 分。\n\n请联系群运营领取。"
+    return f"🎁 兑换成功 · {name}\n已扣 {price} 分，剩余 {balance-price} 分。\n把兑换单 #{order} 发给群运营领取。"

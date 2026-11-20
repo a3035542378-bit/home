@@ -74,5 +74,5 @@ os._exit(73)
         jobs.tick(self.db,now+8)
         self.assertEqual(1,self.db.execute("SELECT COUNT(*) FROM outbox").fetchone()[0])
         receive(self.db,"sim-account","demo-group","p","help",{"text":"二狗 菜单"});step(self.db)
-        self.assertIn("命令前缀",self.db.execute("SELECT body FROM outbox ORDER BY id DESC LIMIT 1").fetchone()[0])
+        self.assertIn("二狗菜单",self.db.execute("SELECT body FROM outbox ORDER BY id DESC LIMIT 1").fetchone()[0])
 

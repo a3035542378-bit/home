@@ -304,7 +304,7 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
         return intents.horoscope(args,e["arrived"])
     if first in ("兑换","兑换列表"):
         from .group_tools import redeem
-        return redeem(db,e,args if first=="兑换" else "")
+        return redeem(db,e,args if first=="兑换" else "",prefix)
     if first=="积分":
         score=db.execute("SELECT COALESCE(SUM(points),0) FROM ledger WHERE grp=? AND member=?",(e["grp"],e["member"])).fetchone()[0]
         return f"本群积分 {score}"

@@ -40,7 +40,7 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
     page_size = 2 if storage == "pond" else 6
     pages = max(1, (count+page_size-1)//page_size)
     if page > pages:
-        return f"{name}只有 {pages} 页。"
+        return f"{name}只有 {pages} 页。看最后一页请发：\n{prefix}{name}{' 重量' if by_weight else ''} {pages}"
     is_pond = storage == "pond"
     icon = "🐟" if is_pond else "🎒"
     lines = [f"{icon} 我的{name}　{level} 级", f"容量 {count}/{capacity} 条", ""]
@@ -87,7 +87,7 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
         if count > 1:
             lines.append(f"卖整塘　　{prefix}一键卖鱼" if is_pond else f"卖整包　　{prefix}卖出鱼包")
     else:
-        lines.append(f"鱼塘是空的。发「{prefix}查看鱼包」选鱼放入。" if is_pond else f"鱼包是空的。发「{prefix}抛竿」试试手气。")
+        lines.append(f"鱼塘是空的。先去鱼包，挑一条想养的鱼。\n{prefix}查看鱼包" if is_pond else f"鱼包是空的。钓到的鱼会放在这里。\n{prefix}抛竿")
     if count > capacity:
         lines.append("原有鱼获已保留，腾出位置或扩容后可继续存鱼。")
     if level < len(TIERS[storage]):
@@ -190,11 +190,16 @@ def handle(db, key, cmd, prefix, now=None):
     action = pond_growth.ACTION.fullmatch(cmd)
     if action:
         return pond_growth.act(db,key,action[1],int(action[2]),now,prefix)
-    if cmd == "卖鱼":
-        return f"🎒 你想卖哪条鱼？发送「{prefix}鱼包」查看鱼的编号。\n例如　{prefix}卖鱼#17"
-    if cmd in ("放入图鉴", "放入鱼塘"):
-        return (f"🐟 想选哪条鱼？请带上鱼的编号。\n例如　{prefix}{cmd}#17\n"
-                f"查看编号　{prefix}查看鱼包" + ("" if cmd == "放入鱼塘" else f" / {prefix}查看鱼塘"))
+    if cmd in ("卖鱼", "放入图鉴", "放入鱼塘"):
+        row = db.execute("""SELECT id,fish,price FROM fishing_pond
+                            WHERE grp=? AND member=? AND (? != '放入鱼塘' OR storage='bag')
+                            ORDER BY storage='bag' DESC,price,id LIMIT 1""", (*key,cmd)).fetchone()
+        if row is None:
+            return f"🎒 还没有可选的鱼。钓到后会看到鱼的编号。\n{prefix}抛竿"
+        intent = {"卖鱼": "想卖哪条鱼", "放入鱼塘": "想把哪条鱼放进塘", "放入图鉴": "想用哪条鱼点亮图鉴"}[cmd]
+        price = f"（可卖 {row['price']} 鱼币）" if cmd == "卖鱼" else ""
+        return (f"{intent}？选好编号后再发。\n比如这条：#{row['id']} {row['fish']}{price}\n"
+                f"{prefix}{cmd}#{row['id']}" + ("\n发送这条指令即出售。" if cmd == "卖鱼" else ""))
     page = PAGE.fullmatch(cmd)
     if page:
         storage = "bag" if page[1] == "鱼包" else "pond"

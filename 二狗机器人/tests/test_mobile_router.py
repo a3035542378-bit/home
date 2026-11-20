@@ -71,6 +71,7 @@ class MobileRouter(unittest.TestCase):
         key=(self.api.room,self.api.details["senderId"])
         self.db.execute("INSERT OR IGNORE INTO fishing_wallets(grp,member) VALUES(?,?)",key)
         self.db.execute("INSERT INTO fishing_pond(id,grp,member,fish,grams,price,storage) VALUES(17,?,?,'鲫鱼',205,4,'bag')",key)
+        self.assertIn("二狗卖鱼#17", self.send("二狗卖鱼"))
         for phrase in ("别卖17号鱼","卖#17？"):
             self.send("二狗"+phrase)
             self.assertTrue(self.db.execute("SELECT 1 FROM fishing_pond WHERE id=17").fetchone())

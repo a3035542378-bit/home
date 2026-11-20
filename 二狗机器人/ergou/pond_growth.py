@@ -217,9 +217,9 @@ def panel(db,key,item,changes,prefix,now):
                         f"🪙 初价 {row['original_price']} → 现价 {row['price']} 鱼币"]
     lines.extend([f"⚖️ {weight(row['grams'])} / 上限 {weight(limit)}",f"🪙 现在可卖 {row['price']} 鱼币"])
     if row["next_at"] is None:
-        return lines+[f"💤 暂停 · {row['rounds']}/{ROUNDS} 轮",f"{prefix}换入成长位#{item}"]
+        return lines+[f"💤 成长已暂停（已养 {row['rounds']}/{ROUNDS} 轮）\n想继续养，就发",f"{prefix}换入成长位#{item}"]
     minutes = math.ceil(((ROUNDS-row["rounds"]-1)*SECONDS + row["next_at"]-now)/60)
     lines.append(f"🌱 {row['rounds']}/{ROUNDS} 轮 · 最多还有 {minutes} 分钟")
     if row["food"]:
         return lines+[f"🍤 已有 {row['food']} 轮饲料"]
-    return lines+[f"🍤 {prefix}投喂#{item}　{min(3,ROUNDS-row['rounds'])} 轮 {feed_cost(row['original_price'],row['rounds'])} 鱼币"]
+    return lines+[f"🍤 喂 {min(3,ROUNDS-row['rounds'])} 轮共 {feed_cost(row['original_price'],row['rounds'])} 鱼币",f"{prefix}投喂#{item}"]

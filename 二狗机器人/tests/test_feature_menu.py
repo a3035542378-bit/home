@@ -126,6 +126,12 @@ class FeatureMenuTests(unittest.TestCase):
         self.assertIn("积分",disabled)
         self.model.assert_not_called()
 
+    def test_reward_list_shows_a_command_for_this_group(self):
+        admin.configure(self.db,self.admin,"other",1,dict(prefix="团团"))
+        self.db.execute("INSERT INTO reward_offers VALUES('other','选片权',5)")
+        self.assertIn("团团兑换 选片权",self.say("团团兑换列表",group="other"))
+        self.assertFalse(self.db.execute("SELECT 1 FROM redemptions").fetchone())
+
     def test_native_mention_requires_verified_mention_and_sends_once(self):
         api=Fixture()
         secret="k"*40

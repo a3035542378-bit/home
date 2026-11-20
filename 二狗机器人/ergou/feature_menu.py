@@ -3,18 +3,18 @@ from . import roles as permissions, voice_policy
 
 
 MAIN_MENU = """🐕 二狗菜单
-命令前缀「{prefix}」　{mode}
+{mode}
 {games}🏅 {prefix}积分　📜 {prefix}群规
 🎵 {prefix}点歌 茉莉花
 🌤 {prefix}天气 北京　🔎 {prefix}百科 大熊猫
-{interaction}📚 {prefix}全菜单"""
+{interaction}📚 更多用法　{prefix}全菜单"""
 
 
 def render(db,group,event,cfg,prefix):
     games=[]
     if cfg["games"]:
         if "钓鱼" not in cfg.get("disabled_games",[]):
-            games.append(f"🎣 {prefix}抛竿　/　{prefix}钓鱼玩法")
+            games.append(f"🎣 {prefix}抛竿　📖 {prefix}钓鱼玩法")
         games.append(f"🎮 {prefix}游戏列表")
     interaction=[]
     if cfg["polls"]:
@@ -22,7 +22,8 @@ def render(db,group,event,cfg,prefix):
     if cfg["draws"]:
         interaction.append(f"{prefix}抽签 报名")
     from .models import api_first
-    mode="智能聊天请 @二狗" if api_first(db,group["id"]) else "@二狗 也可发指令"
+    mode=(f"查分发「{prefix}积分」，聊天请 @二狗" if api_first(db,group["id"])
+          else "照着下面发，或 @二狗 后说指令")
     return MAIN_MENU.format(prefix=prefix,mode=mode,games="".join(line+"\n" for line in games),
                             interaction=("🗳 "+ "　".join(interaction)+"\n") if interaction else "")
 
@@ -33,7 +34,7 @@ def full_menu(db,group,event,cfg,prefix):
                 EXISTS(SELECT 1 FROM managers WHERE grp=g.id AND member=:member) AS group_admin
                 FROM groups g LEFT JOIN chat_models m ON m.grp=g.id LEFT JOIN smart_controls c ON c.grp=g.id
                 WHERE g.id=:grp""",{"grp":group["id"],"member":event["member"]}).fetchone()
-    lines=[f"📚 二狗全菜单　命令前缀「{prefix}」", f"🌤 {prefix}天气 北京"]
+    lines=["📚 二狗全菜单", f"每条指令前加「{prefix}」，例如「{prefix}天气 北京」。"]
     group_admin,model_admin=roles["group_admin"],roles["model_admin"]
     adopted=permissions.owner(db,group["account"])
     if adopted:
@@ -57,13 +58,13 @@ def full_menu(db,group,event,cfg,prefix):
         lines.append("取消报名：抽签 退出")
     lines.extend(["\n💬 聊天"])
     if roles["verified"] and roles["model_on"]:
-        lines.append("@二狗 帮我想三个周末活动")
+        lines.append("想聊天？在微信里选中 @二狗，再说想聊的事。")
     else:
         lines.append("智能对话已关闭" if roles["verified"] else "本地聊天")
-    lines.extend(["讲个笑话　/　讲个故事","追问　然后呢（也要点名）",
+    lines.extend(["讲个笑话　/　讲个故事",f"接着听　{prefix}然后呢",
                   "\n🔎 查询与娱乐","百科 大熊猫","菜谱 土豆","运势","星座 白羊座",
                   "快递 圆通 单号（承运商需已接通）",
-                  "\n🏅 积分与群服务","周榜　/　月榜　/　总榜","资产榜","兑换列表","兑换 奖励名","关键词：点名后发本群关键词"])
+                  "\n🏅 积分与群服务","周榜　/　月榜　/　总榜","资产榜","兑换列表","兑换 奖励名",f"群关键词也要加「{prefix}」"])
     if cfg["games"]:
         start="开始 成语接龙" if "成语接龙" not in cfg.get("disabled_games",[]) else "开始 游戏名"
         lines.extend(["\n🎮 群游戏",start,"加入 G01","状态 G01","G01 动作","退出 G01",
@@ -85,5 +86,5 @@ def full_menu(db,group,event,cfg,prefix):
     if ids:
         notes.append("，".join(ids))
     voice="语音未启用" if voice_policy.active(db,group["id"],group["account"],group["binding"]) is None else "语音用“二狗二狗”唤醒"
-    lines.extend(["\n📌 使用说明","智能模式开启时，@二狗 会与模型对话。" if roles["verified"] and roles["model_on"] else "也可以 @二狗 后发指令。",*notes,voice,"欢迎、退群提醒和定时通知由后台设置。",f"没找到？发「{prefix}菜单」。"])
+    lines.extend(["\n📌 使用说明","智能模式开启时，@二狗 会与模型对话。" if roles["verified"] and roles["model_on"] else "也可以 @二狗 后发指令。",*notes,voice,"欢迎、退群提醒和定时通知由后台设置。",f"返回常用指令　{prefix}菜单"])
     return "\n".join(lines)
