@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS permission_audit_log (
 );
 CREATE TABLE IF NOT EXISTS role_notices (
  id INTEGER PRIMARY KEY AUTOINCREMENT, bot_id TEXT NOT NULL, destination TEXT NOT NULL, binding INTEGER,
- body TEXT NOT NULL, expires REAL NOT NULL, source TEXT, UNIQUE(bot_id,source)
+ body TEXT NOT NULL, expires REAL NOT NULL, source TEXT, mention_user TEXT, UNIQUE(bot_id,source)
 );
 CREATE VIEW IF NOT EXISTS group_binding_state AS
  SELECT b.*,CASE WHEN g.paused=0 AND g.account=b.bot_id AND p.grp IS NOT NULL

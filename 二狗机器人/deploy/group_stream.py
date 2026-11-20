@@ -205,8 +205,12 @@ def send_notice(db,client,stream,token):
     top=roles.owner(db,bot)
     permitted=(dest==top["owner_user_id"] if top and row["binding"] is None
                else binding and binding[0]==row["binding"] and client.member(dest,bot))
+    if row["mention_user"]:
+        chief=db.execute("SELECT owner_user_id,owner_grant_status FROM group_binding WHERE group_id=? AND bot_id=?",
+                         (dest,bot)).fetchone()
+        permitted=permitted and chief and chief[0]==row["mention_user"] and chief[1]=="pending"
     if permitted and client.identity()==bot and client.get("/v1/status").get("serverId")==stream["server_id"]:
-        wx.send_direct(client,token,dict(grp=dest,body=row["body"],biz="role-"+str(row["id"])))
+        wx.send_direct(client,token,dict(grp=dest,body=row["body"],biz="role-"+str(row["id"]),mention_sender=row["mention_user"]))
     db.execute("UPDATE role_notices SET body='',expires=-abs(expires) WHERE id=?",(row["id"],))
     return True
 

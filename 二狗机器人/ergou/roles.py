@@ -72,8 +72,8 @@ def sync(db,bot,group,uid,name,*,departed=False,notify=True):
     if notify and binding and (uid or departed):
         who=labels(db,group)(uid) if uid else ""
         text=(f"👑 当前群主 {who} · 待授权\n主人发「二狗授权群主」可开通本群管理权限。" if uid else "👑 原群主已离群，群主授权已失效。")
-        db.execute("INSERT INTO role_notices(bot_id,destination,binding,body,expires) VALUES(?,?,?,?,?)",
-                   (bot,group,binding[0],text,now+120))
+        db.execute("INSERT INTO role_notices(bot_id,destination,binding,body,expires,mention_user) VALUES(?,?,?,?,?,?)",
+                   (bot,group,binding[0],text,now+120,uid))
 
 
 def parse(cmd):
