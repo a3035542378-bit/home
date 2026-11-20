@@ -37,6 +37,32 @@ class PondDirectoryTests(unittest.TestCase):
         self.db.execute("UPDATE pond_growth SET rounds=10 WHERE item=77")
         self.db.execute("UPDATE pond_growth SET next_at=? WHERE item=82",(time.time()+180,))
 
+    def test_old_full_bag_is_one_list_and_can_make_room(self):
+        self.db.execute("INSERT INTO fishing_storage_levels VALUES(?,?,'bag',2)",self.key)
+        for item in range(1,9):
+            self.stock(item,"鲫鱼",200+item,storage="bag")
+        body=self.send("二狗查看鱼包")
+        self.assertIn("8/5",body)
+        self.assertEqual(sum(line.startswith("[编号:") for line in body.splitlines()),8)
+        self.assertNotIn("下一页",body)
+        self.assertNotIn("升级鱼包",body)
+        self.assertEqual(self.send("二狗查看鱼包 2"),body)
+        self.assertIn("鱼包固定放 5 条",self.send("二狗鱼包扩容"))
+        for remaining in range(8,4,-1):
+            self.assertIn(f"腾出 {remaining-4} 格",self.send("二狗抛竿"))
+            next_step=self.send("二狗鱼包").splitlines()[-1]
+            self.assertIn("放入鱼塘#",next_step)
+            self.assertIn("已将",self.send(next_step))
+        self.assertIn("已满 4/4",self.send("二狗鱼塘"))
+        self.assertIn("4/5",self.send("二狗鱼包"))
+        self.assertIn("可放 10 条",self.send("二狗升级鱼塘"))
+        wallet=self.db.execute("SELECT coins FROM fishing_wallets WHERE grp=? AND member=?",self.key).fetchone()[0]
+        self.assertEqual(wallet,40)
+        from unittest.mock import patch
+        with patch("ergou.giant_fish.encounter",return_value=None), patch("ergou.fishing.fight",return_value=None), patch("ergou.angler.slip_percent",return_value=0):
+            self.assertIn("5/5",self.send("二狗抛竿"))
+        self.assertIn("鱼包已满",self.send("二狗抛竿"))
+
     def test_home_details_and_copyable_actions(self):
         self.scenario()
         home=self.send("二狗鱼塘")

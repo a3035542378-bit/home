@@ -189,7 +189,7 @@ class HelpWalkthrough(unittest.TestCase):
         self.assertIsNone(f.send("帮助"))
         body=f.send("二狗菜单")
         self.replays["主菜单"]=("二狗菜单",body,[("二狗天气帮助",self.follow(f,"二狗天气帮助"))])
-        for cmd in ("升级鱼竿","升级鱼包","强化鱼竿"):
+        for cmd in ("升级鱼竿","升级鱼塘","强化鱼竿"):
             result=self.follow(f,"二狗"+cmd)
             self.assertIn("还差",result)
             self.assertIn("发送即卖出",self.follow(f,result.splitlines()[-1]))

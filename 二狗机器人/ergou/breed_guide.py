@@ -60,7 +60,7 @@ def guide(db, key, prefix, now):
         status=(missing or species)+(" · " if pair else "")+(
             "一级塘只能放一条鱼。" if capacity<2 else f"先腾 {need} 个塘位，保留亲鱼。")
         if capacity<2:
-            cap,cost=fish_storage.TIERS["pond"][level]
+            cap,cost=fish_storage.POND_TIERS[level]
             wallet=db.execute("SELECT coins FROM fishing_wallets WHERE grp=? AND member=?",key).fetchone()
             coins=wallet[0] if wallet else 30
             status+=f"当前 {used}/{capacity}，扩到 {cap} 条需 {cost} 鱼币，余额 {coins} 鱼币。"
@@ -71,8 +71,8 @@ def guide(db, key, prefix, now):
                   if spare else catch_step(db,key,prefix,area,area,now))
             return reply(status+f"还差 {cost-coins} 币。",step)
         wallet=db.execute("SELECT coins FROM fishing_wallets WHERE grp=? AND member=?",key).fetchone()
-        if level<len(fish_storage.TIERS["pond"]):
-            cap,cost=fish_storage.TIERS["pond"][level]
+        if level<len(fish_storage.POND_TIERS):
+            cap,cost=fish_storage.POND_TIERS[level]
             if (wallet[0] if wallet else 30)>=cost:
                 return reply(status,f"也可扣 {cost} 鱼币扩到 {cap} 格\n{prefix}升级鱼塘")
         return reply(status,prefix+"鱼塘操作")

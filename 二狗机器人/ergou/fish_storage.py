@@ -8,11 +8,9 @@ from .fish_receipts import grid, mass
 from .fishing_waters import HABITAT, size_grade, weight
 
 
-# 每级的容量、由上一级升到该级的鱼币费用
-TIERS = {
-    "bag": ((5, 0), (8, 25), (12, 65), (16, 140), (20, 260)),
-    "pond": ((1, 0), (4, 20), (10, 60), (20, 150), (30, 300)),
-}
+BAG_CAPACITY = 5
+# 每级鱼塘容量、由上一级升到该级的鱼币费用。
+POND_TIERS = ((1, 0), (4, 20), (10, 60), (20, 150), (30, 300))
 NAMES = {"bag": "鱼包", "pond": "鱼塘"}
 PAGE = re.compile(r"(?:查看)?(鱼包|鱼塘)(?: (重量))?(?: ([1-9][0-9]{0,5}))?")
 ITEM = re.compile(r"(放入鱼塘|放入图鉴|点亮图鉴|卖鱼)\s*[#＃]([1-9][0-9]{0,17})")
@@ -24,32 +22,29 @@ def matches(cmd):
     return pond_view.DETAIL.fullmatch(cmd) or pond_growth.ACTION.fullmatch(cmd) or cmd in COMMANDS or PAGE.fullmatch(cmd) or ITEM.fullmatch(cmd)
 
 
-def level_for(db, key, storage):
-    row = db.execute("SELECT level FROM fishing_storage_levels WHERE grp=? AND member=? AND storage=?",
-                     (*key, storage)).fetchone()
+def pond_level(db, key):
+    row = db.execute("SELECT level FROM fishing_storage_levels WHERE grp=? AND member=? AND storage='pond'",key).fetchone()
     return row[0] if row else 1
 
 
 def occupancy(db, key, storage):
-    level = level_for(db, key, storage)
     count = db.execute("SELECT count(*) FROM fishing_pond WHERE grp=? AND member=? AND storage=?",
                        (*key, storage)).fetchone()[0]
-    return count, TIERS[storage][level-1][0], level
+    if storage == "bag":
+        return count, BAG_CAPACITY, 1
+    level = pond_level(db, key)
+    return count, POND_TIERS[level-1][0], level
 
 
 def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None):
     if storage=="pond":
         return pond_view.home(db,key,page,by_weight,prefix,changes or {},now)
-    name = NAMES[storage]
-    count, capacity, level = occupancy(db, key, storage)
-    pages=max(1,(count+5)//6)
-    if page>pages:
-        return f"{name}只有 {pages} 页。看最后一页请发：\n{prefix}{name}{' 重量' if by_weight else ''} {pages}"
+    count, capacity, _ = occupancy(db, key, "bag")
     if not count:
-        return f"🎒 {name}是空的（0/{capacity} 条）。\n{cast_step(db,key,prefix,now)}"
+        return f"🎒 鱼包是空的（0/{capacity} 条）。\n{cast_step(db,key,prefix,now)}"
     order="grams DESC,id DESC" if by_weight else "id DESC"
     rows=db.execute(f"""SELECT * FROM fishing_pond WHERE grp=? AND member=? AND storage='bag'
-                        ORDER BY {order} LIMIT 6 OFFSET ?""",(*key,(page-1)*6)).fetchall()
+                        ORDER BY {order}""",key).fetchall()
     sample=rows[0]
     item=sample["id"]
     pond_used,pond_capacity,_=occupancy(db,key,"pond")
@@ -57,25 +52,21 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
         step=f"{prefix}放入鱼塘#{item}"
         purpose=f"可把 #{item} {sample['fish']} 存塘"
     else:
-        step=prefix+"卖鱼"
-        purpose="塘已满，先查单条售价"
-    lines=[f"🎒 鱼包 {count}/{capacity} 条","", "🐟 本页鱼获"]
+        step=prefix+"鱼塘操作"
+        purpose="鱼塘已满，先查看塘位"
+    lines=[f"🎒 鱼包 {count}/{capacity} 条"]
+    if count > capacity:
+        lines.append(f"原有 {count} 条都在，移出 {count-capacity+1} 条就能继续钓。")
+    lines.append("")
     lines.extend(grid((f"编号: {r['id']}",r["fish"],mass(r["grams"]),f"{r['price']} 鱼币",fish_grades.label(r["grade"],r["grade_upgraded"]) or "历史鱼") for r in rows))
     for row in rows:
         child=breeding.fry(db,row["id"])
         if child:
             lines.append(f"🐣 编号 {row['id']} · "+breeding.source(child,key[1]))
-    if page<pages:
-        lines.append(f"【{name}{' 重量' if by_weight else ''} {page+1}】下一页")
     lines.extend(["","🎒 处理鱼获","【放入图鉴】查看可展出的鱼",f"【卖鱼#{item}】立即出售，到账 {sample['price']} 鱼币"])
     if count>1:
         total=db.execute("SELECT sum(price) FROM fishing_pond WHERE grp=? AND member=? AND storage='bag'",key).fetchone()[0]
         lines.append(f"【卖出鱼包】清空 {count} 条，共 {total} 鱼币")
-    if count > capacity:
-        lines.append("原有鱼获已保留，腾出位置或扩容后可继续存鱼。")
-    if level < len(TIERS[storage]):
-        next_capacity, cost = TIERS[storage][level]
-        lines.append(f"【升级{name}】扣 {cost} 鱼币，扩到 {next_capacity} 条")
     lines.extend(["", "💬 "+purpose,step])
     return "\n".join(lines)
 
@@ -88,22 +79,20 @@ def shortfall(db,key,cost,prefix,now,reason):
     return f"{reason}需要 {cost} 鱼币，余额不足。\n当前 {coins} 币，还差 {cost-coins} 币。\n{step}"
 
 
-def upgrade(db, key, storage, prefix, now):
-    name = NAMES[storage]
-    level = level_for(db, key, storage)
-    tiers = TIERS[storage]
-    if level >= len(tiers):
-        return f"{name}已满级，最多 {tiers[-1][0]} 条。"
-    capacity, cost = tiers[level]
+def upgrade_pond(db, key, prefix, now):
+    level = pond_level(db, key)
+    if level >= len(POND_TIERS):
+        return f"鱼塘已满级，最多 {POND_TIERS[-1][0]} 条。"
+    capacity, cost = POND_TIERS[level]
     db.execute("INSERT OR IGNORE INTO fishing_wallets(grp,member) VALUES(?,?)", key)
     paid = db.execute("UPDATE fishing_wallets SET coins=coins-? WHERE grp=? AND member=? AND coins>=?",
                       (cost, *key, cost))
     if not paid.rowcount:
-        return shortfall(db,key,cost,prefix,now,"升级"+name)
-    db.execute("""INSERT INTO fishing_storage_levels(grp,member,storage,level) VALUES(?,?,?,?)
+        return shortfall(db,key,cost,prefix,now,"升级鱼塘")
+    db.execute("""INSERT INTO fishing_storage_levels(grp,member,storage,level) VALUES(?,?,'pond',?)
                   ON CONFLICT(grp,member,storage) DO UPDATE SET level=excluded.level""",
-               (*key, storage, level+1))
-    return f"{name}已升到 {level+1} 级，可放 {capacity} 条鱼，消耗 {cost} 鱼币。"
+               (*key, level+1))
+    return f"鱼塘已升到 {level+1} 级，可放 {capacity} 条鱼，消耗 {cost} 鱼币。"
 
 
 def cast_step(db, key, prefix, now):
@@ -203,6 +192,8 @@ def exhibit(db, key, item, prefix, now):
 
 def handle(db, key, cmd, prefix, now=None):
     now = time.time() if now is None else now
+    if cmd=="升级鱼包":
+        return f"🎒 鱼包固定放 {BAG_CAPACITY} 条。想多留鱼，可以升级鱼塘。\n{prefix}鱼塘操作"
     changes = pond_growth.settle(db,key[0],now,key[1])
     action = pond_growth.ACTION.fullmatch(cmd)
     if action:
@@ -246,8 +237,8 @@ def handle(db, key, cmd, prefix, now=None):
             _,reply=exhibit(db, key, number, prefix, now)
             return reply
         return sell(db, key, "id", number, prefix, now)
-    if cmd in ("升级鱼包", "升级鱼塘"):
-        return upgrade(db, key, "bag" if cmd == "升级鱼包" else "pond",prefix,now)
+    if cmd=="升级鱼塘":
+        return upgrade_pond(db,key,prefix,now)
     if cmd in ("卖出鱼包", "一键卖鱼"):
         return sell(db, key, "storage", "bag" if cmd == "卖出鱼包" else "pond", prefix, now)
     raise ValueError("未识别的鱼获指令")

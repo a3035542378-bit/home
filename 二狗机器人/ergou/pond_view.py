@@ -132,8 +132,8 @@ def actions(db,key,prefix):
         lines.append("【卖鱼】选一尾，免费查报价")
     else:
         lines.append("【放入鱼塘】选鱼放进第一格")
-    if level<len(fish_storage.TIERS["pond"]):
-        capacity,cost=fish_storage.TIERS["pond"][level]
+    if level<len(fish_storage.POND_TIERS):
+        capacity,cost=fish_storage.POND_TIERS[level]
         coins=db.execute("SELECT coins FROM fishing_wallets WHERE grp=? AND member=?",key).fetchone()
         if (coins[0] if coins else 30)>=cost:
             lines.append(f"【升级鱼塘】扣 {cost} 鱼币，扩到 {capacity} 条")
