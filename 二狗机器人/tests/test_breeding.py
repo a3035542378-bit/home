@@ -233,8 +233,8 @@ class BreedingTests(unittest.TestCase):
         assert "已有一对" in g.say(f"确认配对#{a} #{b}",703)
         assert g.balance()==94
         pond=g.say("鱼塘",86500)
-        assert "待领幼鱼" in pond.splitlines()[1]
-        assert "领取幼鱼" in pond.splitlines()[2]
+        assert "待领幼鱼" in pond.splitlines()[2]
+        assert "领取幼鱼" in pond.splitlines()[3]
         assert "待领幼鱼" not in g.say("鱼塘",86501,group="west")
         claim=g.say("领取幼鱼",86502)
         assert "鲤鱼幼鱼" in claim and "你亲自繁育的第一尾" in claim

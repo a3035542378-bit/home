@@ -46,8 +46,8 @@ class FeatureMenuTests(unittest.TestCase):
             rule("菜单","自定义关键词内容",mode="contains"),rule("帮助","本群的帮助信息")
         ]))
         for command in ("二狗 菜单","二狗功能菜单","二狗全部功能"):
-            self.assertIn("游戏列表",self.say(command))
-        self.assertEqual(self.say("二狗帮助"),"本群的帮助信息")
+            self.assertIn("游戏",self.say(command))
+        self.assertEqual(self.say("二狗帮助"),menu)
         self.assertIsNone(self.say("今晚聚餐的菜单"))
         self.assertEqual(self.db.execute("SELECT COUNT(*) FROM outbox").fetchone()[0],7)
         for table in ("games","ledger","queries","chat_requests"):
@@ -78,13 +78,12 @@ class FeatureMenuTests(unittest.TestCase):
         self.db.execute("INSERT INTO chat_models VALUES('room',1,'openai','model',?,?)",(b"key",time.time()))
         self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('room',1,1)")
         menu=self.say("二狗菜单")
-        first=menu.split("\n\n🗳️ 群互动")[0]
-        self.assertIn("🏅 二狗积分",first)
-        self.assertLessEqual(len(first.splitlines()),10)
+        first=menu
+        self.assertLessEqual(len(first.splitlines()),12)
         for line in menu.splitlines():
             width=sum(2 if unicodedata.east_asian_width(c) in ("W","F") else 1 for c in line)
             self.assertLessEqual(width,40,line)
-        for command in ("积分","天气 北京","点歌 茉莉花","游戏列表","群规","投票 V01 1","抽签 报名"):
+        for command in ("积分帮助","天气帮助","点歌帮助","游戏帮助","群服务帮助","互动帮助"):
             self.assertIn(command,first)
         self.assertIn("二狗全菜单",first)
         self.assertNotIn("@ 我",menu)
@@ -99,11 +98,11 @@ class FeatureMenuTests(unittest.TestCase):
                 self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('other',1,1)")
             def ask(cmd):
                 return self.say(prefix+cmd,group=group)
-            self.assertIn(prefix+"钓鱼玩法",ask("菜单").split("\n\n🗳️ 群互动")[0])
+            self.assertIn(prefix+"钓鱼帮助",ask("菜单"))
             self.assertIn(prefix+"抛竿",ask("游戏列表"))
             guide=ask("钓鱼玩法")
             self.assertEqual(guide,ask("怎么钓鱼？"))
-            for cmd in ("抛竿","查看鱼包","切换钓场","偷鱼","全图鉴","钓鱼进阶"):
+            for cmd in ("抛竿","鱼包帮助","钓场帮助","护塘帮助","图鉴帮助","装备帮助"):
                 self.assertIn(prefix+cmd,guide)
             self.assertIn("升级鱼线",ask("钓鱼进阶"))
             self.assertIsNone(self.db.execute("SELECT 1 FROM fishing_wallets WHERE grp=?",(group,)).fetchone())
@@ -112,7 +111,7 @@ class FeatureMenuTests(unittest.TestCase):
         self.db.execute("UPDATE groups SET config=json_set(config,'$.disabled_games',json_array('钓鱼')) WHERE id='room'")
         self.assertNotIn("钓鱼玩法",self.say("二狗菜单"))
         self.assertNotIn("钓鱼玩法",self.say("二狗游戏列表"))
-        self.assertIn("关闭",self.say("二狗钓鱼帮助"))
+        self.assertIn("未开启",self.say("二狗钓鱼帮助"))
         self.model.assert_not_called()
 
     def test_menu_reflects_model_readiness_without_invoking_it(self):
@@ -159,5 +158,5 @@ class FeatureMenuTests(unittest.TestCase):
         posted=emit(14,dict(state="known",self=True,all=False,userIds=[api.account]))
         self.assertIn("二狗",posted)
         self.assertNotIn("团团",posted)
-        self.assertIn("游戏列表",posted)
+        self.assertIn("游戏帮助",posted)
         self.assertEqual(self.db.execute("SELECT count(*) FROM outbox WHERE grp=?",(api.room,)).fetchone()[0],1)

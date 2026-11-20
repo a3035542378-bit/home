@@ -1,11 +1,10 @@
 """按鱼获编号保存终身进度。调用方在入站写事务内结算。"""
-import math
 import re
 from random import Random
 
 from . import breeding, fish_grades
 from .display_names import labels
-from .fishing_waters import SPECIES, giant_max, size_grade, weight
+from .fishing_waters import SPECIES, giant_max, size_grade
 
 SECONDS = 180
 ROUNDS = 10
@@ -187,39 +186,3 @@ def act(db, key, action, item, now, prefix):
     db.execute("UPDATE pond_growth SET food=?,first_fed=1 WHERE item=?",(count,item))
     mark(db,key,now,"tend")
     return f"🍤 已投喂 #{item} {row['fish']}　−{cost} 鱼币\n覆盖接下来 {count} 轮，下一轮保证增重。"
-
-
-def panel(db,key,item,changes,prefix,now):
-    row = db.execute(SELECT+" AND p.member=? AND p.id=?",(*key,item)).fetchone()
-    if not row:
-        return []
-    child = breeding.fry(db,item)
-    if child:
-        return breeding.detail(row,child)
-    fish = row["fish"]
-    limit = cap(fish,row["original_grams"])
-    finished = row["rounds"] == ROUNDS or row["grams"] >= limit or row["grade"] is None
-    title = ("🏁" if finished else "🐟")+f" #{item} {fish}"
-    if row["grade"] is not None:
-        title += " · "+fish_grades.GRADES[row["grade"]]
-    lines = [title]
-    if row["flagship"]:
-        lines.append(f"🌟 {labels(db,key[0])(key[1],'你')}的招牌鱼")
-    gain,look,up = changes.get(item,(0,0,0))
-    if gain:
-        lines.append("🌱 这次长了 "+weight(gain))
-    if up:
-        lines.append("🎉 塘养升品！")
-    if row["appearance"]:
-        lines.append(f"✨ {'鳞色变亮，' if look else ''}品相加价 {row['appearance']}%")
-    if finished:
-        return lines + [f"已定型　{weight(row['original_grams'])} → {weight(row['grams'])}",
-                        f"🪙 初价 {row['original_price']} → 现价 {row['price']} 鱼币"]
-    lines.extend([f"⚖️ {weight(row['grams'])} / 上限 {weight(limit)}",f"🪙 现在可卖 {row['price']} 鱼币"])
-    if row["next_at"] is None:
-        return lines+[f"💤 成长已暂停（已养 {row['rounds']}/{ROUNDS} 轮）\n想继续养，就发",f"{prefix}换入成长位#{item}"]
-    minutes = math.ceil(((ROUNDS-row["rounds"]-1)*SECONDS + row["next_at"]-now)/60)
-    lines.append(f"🌱 {row['rounds']}/{ROUNDS} 轮 · 最多还有 {minutes} 分钟")
-    if row["food"]:
-        return lines+[f"🍤 已有 {row['food']} 轮饲料"]
-    return lines+[f"🍤 喂 {min(3,ROUNDS-row['rounds'])} 轮共 {feed_cost(row['original_price'],row['rounds'])} 鱼币",f"{prefix}投喂#{item}"]

@@ -229,25 +229,6 @@ def help_requested(cmd):
     return cmd.rstrip("。！？!?").strip() in HELP_COMMANDS
 
 
-FISHING_MENU = """🎣 二狗钓鱼指南
-先发「{prefix}抛竿」· 免费饵每 {cooldown} 秒一竿
-🎒 卖鱼或留鱼　{prefix}查看鱼包
-🌱 养鱼和投喂　{prefix}鱼塘
-📖 看收藏　{prefix}图鉴　/　{prefix}图鉴榜
-
-🌊 换个地方钓　{prefix}切换钓场
-🐋 看巨物何时来　{prefix}巨物鱼讯
-🪱 选饵　{prefix}鱼饵
-📋 查装备和余额　{prefix}钓鱼信息
-🐾 找群友偷鱼　{prefix}偷鱼 @群友
-看全部 {species} 种鱼　{prefix}全图鉴
-装备、概率和规则　{prefix}钓鱼进阶"""
-
-
-def fishing_menu(prefix,cooldown):
-    return FISHING_MENU.format(prefix=prefix,cooldown=cooldown,species=len(FISH))
-
-
 def game_list_entry(prefix):
     return f"🎣 {prefix}抛竿 钓第一条鱼\n📖 {prefix}钓鱼玩法 看指令"
 
@@ -273,7 +254,7 @@ def line_help(db, key, coins, area, prefix, now, heading="鱼线已断"):
     return f"🧵 {heading}。换线需 3 鱼币，余额 {coins}，还差 {3-coins} 币。\n{step}"
 
 
-def play(db, event, cmd, prefix, cfg):
+def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     if event["adapter_version"]=="agent-wechat-events/2.7.1":
         from .display_names import mention_sender
         mention_sender(db,event)
@@ -285,6 +266,13 @@ def play(db, event, cmd, prefix, cfg):
     key = (event["grp"], event["member"])
     pilot = breeding.enabled(db,key[0])
     breeding.resolve(db,key,event["arrived"])
+    if batch_ids is not None:
+        from . import exhibit_batch
+        pond_growth.settle(db,key[0],event["arrived"],key[1])
+        reply=exhibit_batch.render(db,key,prefix,event["arrived"],batch_ids)
+        if pilot:
+            breed_metrics.refresh(db,key,event["arrived"])
+        return reply
     if breeding.matches(cmd):
         reply=breeding.play(db,key,event,cmd,prefix)
         if pilot:
@@ -303,7 +291,8 @@ def play(db, event, cmd, prefix, cfg):
     if cmd=="鱼饵":
         return fishing_bait.menu(db,key,prefix)
     if help_requested(cmd):
-        return fishing_menu(prefix,cooldown)+(f"\n🥚 看看哪两条能配对　{prefix}繁育配对" if pilot else "")
+        from .feature_menu import fishing_directory
+        return fishing_directory(prefix,cooldown,pilot)
     if cmd=="钓鱼进阶":
         return (f"🎣 钓鱼进阶\n每条指令前加「{prefix}」。\n\n"
                 f"🎣 钓手等级\n常规鱼获前 {angler.PROTECTED_CASTS} 竿免脱钩。\n巨物、史诗和传说都可能跑鱼。\n装备扛住后再判脱钩。\n每升一级，脱钩率降 1 个百分点。\n池塘最低 2%，其他钓场最低 5%。\n\n"

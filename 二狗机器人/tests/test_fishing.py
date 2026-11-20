@@ -473,7 +473,7 @@ class FishingTests(unittest.TestCase):
         self.db.executemany("""INSERT INTO fishing_pond(grp,member,fish,grams,price)
             VALUES('one','player','大鱼',?,5)""",[(2000000,)]*30)
         self.assertIn("仍在鱼包",self.say("limit","放入鱼塘#1",203))
-        self.assertIn("2吨",self.say("large","鱼塘",204))
+        self.assertIn("2.000 吨",self.say("large","鱼塘",204))
 
     def test_pond_mobile_layout_and_sale_scope(self):
         self.say("wallet","我的鱼竿",100)
@@ -482,17 +482,18 @@ class FishingTests(unittest.TestCase):
                                VALUES('one','player','鲫鱼',?,4)""",(grams,))
         put(205)
         single=self.say("single","鱼塘",101)
-        self.assertEqual(single.split("\n\n"),[
-            "🐟 我的鱼塘　1 级\n容量 1/1 条\n🌱 成长位 0/1",
-            "#1 鲫鱼　205克 · 小型　4 鱼币",
-            "设为招牌鱼可免偷\n二狗设为招牌鱼#1\n查看可展出的鱼\n二狗放入图鉴\n立即出售 #1 · 当前 4 鱼币。\n二狗卖鱼#1",
-            "扩到 4 条需 20 鱼币\n二狗升级鱼塘",
-        ])
+        self.assertIn("已满 1/1 条｜成长位 0/1",single)
+        self.assertIn("#1 鲫鱼",single)
+        self.assertIn("205 克｜现价 4 鱼币",single)
+        self.assertNotIn("下一页",single)
+        self.assertNotIn("一键卖鱼",single)
+        self.assertEqual(single.splitlines()[-1],"二狗鱼塘帮助")
         self.say("upgrade","升级鱼塘",102)
         put(106)
         multi=self.say("multi","鱼塘 重量",103)
-        self.assertIn("立即出售 #1 · 当前 4 鱼币",multi)
-        self.assertIn("全部出售会清空鱼塘 · 共 2 条，当前 8 鱼币。\n二狗一键卖鱼",multi)
+        self.assertIn("#1 鲫鱼",multi)
+        help_text=self.say("guide","鱼塘帮助",103)
+        self.assertIn("整塘出售会清空 2 条，当前共 8 鱼币。\n二狗一键卖鱼",help_text)
         self.assertIn("卖出 2 条",self.say("sell","一键卖鱼",104))
         empty=self.say("empty","查看鱼塘",105)
         self.assertIn("二狗抛竿",empty)

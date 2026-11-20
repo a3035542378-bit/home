@@ -272,11 +272,18 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     if cmd in ("签到","打卡"):
         from .group_tools import check_in
         return check_in(db,e,cfg,prefix)
+    from . import exhibit_batch
+    batch=exhibit_batch.parse(cmd)
+    if batch is not None:
+        return fishing.play(db,e,cmd,prefix,cfg,batch_ids=batch)
+    topic=feature_menu.find_topic(cmd)
+    if topic:
+        return feature_menu.page(db,g,e,cfg,prefix,topic)
     canonical=intents.command_alias(cmd)
     menu=canonical.rstrip("。！？!?").strip()
     if menu in ("全菜单","全部功能"):
         return feature_menu.full_menu(db,g,e,cfg,prefix)
-    if menu in ("菜单","功能菜单"):
+    if menu in ("菜单","功能菜单","帮助"):
         return feature_menu.render(db,g,e,cfg,prefix)
     if canonical in ("钓鱼玩法","切换水域","查看鱼包") or canonical.startswith("切换水域 "):
         return fishing.play(db,e,canonical,prefix,cfg)

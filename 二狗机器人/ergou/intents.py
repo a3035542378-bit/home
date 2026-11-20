@@ -130,7 +130,7 @@ def interpret(text,cfg):
     game=re.sub(r"^(?:玩一局|玩个|玩|开始玩|来一局|来个)","",request)
     if game in GAMES:
         return "开始 "+game
-    match=re.fullmatch(r"(?:查询|查一下|查查|查|看看|看下)?(.{2,16}?)(?:今天|现在|今日)?的?天气(?:怎么样|如何|好吗)?",request)
+    match=re.fullmatch(r"(?:查看|查询|查一下|查查|查|看看|看下)?(.{2,16}?)(?:今天|现在|今日)?的?天气(?:怎么样|如何|好吗)?",request)
     if match:
         city=match[1]
         if city in ("今天","今日","现在"):
