@@ -7,6 +7,8 @@ import json
 import random
 import re
 
+from . import fishing_bait
+from .fishing_waters import WATERS
 from .fish_receipts import grid
 
 COMMANDS={"强化鱼竿","回退强化","强化玩法"}
@@ -25,16 +27,26 @@ def weights(rod,rows):
     return (40-rare-prized,30,20,8*rod+rare,2*rod+prized)
 
 
-def describe(rod,rows):
+def trophy_bonus(rod, active):
+    return 1 + .25*(rod-1) + .05*len(active)
+
+
+def describe(rod,rows,area):
     active=[r for r in rows if r["tier"]<=rod]
-    w=weights(rod,active)
-    lines=[f"🔧 强化 {len(active)}/{rod} 阶",f"咬钩机会　稀有 {100*w[3]/sum(w):.2f}%",f"　　　　　珍品 {100*w[4]/sum(w):.2f}%"]
+    bonus=trophy_bonus(rod,active)
+    chances=fishing_bait.distribution(WATERS[area],weights(rod,active),fishing_bait.BAITS["免费鱼饵"],bonus)
+    lines=[f"🔧 强化 {len(active)}/{rod} 阶",f"🎣 常规咬钩率 · {area} · 免费饵"]
+    for tier in ("普通","稀有","珍品","史诗","传说"):
+        chance=chances.get(tier)
+        value=f"{chance:.4f}".rstrip("0").rstrip(".")+"%" if chance is not None else "本场无此鱼种"
+        lines.append(f"{tier}　{value}")
+    lines.append(f"史诗、传说倍率 ×{bonus:g}（竿级和已生效强化）")
     for r in rows:
         lines.append(f"\n第 {r['tier']} 阶　各项上限 {r['tier']+2}\n强化品质 {r['quality']}　韧性 {r['toughness']}　硬度 {r['hardness']}"+(" 暂停" if r["tier"]>rod else ""))
     return "\n".join(lines)
 
 
-def change(db,key,cmd,rod,event_id,prefix="二狗",now=None):
+def change(db,key,cmd,rod,event_id,prefix,now,area):
     rows=levels(db,key)
     depth=len(rows)
     match=REFORGE.fullmatch(cmd)
@@ -77,7 +89,7 @@ def change(db,key,cmd,rod,event_id,prefix="二狗",now=None):
     else:
         change=f"已移除第 {tier} 阶，剩余 {tier-1} 阶。"
         db.execute("DELETE FROM rod_enhancements WHERE grp=? AND member=? AND tier=?",(*key,tier))
-    return f"{cmd}成功，消耗 {cost} 鱼币。\n{change}\n"+describe(rod,levels(db,key))
+    return f"{cmd}成功，消耗 {cost} 鱼币。\n{change}\n"+describe(rod,levels(db,key),area)
 
 
 ASSET_RANKS = """WITH pond AS (SELECT member,sum(price) value FROM fishing_pond WHERE grp=? GROUP BY member),

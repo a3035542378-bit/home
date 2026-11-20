@@ -182,7 +182,7 @@ def catch_guide(name,prefix):
     _,low,high,_,_,rarity=species
     extra=(f"\n🌊 巨物鲤鱼 12～25 公斤" if name=="鲤鱼" else f"\n🌊 巨物门槛　{weight(giant_min(species))}")
     if rarity in TROPHY_PERCENT:
-        extra+=f"\n免费饵常规咬钩率 {TROPHY_PERCENT[rarity]:g}%\n⚠️ 重鱼可能断线或折竿。"
+        extra+=f"\n一级竿免费饵 · {rarity}鱼种合计 {TROPHY_PERCENT[rarity]:g}%\n⚠️ 重鱼可能断线或折竿。"
     return (f"🐟 {name}（{rarity}）\n⚖️ 重量　{weight(low)}～{weight(high)}\n"
             f"📍 在{area}随机上钩{extra}\n\n🎣 去钓这条鱼\n【巨物鱼讯】查本场活动\n"
             f"【切换水域 {area}】前往钓场\n【抛竿】钓一条鱼\n【查看鱼包】选鱼点亮")
@@ -381,6 +381,14 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     wear=durability.read(db,key)
     line_max=durability.LINE_LIMITS[line_level-1]
     rod_max=durability.ROD_LIMITS[rod-1]
+    # 满重冠鲨收竿后耗尽的一件装备，保留到下次有效抛竿；已断的旧线仍走原有换线流程。
+    pending_rod=wear.rod>=rod_max
+    pending_line=not broken and wear.line>=line_max
+    pending_note=""
+    if pending_rod:
+        pending_note="鱼竿已撑到极限，下竿前可修竿。"
+    elif pending_line:
+        pending_note="鱼线已撑到极限，下竿前可换线。"
     if cmd=="钓鱼信息":
         bag,bag_limit,_=fish_storage.occupancy(db,key,"bag")
         pond,pond_limit,_=fish_storage.occupancy(db,key,"pond")
@@ -390,9 +398,11 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         return (f"📋 我的钓鱼信息\n{growth}\n\n"
                 f"🪙 当前余额　{coins} 鱼币\n🧰 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）　鱼线 {line_level} 级"
                 f"（{'已断' if broken else '可用'}）\n🧵 线耐久 {0 if broken else durability.percent(wear.line,line_max)}% · 竿耐久 {durability.percent(wear.rod,rod_max)}%\n🎒 鱼包 {bag}/{bag_limit} 条　鱼塘 {pond}/{pond_limit} 条\n"
-                f"🐟 累计钓获　{landed} 条\n🏆 最重纪录　{best}\n\n处理鱼获\n{prefix}查看鱼包")
+                f"🐟 累计钓获　{landed} 条\n🏆 最重纪录　{best}\n{pending_note}\n处理鱼获\n{prefix}查看鱼包")
     if cmd in ("鱼线","升级鱼线"):
         if cmd=="升级鱼线":
+            if pending_line:
+                return f"🧵 鱼线已到极限，先换新线。换线 {durability.LINE_PRICE} 鱼币\n{prefix}买鱼线"
             if line_level==len(LINE_COST):
                 return f"鱼线已满 5 级。查看耐久和换线费用\n{prefix}鱼线"
             if broken:
@@ -412,8 +422,10 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
             f"抗过载承重 {limit:g} 公斤\n升级需要 {LINE_COST[line_level]} 鱼币。")
         paid=f"升级成功，消耗 {cost} 鱼币。\n" if cmd=="升级鱼线" else ""
         remaining=coins-cost if paid else coins
-        if line_level<len(LINE_COST) and remaining>=LINE_COST[line_level]:
+        if not pending_line and line_level<len(LINE_COST) and remaining>=LINE_COST[line_level]:
             effect+=f"\n发送即扣费升级\n{prefix}升级鱼线"
+        if pending_line:
+            effect+="\n再抛竿就会断线。"
         effect+=f"\n换新 {durability.LINE_PRICE} 鱼币，保留线级。"
         if wear.line and remaining>=durability.LINE_PRICE:
             effect+=f"\n{prefix}买鱼线"
@@ -439,7 +451,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         durability.save(db,key,durability.Wear(wear.line,0))
         return f"🎣 鱼竿已修好，消耗 {repair} 鱼币。{rod} 级耐久恢复至 100%。"
     if cmd in gear.COMMANDS or gear.REFORGE.fullmatch(cmd):
-        return gear.change(db,key,cmd,rod,event["event_id"],prefix,event["arrived"])
+        return gear.change(db,key,cmd,rod,event["event_id"],prefix,event["arrived"],area)
     upgrade=20*rod
     if cmd=="我的鱼竿":
         next_grade=gear.GRADE_BY_LEVEL.get(rod+1)
@@ -450,9 +462,11 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         if wear.rod and coins>=repair:
             maintenance+=f"\n{prefix}修理鱼竿"
         if rod==len(durability.ROD_LIMITS):
-            maintenance+="\n满耐久可承受 3 次最重活动鱼的拉扯。"
+            maintenance+="\n满耐久可承受三次满重冠鲨拉扯。\n钓起满重冠鲨时，装备到极限可在下竿前维护。"
+        if pending_rod:
+            maintenance+="\n再抛竿就会折竿降级。"
 
-        return f"🎣 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）\n{durability.condition(wear.rod,rod_max)}{maintenance}\n🪙 余额 {coins} 鱼币\n{next_level}\n\n"+gear.describe(rod,gear.levels(db,key))
+        return f"🎣 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）\n{durability.condition(wear.rod,rod_max)}{maintenance}\n🪙 余额 {coins} 鱼币\n{next_level}\n\n"+gear.describe(rod,gear.levels(db,key),area)
     if cmd=="升级鱼竿":
         if rod+1 not in gear.GRADE_BY_LEVEL:
             return f"鱼竿已满 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）。"
@@ -480,14 +494,29 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         if available < bait.points:
             return (f"🪱 {bait_name}需要 {bait.points} 积分，你有 {available} 积分。\n"
                     f"还差 {bait.points-available} 分。免费开钓\n{prefix}抛竿")
+    db.execute("""INSERT INTO fishing_tackle VALUES(?,?,0,?) ON CONFLICT(grp,member)
+                  DO UPDATE SET last_attempt=excluded.last_attempt""",(*key,now))
+    pond_growth.mark(db,key,now,"cast")
+    casts = angler.advance(db,key,record["count"] if record else 0)
+    if pending_line or pending_rod:
+        footer="\n本竿未扣鱼饵积分。\n"+angler.progress(casts)
+        if pending_rod:
+            new_level=max(1,rod-1)
+            db.execute("UPDATE fishing_wallets SET rod=? WHERE grp=? AND member=?",(new_level,*key))
+            durability.save(db,key,durability.Wear(wear.line,0))
+            return f"🎣 鱼竿折断，降为 {new_level} 级。上竿的冠鲨已收好。"+footer+f"\n{prefix}我的鱼竿"
+        db.execute("UPDATE fishing_tackle SET broken=1 WHERE grp=? AND member=?",key)
+        return "🧵 下竿时鱼线断了，上竿的冠鲨已收好。"+footer+"\n"+line_help(db,key,coins,area,prefix,now)
+    if bait.points:
         db.execute("""INSERT INTO ledger(grp,member,round,kind,points,rule_version,event,at,reason)
                       VALUES(?,?,0,'鱼饵',?,'bait/1',?,?,?)""",
                    (*key,-bait.points,event["event_id"],now,bait_name))
         receipt = f"\n🪱 {bait_name}　−{bait.points} 积分，扣饵后余 {available-bait.points} 分"
+    progress_footer=receipt+"\n"+angler.progress(casts)
     rng = random.Random(event["event_id"])
     levels=[row for row in gear.levels(db,key) if row["tier"]<=rod]
     weights=gear.weights(rod,levels)
-    rarity=fishing_bait.choose_rarity(rng,WATERS[area],weights,bait)
+    rarity=fishing_bait.choose_rarity(rng,WATERS[area],weights,bait,gear.trophy_bonus(rod,levels))
     pool=[item for item in WATERS[area] if item[-1]==rarity]
     fish,low,high,_,_,rarity=rng.choice(pool)
     grams = round(rng.triangular(low, high, low+(high-low)*bait.weight_mode))
@@ -499,11 +528,6 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     if sighting.taken and fish==sighting.fish:
         grams=min(grams,giant_fish.giant_min(giant_fish.SPECIES[fish])-1)
     grade=size_grade(fish,grams)
-    db.execute("""INSERT INTO fishing_tackle VALUES(?,?,0,?) ON CONFLICT(grp,member)
-                  DO UPDATE SET last_attempt=excluded.last_attempt""",(*key,now))
-    pond_growth.mark(db,key,now,"cast")
-    casts = angler.advance(db,key,record["count"] if record else 0)
-    progress_footer=receipt+"\n"+angler.progress(casts)
     notice=""
     if not sighting.taken and sighting.start-giant_fish.LEAD<=now<sighting.start+giant_fish.DURATION:
         notice="\n\n"+sighting.notice(now, area)
@@ -515,12 +539,26 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     worn=wear.line+durability.line_load(grams,line_level)>=line_max or wear.rod+durability.strain(grams)>=rod_max
     fatigue=durability.fatigue(wear.line,line_max) or durability.fatigue(wear.rod,rod_max)
     damage=fight(rng,grams,rod,levels,line_level,wear) if risk or offshore and (worn or fatigue) else None
+    crown_landing=rod==5 and fish=="星渊冠鲨" and grams==giant_fish.giant_max(giant_fish.SPECIES[fish])
+    chance=angler.slip_percent(casts-1,not offshore,heavy_encounter)
+    slipped=(damage is None or crown_landing) and chance and rng.random()<chance/100
+    deferred=None
+    if crown_landing and damage:
+        if not slipped:
+            deferred=damage
+        damage=None
     updated=durability.after_pull(wear,grams,line_level,rod,damage,broken)
+    if deferred=="竿":
+        updated=durability.Wear(updated.line,rod_max)
+    elif deferred=="线":
+        updated=durability.Wear(line_max,updated.rod)
     durability.save(db,key,updated)
     if damage is None:
         line_pct=durability.percent(updated.line,line_max)
         rod_pct=durability.percent(updated.rod,rod_max)
         progress_footer+=f"\n🧵 线耐久 {line_pct}% · 🎣 竿耐久 {rod_pct}%"
+        if deferred:
+            progress_footer+=f"\n⚠️ 鱼{deferred}撑到了收竿，下次有效抛竿会断。"
         if not broken and (line_pct<=30 or updated.line+durability.line_load(grams,line_level)>=line_max):
             progress_footer+=f"\n换线 {durability.LINE_PRICE} 鱼币"+(f"\n{prefix}买鱼线" if coins>=durability.LINE_PRICE else "，余额不足。")
         if rod_pct<=30:
@@ -534,8 +572,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         db.execute("UPDATE fishing_wallets SET rod=? WHERE grp=? AND member=?",(new_level,*key))
         grade=gear.GRADE_BY_LEVEL[new_level]
         return f"🎣 鱼竿折断！鱼竿 {rod} → {new_level} 级（{grade}）。\n你稳住竿柄，{fish}又猛地一挣，游走了。"+("\n高阶强化已封存，升回原等级可恢复。" if new_level<rod else "")+footer+f"\n{prefix}我的鱼竿"
-    chance = angler.slip_percent(casts-1, not offshore, heavy_encounter)
-    if chance and rng.random() < chance/100:
+    if slipped:
         story=f"水面翻起一大片浪花，巨物{fish}甩开了钩。" if grade=="巨物" else rng.choice(angler.SLIPPED)
         if rarity in TROPHY_PERCENT:
             story=f"{RARITY_ICONS[rarity]} {rarity}鱼「{fish}」翻出水面，甩开了钩。"

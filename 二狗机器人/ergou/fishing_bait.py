@@ -43,14 +43,16 @@ def rarity_weights(rod_weights, bait):
     common = sum(rod_weights[:3])
     return common, rod_weights[3]*bait.rarity_factor, rod_weights[4]*bait.rarity_factor
 
-def choose_rarity(rng, school, rod_weights, bait):
-    tiers = ["普通", "稀有", "珍品"]
-    weights = rarity_weights(rod_weights, bait)
+def distribution(school, rod_weights, bait, trophy_bonus):
     stocked = {fish[-1] for fish in school}
-    extras = {tier: pct * bait.trophy_factor for tier, pct in TROPHY_PERCENT.items() if tier in stocked}
-    if extras:
-        # 给高阶鱼留出固定百分比，余下按原鱼竿、强化、鱼饵的相对权重分配。
-        scale = (100 - sum(extras.values())) / sum(weights)
-        weights = [w * scale for w in weights] + list(extras.values())
-        tiers.extend(extras)
-    return rng.choices(tiers, weights=weights, k=1)[0]
+    regular = {tier: w for tier,w in zip(("普通","稀有","珍品"),rarity_weights(rod_weights,bait))
+               if tier in stocked}
+    trophies = {tier: pct * bait.trophy_factor * trophy_bonus
+                for tier,pct in TROPHY_PERCENT.items() if tier in stocked}
+    scale = (100 - sum(trophies.values())) / sum(regular.values())
+    return {**{tier: w*scale for tier,w in regular.items()}, **trophies}
+
+
+def choose_rarity(rng, school, rod_weights, bait, trophy_bonus):
+    chances = distribution(school, rod_weights, bait, trophy_bonus)
+    return rng.choices(list(chances), weights=list(chances.values()), k=1)[0]

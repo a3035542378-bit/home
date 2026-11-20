@@ -24,7 +24,7 @@ class TackleWearTests(unittest.TestCase):
     def wallet(self):
         return tuple(self.db.execute("SELECT coins,rod FROM fishing_wallets WHERE grp=? AND member=?",self.key).fetchone())
 
-    def test_three_maximum_event_catches_then_break(self):
+    def test_three_maximum_event_catches_then_land_last_shark_before_break(self):
         species=max(SPECIES.values(),key=giant_max)
         grams=giant_max(species)
         self.send("二狗切换水域 深渊海沟")
@@ -45,10 +45,18 @@ class TackleWearTests(unittest.TestCase):
                 self.assertEqual(self.wear().rod,(attempt+1)*tackle_wear.strain(grams))
                 self.assertEqual(self.wallet(),(200-3*attempt,5))
             else:
-                self.assertIn("鱼竿折断",reply)
+                self.assertIn("已收入鱼包",reply)
+                self.assertIn("鱼竿撑到了收竿",reply)
+                self.assertEqual(self.wallet(),(191,5))
+                self.assertIn("秒后再来",self.send("二狗抛竿"))
+                self.assertIn("再抛竿就会折竿",self.send("二狗我的鱼竿"))
+                self.player.now+=20
+                points=self.db.execute("SELECT sum(points) FROM ledger").fetchone()[0]
+                self.assertIn("鱼竿折断",self.send("二狗抛竿 高级鱼饵"))
+                self.assertEqual(self.db.execute("SELECT sum(points) FROM ledger").fetchone()[0],points)
                 self.assertEqual(self.wallet(),(191,4))
                 self.assertEqual(self.wear().rod,0)
-        self.assertEqual(self.db.execute("SELECT count(*) FROM fishing_pond WHERE grams=? AND grade=5",(grams,)).fetchone()[0],3)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM fishing_pond WHERE grams=? AND grade=5",(grams,)).fetchone()[0],4)
 
     def test_fatigue_increases_break_risk_even_on_max_line(self):
         rng=Mock()
@@ -115,3 +123,63 @@ class TackleWearTests(unittest.TestCase):
         self.assertIn("恢复至 100%",self.send("二狗买鱼线"))
         self.assertIn("300/300",self.send("二狗鱼线"))
         self.assertEqual(self.wallet(),(197,5))
+
+    def crown_cast(self,grams):
+        species=SPECIES["星渊冠鲨"]
+        event=giant_fish.Sighting(species[0],self.player.now)
+        with (patch("ergou.giant_fish.current",return_value=event),
+              patch("ergou.giant_fish.encounter",return_value=(species,grams)),
+              patch("ergou.angler.slip_percent",return_value=0)):
+            return self.send("二狗抛竿")
+
+    def test_last_line_can_be_replaced_before_the_next_attempt(self):
+        self.send("二狗切换水域 深渊海沟")
+        grams=giant_max(SPECIES["星渊冠鲨"])
+        for repair in (True,False):
+            self.player.now+=3600
+            tackle_wear.save(self.db,self.key,tackle_wear.Wear(299,100))
+            landed=self.crown_cast(grams)
+            self.assertIn("鱼线撑到了收竿",landed)
+            self.assertIn("已收入鱼包",landed)
+            self.assertIn("再抛竿就会断线",self.send("二狗鱼线"))
+            if repair:
+                self.assertIn("100%",self.send("二狗买鱼线"))
+                self.assertEqual(self.wear().line,0)
+                self.player.now+=20
+                self.assertIn("上钩了",self.crown_cast(grams))
+            else:
+                self.player.now+=20
+                self.assertIn("下竿时鱼线断了",self.send("二狗抛竿"))
+                self.assertIn("鱼线已断",self.send("二狗抛竿"))
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM fishing_pond WHERE grams=?",(grams,)).fetchone()[0],3)
+
+    def test_near_max_does_not_defer_damage(self):
+        self.send("二狗切换水域 深渊海沟")
+        tackle_wear.save(self.db,self.key,tackle_wear.Wear(299,0))
+        self.assertIn("鱼线断了",self.crown_cast(giant_max(SPECIES["星渊冠鲨"])-1))
+        self.assertEqual(self.db.execute("SELECT count(*) FROM fishing_pond").fetchone()[0],0)
+
+    def test_grade_and_active_enhancements_change_actual_shown_odds(self):
+        starter=self.send("二狗鱼钩")
+        self.assertIn("传说　本场无此鱼种",starter)
+        self.send("二狗切换水域 深渊海沟")
+        panel=self.send("二狗我的鱼竿")
+        self.assertIn("史诗　0.24%",panel)
+        self.assertIn("传说　0.02%",panel)
+        enhanced=self.send("二狗强化鱼竿")
+        self.assertIn("史诗　0.246%",enhanced)
+        self.assertIn("传说　0.0205%",enhanced)
+        with (patch("ergou.fishing.random.Random") as factory,
+              patch("ergou.giant_fish.encounter",return_value=None)):
+            rng=factory.return_value
+            rng.choices.return_value=["普通"]
+            rng.choice.side_effect=lambda school:school[0]
+            rng.random.return_value=.99
+            rng.triangular.side_effect=lambda low,high,mode:mode
+            self.send("二狗抛竿")
+            call=rng.choices.call_args
+        actual=dict(zip(call.args[0],call.kwargs["weights"],strict=True))
+        self.assertAlmostEqual(sum(actual.values()),100)
+        for name,percent in actual.items():
+            formatted=f"{percent:.4f}".rstrip("0").rstrip(".")
+            self.assertIn(f"{name}　{formatted}%",enhanced)

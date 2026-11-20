@@ -274,14 +274,14 @@ class FishingTests(unittest.TestCase):
             stocked={row[-1] for row in school}
             for bait,epic,legend in zip(fishing_bait.BAITS.values(),(.12,.18,.24),(.01,.015,.02)):
                 for level in (1,5):
-                    fishing_bait.choose_rarity(rng,school,rod.weights(level,[]),bait)
+                    fishing_bait.choose_rarity(rng,school,rod.weights(level,[]),bait,rod.trophy_bonus(level,[]))
                     kinds=rng.choices.call_args.args[0]
                     weights=rng.choices.call_args.kwargs["weights"]
                     self.assertEqual(set(kinds),stocked)
                     self.assertEqual(len(kinds),len(weights))
                     for tier,pct in (("史诗",epic),("传说",legend)):
                         if tier in stocked:
-                            self.assertAlmostEqual(weights[kinds.index(tier)]*100/sum(weights),pct)
+                            self.assertAlmostEqual(weights[kinds.index(tier)]*100/sum(weights),pct*(1+.25*(level-1)))
 
 
     def test_trophy_cast_through_storage_and_book(self):
@@ -625,7 +625,9 @@ class FishingTests(unittest.TestCase):
             rng.triangular.side_effect=lambda low,high,mode: mode
             for i,(suffix,factor,mode) in enumerate((("",1,.15),(" 高级鱼饵",2,.50),(" 顶级鱼饵",4,.85))):
                 self.say(f"cast{i}","抛竿"+suffix,100+i*20)
-                self.assertEqual(rng.choices.call_args.kwargs["weights"],(90,8*factor,2*factor))
+                chances=rng.choices.call_args.kwargs["weights"]
+                for actual,weight in zip(chances,(90,8*factor,2*factor),strict=True):
+                    self.assertAlmostEqual(actual,100*weight/(90+10*factor))
                 low,high,actual=rng.triangular.call_args.args
                 self.assertAlmostEqual(actual,low+(high-low)*mode)
         self.say("four","抛竿",160)

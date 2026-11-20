@@ -51,7 +51,7 @@ def window(group, area, now):
         if now < start + DURATION:
             school = WATERS[area]
             # 群共享目标按基础竿、免费饵的稀有度分布选种，同档鱼种机会相同。
-            tier = fishing_bait.choose_rarity(rng, school, rod.weights(1, ()), fishing_bait.BAITS["免费鱼饵"])
+            tier = fishing_bait.choose_rarity(rng, school, rod.weights(1, ()), fishing_bait.BAITS["免费鱼饵"],rod.trophy_bonus(1, ()))
             fish = rng.choice([row[0] for row in school if row[-1] == tier])
             return Sighting(fish, start)
 
