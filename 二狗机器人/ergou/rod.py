@@ -31,7 +31,7 @@ def describe(rod,rows):
     return "\n".join(lines)
 
 
-def change(db,key,cmd,rod,event_id):
+def change(db,key,cmd,rod,event_id,prefix="二狗",now=None):
     rows=levels(db,key)
     depth=len(rows)
     match=REFORGE.fullmatch(cmd)
@@ -57,7 +57,8 @@ def change(db,key,cmd,rod,event_id):
     paid=db.execute("UPDATE fishing_wallets SET coins=coins-? WHERE grp=? AND member=? AND coins>=?",
                     (cost,*key,cost))
     if not paid.rowcount:
-        return f"需要 {cost} 鱼币。"
+        from .fish_storage import shortfall
+        return shortfall(db,key,cost,prefix,now or time.time(),"本次强化")
     cap=tier+2
     if cmd=="强化鱼竿":
         values=[rng.randint(1,cap) for _ in range(3)]

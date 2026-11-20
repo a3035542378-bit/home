@@ -175,13 +175,14 @@ def act(db, key, action, item, now, prefix):
     if row["rounds"] == ROUNDS or row["grams"] >= cap(row["fish"],row["original_grams"]):
         return "🏁 已定型，饲料留给其他鱼吧。"
     if row["next_at"] is None:
-        return f"先让它进入成长位　{prefix}换入成长位#{item}"
+        return f"先让它进入成长位，位满时会换下一尾。\n{prefix}换入成长位#{item}"
     if row["food"]:
         return f"🍤 还有 {row['food']} 轮饲料。"
     cost = feed_cost(row["original_price"],row["rounds"])
     if not db.execute("UPDATE fishing_wallets SET coins=coins-? WHERE grp=? AND member=? AND coins>=?",
                       (cost,*key,cost)).rowcount:
-        return f"鱼币不足，这份饲料需要 {cost} 鱼币。"
+        from .fish_storage import shortfall
+        return shortfall(db,key,cost,prefix,now,"这份饲料")
     count = min(FEED_ROUNDS,ROUNDS-row["rounds"])
     db.execute("UPDATE pond_growth SET food=?,first_fed=1 WHERE item=?",(count,item))
     mark(db,key,now,"tend")

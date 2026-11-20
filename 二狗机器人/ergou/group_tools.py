@@ -191,7 +191,7 @@ def redeem(db,event,arg,prefix="二狗"):
     if not name:
         available=db.execute("SELECT name,price FROM reward_offers WHERE grp=? ORDER BY price,name",(group,)).fetchall()
         if not available:
-            return "本群暂未上架兑换奖励。"
+            return f"本群暂未上架兑换奖励。先查自己的积分\n{prefix}积分"
         lines = [f"{r['name']}　{r['price']} 分" for r in available]
         cheapest = available[0]
         if cheapest["price"] > balance:

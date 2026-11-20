@@ -8,7 +8,7 @@ from datetime import datetime
 
 from . import asset_actions, community, plugins, retention
 from .db import BJ, allowed, audit, closing_db, dump, transaction, window
-from .games import GAMES, RULE_VERSION, start_board, visible_board
+from .games import GAMES, RULE_VERSION, start_board, turn_hint, visible_board
 
 ACTIVE = "('RUNNING','PAUSED','WAITING_PLAYERS')"
 KINDS = {"message","join","baseline","leave","revoke","bot_leave"}
@@ -142,17 +142,52 @@ def summary(rows):
     return "、".join(f"{r['code']} {r['game']}" for r in rows) or "暂无进行中的会话"
 
 
-def start(db,g,e,name,cfg):
+def game_list(db,g,e,cfg,prefix,args,manager,governed):
+    names=[n for n in [*GAMES,*plugins.active(db)] if n not in cfg.get("disabled_games",())]
+    per_page=12
+    pages=max(1,(len(names)+per_page-1)//per_page)
+    if args and (not re.fullmatch(r"[1-9][0-9]{0,3}",args) or int(args)>pages):
+        return f"游戏列表共 {pages} 页，返回第一页\n{prefix}游戏列表"
+    page=int(args or 1)
+    names=names[(page-1)*per_page:page*per_page]
+    rows=sessions(db,g["id"])
+    lines=["🎮 本群游戏"]
+    for row in rows if page==1 else ():
+        code=row["code"]
+        lines.extend([f"{row['game']} · {code}",f"{prefix}状态 {code}"])
+        if row["state"]!="RUNNING":
+            continue
+        lines.append(f"{prefix}加入 {code}")
+        owns=row["owner"]==e["member"]
+        if manager or (owns and not governed):
+            lines.extend(["发送即结束这局",f"{prefix}结束 {code}"])
+            if governed or owns or db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone():
+                lines.extend(["发送即重置盘面",f"{prefix}{code} 重置"])
+    if names:
+        lines.extend(["","可开局的游戏"])
+        lines.extend("、".join(names[i:i+3]) for i in range(0,len(names),3))
+        unopened=next((n for n in names if n not in {r["game"] for r in rows}),None)
+        if unopened and len(rows)<cfg["max_games"]:
+            lines.extend(["想开新局，发送",f"{prefix}开始 {unopened}"])
+    if page<pages:
+        lines.extend([f"下一页（{page}/{pages}）",f"{prefix}游戏列表 {page+1}"])
+    if page==1 and "钓鱼" not in cfg.get("disabled_games",[]):
+        lines.extend(["","想自己钓一条鱼",prefix+"抛竿",prefix+"钓鱼玩法"])
+    return "\n".join(lines)
+
+
+def start(db,g,e,name,cfg,prefix):
     rows=sessions(db,g["id"])
     if len(rows)>=cfg["max_games"]:
-        raise ValueError("本群会话已满："+summary(rows))
+        raise ValueError(f"本群会话已满。看看哪一局可以加入\n{prefix}游戏列表")
     if any(r["game"]==name for r in rows):
-        raise ValueError("本群已开同款："+summary(rows))
+        code=next(r["code"] for r in rows if r["game"]==name)
+        raise ValueError(f"本群已开同款：{name} {code}。加入这局\n{prefix}加入 {code}")
     game=GAMES.get(name)
-    if name in cfg.get("disabled_games",[]):raise ValueError("本群未启用该游戏")
+    if name in cfg.get("disabled_games",[]):raise ValueError(f"本群未启用该游戏。看看能玩的游戏\n{prefix}游戏列表")
     plugin=None if game else plugins.active(db).get(name)
     if not game and not plugin:
-        raise ValueError("未找到该游戏，可查看游戏列表")
+        raise ValueError(f"请选择本群游戏列表里的游戏名\n{prefix}游戏列表")
     no=db.execute("SELECT COUNT(*)+1 FROM games WHERE grp=?",(g["id"],)).fetchone()[0]
     code=f"G{no:02}"
     board=start_board(game,e["event_id"]) if game else {"node":plugin["start"]}
@@ -164,10 +199,13 @@ def start(db,g,e,name,cfg):
     cur=db.execute("""INSERT INTO games(grp,code,game,owner,state,rules,board,started,deadline)
                    VALUES(?,?,?,?,'RUNNING',?,?,?,?)""",(g["id"],code,name,e["member"],dump(snapshot),dump(board),e["arrived"],e["arrived"]+600))
     db.execute("INSERT INTO players VALUES(?,?,?)",(cur.lastrowid,e["member"],e["arrived"]))
-    return f"{code} {name} · 10 分钟 · 完成者 +{cfg['reward']} 分。{prompt} 输入「{cfg['prefix']} {code} 动作」。"
+    hint=turn_hint(name,snapshot,board,code,prefix)
+    goal=prompt.split(" 起始：")[0].split("词库：")[0].split(" 可行动作：")[0].split(" 题面：")[0]
+    return (f"{code} {name} · 限时 10 分钟，完成者 +{cfg['reward']} 分\n"
+            f"{goal}\n{hint}\n\n群友加入这局\n{prefix}加入 {code}")
 
 
-def play(db,e,action,code,arg,manager):
+def play(db,e,action,code,arg,manager,prefix="二狗"):
     from . import roles
     governed=roles.owner(db,e["account"])
     if governed and (action=="结束" or (action=="动作" and arg=="重置")):
@@ -175,7 +213,7 @@ def play(db,e,action,code,arg,manager):
         manager=True
     row=db.execute("SELECT * FROM games WHERE grp=? AND code=?",(e["grp"],code)).fetchone()
     if not row:
-        raise ValueError("会话不存在")
+        raise ValueError(f"本群没有这个局号。查正在玩的局\n{prefix}游戏列表")
     state=row["state"]
     if action=="状态":
         rules=json.loads(row["rules"])
@@ -184,23 +222,27 @@ def play(db,e,action,code,arg,manager):
         cutoff=datetime.fromtimestamp(row["deadline"],BJ).strftime("%H:%M:%S")
         return f"{code} {row['game']} · {state} · {count} 人 · {cutoff} 截止 · "+(row["reason"] or view)
     if state!="RUNNING":
-        raise ValueError("当前会话状态 "+state)
+        raise ValueError(f"这局已结束或已暂停。查看本群游戏\n{prefix}游戏列表")
     if action=="结束":
         if e["member"]!=row["owner"] and not manager:
             raise ValueError("FORBIDDEN 仅发起人或群管理员可结束")
         db.execute("UPDATE games SET state='CANCELLED',ended=?,reason='主动结束' WHERE id=?",(e["arrived"],row["id"]))
         return f"{code} 已取消"
     if action=="退出":
-        if e["member"]==row["owner"]:raise ValueError("发起人可用结束指令取消本局")
+        if e["member"]==row["owner"]:raise ValueError(f"你是发起人，可以结束整局。发送即结束\n{prefix}结束 {code}" if not governed or manager else f"结束本局需要已授权的群管理员。查本局状态\n{prefix}状态 {code}")
         db.execute("DELETE FROM players WHERE game=? AND member=?",(row["id"],e["member"]))
         return f"已退出 {code}"
     if action=="加入":
         if db.execute("SELECT COUNT(*) FROM players WHERE game=?",(row["id"],)).fetchone()[0]>=32 and not db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone():
             raise ValueError("本局已满 32 人")
         db.execute("INSERT OR IGNORE INTO players VALUES(?,?,?)",(row["id"],e["member"],e["arrived"]))
-        return f"已加入 {code}"
+        hint=turn_hint(row["game"],json.loads(row["rules"]),json.loads(row["board"]),code,prefix)
+        return f"已加入 {code} {row['game']}\n{hint}\n\n仅退出自己\n{prefix}退出 {code}" if e["member"]!=row["owner"] else f"你已在 {code} {row['game']} 中\n{hint}"
+    if action=="动作" and not arg:
+        hint=turn_hint(row["game"],json.loads(row["rules"]),json.loads(row["board"]),code,prefix)
+        return f"{code} {row['game']}\n{hint}" if db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone() else f"先加入这局 {row['game']}\n{prefix}加入 {code}"
     if not (governed and manager and arg=="重置") and not db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone():
-        raise ValueError(f"请先加入 {code}")
+        raise ValueError(f"请先加入 {code} {row['game']}\n{prefix}加入 {code}")
     rules=json.loads(row["rules"])
     if rules["version"]!=RULE_VERSION:
         raise ValueError("规则版本未加载")
@@ -276,10 +318,10 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     batch=exhibit_batch.parse(cmd)
     if batch is not None:
         return fishing.play(db,e,cmd,prefix,cfg,batch_ids=batch)
-    topic=feature_menu.find_topic(cmd)
+    canonical=intents.command_alias(cmd)
+    topic=feature_menu.find_topic(cmd) or feature_menu.find_topic(canonical)
     if topic:
         return feature_menu.page(db,g,e,cfg,prefix,topic)
-    canonical=intents.command_alias(cmd)
     menu=canonical.rstrip("。！？!?").strip()
     if menu in ("全菜单","全部功能"):
         return feature_menu.full_menu(db,g,e,cfg,prefix)
@@ -304,8 +346,13 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     manager=bool(db.execute("SELECT 1 FROM managers WHERE grp=? AND member=?",(e["grp"],e["member"])).fetchone())
     if governed:
         manager=roles.LEVEL[level]>=3
+    if cmd=="重铸":
+        return feature_menu.page(db,g,e,cfg,prefix,feature_menu.find_topic("强化帮助"))
     if fishing.matches(cmd):
         return fishing.play(db,e,cmd,prefix or cfg["prefix"],cfg)
+    if first in ("百科","菜谱","点歌","星座") and not args:
+        sample={"百科":"百科 大熊猫","菜谱":"菜谱 土豆","点歌":"点歌 茉莉花","星座":"星座 白羊座"}[first]
+        return f"想查哪一个？把示例换成你要查的内容\n{prefix}{sample}"
     if first=="群规":
         return cfg["rules"]
     if first=="运势":
@@ -323,7 +370,11 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     if first in ("投票","抽签"):
         op,enabled=(community.poll,cfg["polls"]) if first=="投票" else (community.draw,cfg["draws"])
         if not enabled:
-            raise ValueError("本群已关闭此功能")
+            raise ValueError(f"本群已关闭此功能。查看可用模块\n{prefix}菜单")
+        if not args and first=="投票":
+            return community.poll_guide(db,e,manager,prefix)
+        if not args and first=="抽签":
+            return f"参加本群抽签，发送后加入报名池\n{prefix}抽签 报名"
         return op(db,e,args,manager)
     if first in ("点歌","菜谱"):
         reply=leisure.local(first,args)
@@ -333,8 +384,16 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
                           WHERE biz=? AND body=?""",(args,reply.splitlines()[-1],e["event_id"],reply))
             return None
         return reply
-    if first=="百科" and not args:
-        return "想查什么词条？例如「二狗百科 大熊猫」。"
+    if first=="快递" and (not args or not feature_menu.parcel_carriers()):
+        return feature_menu.page(db,g,e,cfg,prefix,feature_menu.find_topic("快递帮助"))
+    if first=="快递":
+        from .queries import parcel_args
+        try:
+            carrier,_=parcel_args(args)
+        except ValueError:
+            return f"请写快递公司和自己的运单号。查看支持的公司\n{prefix}快递帮助"
+        if carrier not in feature_menu.parcel_carriers():
+            return f"当前未接通这家快递。查看支持的公司\n{prefix}快递帮助"
     if first in ("天气","快递","百科"):
         from .queries import submit
         if first=="天气" and not (args or cfg["city"]):
@@ -342,18 +401,15 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
         return submit(db,e,first,args or (cfg["city"] if first=="天气" else ""))
     game_command=first in ("游戏列表","开始","加入","退出","状态","结束") or re.fullmatch(r"G[0-9]+",first.upper())
     if game_command and not cfg["games"]:
-        raise ValueError("本群游戏已关闭")
+        raise ValueError(f"本群游戏已关闭。查看可用功能\n{prefix}菜单")
     if first=="游戏列表":
-        names="、".join(n for n in [*GAMES,*plugins.active(db)] if n not in cfg.get("disabled_games",[]))
-        if "钓鱼" in cfg.get("disabled_games",[]):
-            return names
-        return "\n".join(filter(None,(fishing.game_list_entry(prefix or cfg["prefix"]),names)))
+        return game_list(db,g,e,cfg,prefix,args,manager,governed)
     if first=="开始":
-        return start(db,g,e,args,cfg)
+        return start(db,g,e,args,cfg,prefix)
     if first in ("加入","退出","状态","结束"):
-        return play(db,e,first,args.upper(),"",manager)
+        return play(db,e,first,args.upper(),"",manager,prefix)
     if re.fullmatch(r"G[0-9]+",first.upper()):
-        return play(db,e,"动作",first.upper(),args,manager)
+        return play(db,e,"动作",first.upper(),args,manager,prefix)
     rows=sessions(db,g["id"])
     if len(rows)>1 and first.isdecimal():
         raise ValueError("请指定会话："+summary(rows))
@@ -474,13 +530,32 @@ def process(db,g,e):
         db.execute("RELEASE addressed_command")
 
 
+def is_help_event(group,event):
+    from . import feature_menu, intents
+    if event["kind"]!="message" or not event["payload"]:
+        return False
+    payload=json.loads(event["payload"])
+    text=payload.get("text")
+    if not isinstance(text,str):
+        return False
+    prefix="二狗" if event["adapter_version"]=="agent-wechat-events/2.7.1" or event["message_type"]=="voice" else json.loads(group["config"])["prefix"]
+    cmd=addressed_command(text,prefix,payload.get("mention_account")==group["account"])
+    if cmd is None:
+        return False
+    canonical=intents.command_alias(cmd).rstrip("。！？!?").strip()
+    return bool(feature_menu.find_topic(cmd) or feature_menu.find_topic(canonical) or
+                canonical in ("菜单","帮助","功能菜单","全菜单","全部功能","鱼获品级","偷鱼玩法"))
+
+
 def step(db):
     with transaction(db):
         e=db.execute("SELECT * FROM inbox WHERE state='PENDING' ORDER BY seq LIMIT 1").fetchone()
         if not e:
             return False
         g=db.execute("SELECT * FROM groups WHERE id=?",(e["grp"],)).fetchone()
-        expire(db,e["grp"],e["arrived"])
+        # 帮助只读，即使正好有超时游戏，也留给下一条业务消息处理。
+        if not is_help_event(g,e):
+            expire(db,e["grp"],e["arrived"])
         return settle(db,g,e)
 
 

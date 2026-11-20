@@ -23,14 +23,18 @@ def balance(db, key):
 
 
 def menu(db, key, prefix):
-    lines = ["🪱 鱼饵", f"本群可用积分　{balance(db,key)}", ""]
+    points=balance(db,key)
+    lines = ["🪱 每竿可单独选饵", f"本群可用积分　{points}", ""]
     for name, bait in BAITS.items():
         lines.append(f"{name}　{bait.points} 积分 / 竿")
         if bait.points:
             lines.append(f"稀有和珍品权重 ×{bait.rarity_factor}，更容易钓到重鱼。")
             lines.append(f"史诗和传说咬钩率 ×{bait.trophy_factor:g}。")
         command = "抛竿 "+name if bait.points else "抛竿"
-        lines.extend([prefix+command, ""])
+        if points>=bait.points:
+            lines.extend([prefix+command,""])
+        else:
+            lines.extend([f"还差 {bait.points-points} 分。",""])
     lines.extend(["只用一竿，下次默认免费。", "抛出后消耗鱼饵，跑鱼也会扣分。"])
     return "\n".join(lines)
 

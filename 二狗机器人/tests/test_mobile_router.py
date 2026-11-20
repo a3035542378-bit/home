@@ -42,7 +42,7 @@ class MobileRouter(unittest.TestCase):
         self.assertEqual(guide,self.send("二狗我想换一个更高级的钓场"))
         for area in WATERS:
             self.assertIn(area,guide)
-        self.assertIn("发送「二狗切换钓场 新手池塘」即可切换。",guide)
+        self.assertIn("例如回到新手池塘，发送\n二狗切换钓场 新手池塘",guide)
         self.assertFalse(self.db.execute("SELECT 1 FROM fishing_waters").fetchone())
         self.assertIn("荷花湿地",self.send("二狗换图 荷花湿地"))
         self.assertIn("当前　荷花湿地",self.send("二狗换钓场"))

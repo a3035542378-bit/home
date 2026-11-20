@@ -43,21 +43,28 @@ def play(db, event, cmd, prefix):
                 f"🐟 {SUCCESS}% 捞到一条，放进自己的鱼包。\n"
                 f"🪿 {CAUGHT}% 被抓，赔给塘主 2～5 鱼币。\n"
                 f"💨 其余时候空手离开。\n\n"
-                f"鱼包、图鉴和受保护的鱼塘都安全。\n🛡️ 查看护塘　{prefix}鱼塘保护")
+                f"鱼包、图鉴和受保护的鱼塘都安全。\n🛡️ 查看护塘\n{prefix}鱼塘保护")
     purchase = BUY.fullmatch(cmd)
     if purchase or cmd in ("鱼塘保护","购买保护","鱼塘加固"):
         until = guard_until(db,key)
         if not purchase:
             state = f"守护至 {expiry(until)}" if until>now else "当前未开启保护"
             offers = [f"{hours} 小时　{cost} 积分" for hours,cost in PRICES.items()]
-            return "\n".join(["🛡️ 鱼塘保护",state,"",*offers,"",f"例如　{prefix}购买保护 4小时"])
+            lines=["🛡️ 鱼塘保护",state,"",*offers]
+            if until<=now:
+                points=balance(db,key)
+                if points>=PRICES[4]:
+                    lines.extend(["",f"购买 4 小时，发送即扣 {PRICES[4]} 积分",f"{prefix}购买保护 4小时"])
+                else:
+                    lines.extend(["",f"你有 {points} 分，最短保护还差 {PRICES[4]-points} 分。",prefix+"积分帮助"])
+            return "\n".join(lines)
         if until>now:
             return f"🛡️ 鱼塘已受保护，{expiry(until)} 到期。到期后可再次购买。"
         hours = int(purchase[1])
         cost = PRICES[hours]
         points = balance(db,key)
         if points<cost:
-            return f"护塘 {hours} 小时需要 {cost} 积分，你有 {points} 积分。"
+            return f"护塘 {hours} 小时需要 {cost} 积分，你有 {points} 积分。\n还差 {cost-points} 分，未扣分。查看积分用法\n{prefix}积分帮助"
         db.execute("""INSERT INTO ledger(grp,member,round,kind,points,rule_version,event,at,reason)
                       VALUES(?,?,0,'护塘',?,'guard/1',?,?,?)""",
                    (*key,-cost,event["event_id"],now,f"鱼塘加固 {hours} 小时"))

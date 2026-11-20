@@ -40,7 +40,7 @@ def role(db,bot,group,user):
 def require(db,bot,group,user,level):
     current=role(db,bot,group,user)
     if LEVEL[current]<level:
-        raise ValueError("本群群主尚未获得主人授权，无法使用管理指令。" if current=="group_owner_pending" else "权限不足。")
+        raise ValueError("本群群主尚未获得主人授权，无法使用管理指令。" if current=="group_owner_pending" else {3:"权限不足，需要本群已授权的管理员。",4:"权限不足，需要主人或已授权的群主。",5:"权限不足，仅二狗主人可以操作。"}[level])
     return current
 
 

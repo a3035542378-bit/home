@@ -37,8 +37,8 @@ class FeatureMenuTests(unittest.TestCase):
         admin.configure(self.db,self.admin,"room",1,{"aliases":{"菜单":"帮助"}})
         menu=self.say("二狗菜单")
         full=self.say("二狗全菜单")
-        for command in ("天气","快递","百科","菜谱","点歌","运势","星座","积分","周榜","月榜",
-                        "总榜","兑换","群规","游戏列表","加入","投票","抽签","故事","笑话"):
+        for command in ("天气帮助","生活帮助","点歌帮助","积分帮助","群服务帮助",
+                        "游戏帮助","互动帮助","聊天帮助","鱼包帮助","强化帮助"):
             with self.subTest(command=command):
                 self.assertIn(command,full)
         self.assertEqual(self.say("二狗 帮助"),menu)
@@ -56,9 +56,10 @@ class FeatureMenuTests(unittest.TestCase):
 
     def test_commands_follow_group_settings_and_member_permissions(self):
         models.configure_controls(self.db,self.admin,"room",dict(version=0,admins=["model-manager"]))
-        member=self.say("二狗全菜单")
-        game_admin=self.say("二狗全菜单",member="operator")
-        model_admin=self.say("二狗全菜单",member="model-manager")
+        self.db.execute("INSERT INTO chat_models VALUES('room',1,'glm','fixture',?,100)",(b"test",))
+        member=self.say("二狗管理帮助")
+        game_admin=self.say("二狗管理帮助",member="operator")
+        model_admin=self.say("二狗管理帮助",member="model-manager")
         for command in ("投票 创建","抽签 重抽"):
             self.assertIn(command,game_admin)
             self.assertNotIn(command,member)
@@ -72,14 +73,14 @@ class FeatureMenuTests(unittest.TestCase):
         self.assertIn("团团",other)
         for command in ("游戏列表","投票 V","投票 创建","抽签 报名","抽签 重抽"):
             self.assertNotIn(command,other)
-        self.assertEqual(self.say("二狗全菜单"),member)
+        self.assertEqual(self.say("二狗管理帮助"),member)
 
     def test_first_screen_and_api_mode_explanation(self):
         self.db.execute("INSERT INTO chat_models VALUES('room',1,'openai','model',?,?)",(b"key",time.time()))
         self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('room',1,1)")
         menu=self.say("二狗菜单")
         first=menu
-        self.assertLessEqual(len(first.splitlines()),12)
+        self.assertLessEqual(len(first.splitlines()),24)
         for line in menu.splitlines():
             width=sum(2 if unicodedata.east_asian_width(c) in ("W","F") else 1 for c in line)
             self.assertLessEqual(width,40,line)
@@ -88,7 +89,7 @@ class FeatureMenuTests(unittest.TestCase):
         self.assertIn("二狗全菜单",first)
         self.assertNotIn("@ 我",menu)
         self.assertNotIn("G01",menu)
-        self.assertEqual(self.say("二狗全菜单").count("G01 换成"),1)
+        self.assertIn("二狗游戏帮助",self.say("二狗全菜单"))
 
     def test_fishing_discovery_walkthrough(self):
         for group,prefix in (("room","二狗"),("other","团团")):

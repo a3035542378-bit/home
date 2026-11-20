@@ -184,3 +184,34 @@ def example(game, board):
         return [board["key"]]
     return game.example
 
+
+
+def turn_hint(name, rules, board, code, prefix):
+    """从当前盘面取一个可执行的动作，不读取猜谜的谜底。"""
+    if "plugin" in rules:
+        candidates=rules["plugin"]["states"][board["node"]]
+        action=next(iter(candidates),None)
+    else:
+        game=GAMES[name]
+        if game.id in QUIZZES:
+            return f"题面：{board['clue']}\n猜到后，在「{prefix}{code} 」后写答案。"
+        scenario=next((s for s in SCENARIOS if s.id==game.id),None)
+        if scenario:
+            action=next(iter(scenario.choices(board["state"])),None)
+        elif game.id in ("higher","bulls"):
+            action="16" if game.id=="higher" else "123"
+        else:
+            from copy import deepcopy
+            candidates={"idioms":IDIOMS,"hanoi":("AB","AC","BA","BC","CA","CB"),
+                        "ladder":("COLD","CORD","CARD","WARD","WARM","WORD","WORM")}.get(game.id,game.example)
+            action=None
+            for candidate in candidates:
+                try:
+                    game.move(deepcopy(board),candidate)
+                except ValueError:
+                    continue
+                action=candidate
+                break
+    if action:
+        return f"可以这样走一步\n{prefix}{code} {action}"
+    return f"这一步没有可用动作，先看盘面\n{prefix}状态 {code}"

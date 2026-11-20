@@ -22,16 +22,16 @@ def directory(best, exhibits, picks, prefix, honors):
     for rarity, icon in RARITY_ICONS.items():
         species = [row for row in FISH if row[-1] == rarity]
         names = [species[i][0] for i in (0,len(species)//2,-1)]
-        lines.extend([f"{icon} {prefix}{rarity}图鉴 · {len(species)} 种",
+        lines.extend([f"{icon} {rarity} · {len(species)} 种\n{prefix}{rarity}图鉴",
                       "　" + "、".join(names)])
     lines.extend(["", f"🐋 {prefix}巨物图鉴", "　本场每种鱼都可能成为活动目标", "　巨物鲤鱼 · 12～25 公斤",
                   "　"+ "、".join(row[0] for row in sorted(FISH,key=giant_min,reverse=True)[:2]),
-                  "", f"逐条查看　{prefix}全图鉴 1"])
+                  "", f"逐条查看\n{prefix}全图鉴 1"])
     if picks:
         lines.extend(["", "🎒 手里的鱼"])
         for fish,item in list(picks.items())[:2]:
             action="换展" if fish in exhibits else "点亮"
-            lines.append(f"{fish}{action}　{prefix}收入图鉴#{item}")
+            lines.append(f"{fish}{action}\n{prefix}收入图鉴#{item}")
     return "\n".join(lines)
 
 
@@ -101,7 +101,7 @@ def book(db,key,match,current_area,prefix):
             action="可换展" if fish in exhibits else "可点亮"
             lines.extend([f"{fish}{action}",f"{prefix}收入图鉴#{picks[fish]}"])
         lines.extend(["",f"查看本场　{prefix}图鉴 {area}",f"全部钓场　{prefix}全图鉴",
-                      f"🐋 {prefix}巨物图鉴　/　{prefix}巨物鱼讯"])
+                      f"🐋 看巨物图鉴和鱼讯\n{prefix}巨物图鉴\n{prefix}巨物鱼讯"])
         return "\n".join(lines)
     visible=catalog[(page-1)*6:page*6]
     if giants and page==1:
@@ -143,7 +143,7 @@ def book(db,key,match,current_area,prefix):
                 lines.append("　最高品级 " + quality)
         if fish in picks:
             action="换展" if fish in exhibits else "点亮"
-            actions.append(f"{fish}{action}　{prefix}收入图鉴#{picks[fish]}")
+            actions.append(f"{fish}{action}\n{prefix}收入图鉴#{picks[fish]}")
     if actions:
         lines.extend(["","🎒 可收藏",*actions])
     lines.append("")
@@ -151,8 +151,8 @@ def book(db,key,match,current_area,prefix):
         command=category_title+"图鉴" if category_title else "图鉴" if area else "全图鉴"
         if area:
             command+=" "+area
-        lines.append(f"下页　{prefix}{command} {page+1}")
-    lines.append(f"巨物出没　{prefix}巨物鱼讯" if giants else f"查钓法　{prefix}{visible[0][0]}怎么钓？")
+        lines.append(f"下页\n{prefix}{command} {page+1}")
+    lines.append(f"巨物出没　{prefix}巨物鱼讯" if giants else f"查钓法\n{prefix}{visible[0][0]}怎么钓？")
     return "\n".join(lines)
 
 
@@ -229,10 +229,6 @@ def help_requested(cmd):
     return cmd.rstrip("。！？!?").strip() in HELP_COMMANDS
 
 
-def game_list_entry(prefix):
-    return f"🎣 {prefix}抛竿 钓第一条鱼\n📖 {prefix}钓鱼玩法 看指令"
-
-
 def matches(cmd):
     return breeding.matches(cmd) or pond_raids.matches(cmd) or cmd=="鱼饵" or (cmd.startswith(("抛竿 ","钓鱼 ")) and cmd.endswith("鱼饵")) or help_requested(cmd) or cmd=="钓鱼进阶" or cmd in ("海域","海域列表","水域列表") or cmd.startswith(("切换水域 ","切换海域 ","水域介绍 ","海域介绍 ")) or cmd in COMMANDS or BOOK_PAGE.fullmatch(cmd) or gear.REFORGE.fullmatch(cmd) or fish_storage.matches(cmd) or requested_fish(cmd)
 
@@ -265,6 +261,22 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         raise ValueError(f"本群已关闭钓鱼，查看可用功能\n{prefix}菜单")
     key = (event["grp"], event["member"])
     pilot = breeding.enabled(db,key[0])
+    cooldown = cfg.get("fishing_cooldown_seconds", DEFAULT["fishing_cooldown_seconds"])
+    if cmd=="鱼获品级":
+        return ("🏷️ 每条鱼入包时抽一次品级，小鱼也能升传说。\n"
+                "✨ 升品提高售价，刷新本群同种鱼的品级纪录可得积分。\n"
+                "🌊 活动目标额外升一级，有机会出神话。\n"
+                f"📖 看展品和本群喜报　{prefix}图鉴")
+    if cmd=="鱼饵":
+        return fishing_bait.menu(db,key,prefix)
+    if help_requested(cmd):
+        from .feature_menu import fishing_directory
+        return fishing_directory(prefix,cooldown,pilot)
+    if cmd=="钓鱼进阶":
+        from .feature_menu import find_topic
+        return find_topic(cmd).body.format(p=prefix)
+    if cmd=="偷鱼玩法":
+        return pond_raids.play(db,event,cmd,prefix)
     breeding.resolve(db,key,event["arrived"])
     if batch_ids is not None:
         from . import exhibit_batch
@@ -282,29 +294,6 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         return exhibit_board.board(db,key,prefix)
     if pond_raids.matches(cmd):
         return pond_raids.play(db,event,cmd,prefix)
-    cooldown = cfg.get("fishing_cooldown_seconds", DEFAULT["fishing_cooldown_seconds"])
-    if cmd=="鱼获品级":
-        return ("🏷️ 每条鱼入包时抽一次品级，小鱼也能升传说。\n"
-                "✨ 升品提高售价，刷新本群同种鱼的品级纪录可得积分。\n"
-                "🌊 活动目标额外升一级，有机会出神话。\n"
-                f"📖 看展品和本群喜报　{prefix}图鉴")
-    if cmd=="鱼饵":
-        return fishing_bait.menu(db,key,prefix)
-    if help_requested(cmd):
-        from .feature_menu import fishing_directory
-        return fishing_directory(prefix,cooldown,pilot)
-    if cmd=="钓鱼进阶":
-        return (f"🎣 钓鱼进阶\n每条指令前加「{prefix}」。\n\n"
-                f"🎣 钓手等级\n常规鱼获前 {angler.PROTECTED_CASTS} 竿免脱钩。\n巨物、史诗和传说都可能跑鱼。\n装备扛住后再判脱钩。\n每升一级，脱钩率降 1 个百分点。\n池塘最低 2%，其他钓场最低 5%。\n\n"
-                "🗺 钓场与图鉴\n找钓场　水域\n换钓场　切换水域 外海\n"
-                "看展品　图鉴 外海\n比重量　重量榜\n"
-                "每种鱼展一条，只能用更重的换。\n旧鱼回包，展品受保护。\n\n"
-                "🐾 群友互动　偷鱼玩法 / 鱼塘保护\n\n"
-                "🎒 容量与交易\n升级鱼包　最多 20 条\n升级鱼塘　最多 30 条\n"
-                "查升品和奖励　鱼获品级\n查收购价　鱼市\n卖整包　卖出鱼包\n卖整塘　一键卖鱼\n\n"
-                "🧰 鱼竿与鱼线\n看装备　我的鱼竿 / 鱼线\n"
-                "换线　买鱼线（3 鱼币）\n护线　升级鱼线（5 级免断线）\n"
-                "钓稀有鱼　升级鱼竿\n韧性与硬度　强化玩法\n巨物超载可能断线或折竿，新手塘也一样。")
     if fish_storage.matches(cmd):
         reply=fish_storage.handle(db,key,cmd,prefix,event["arrived"])
         if pilot:
@@ -316,13 +305,13 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         names=list(WATERS)
         rows=["、".join(names[i:i+3]) for i in range(0,len(names),3)]
         return "\n".join(["🌊 想去哪里钓鱼？",f"📍 当前　{area}","当前可去",*rows,"",
-                          f"发送「{prefix}切换钓场 新手池塘」即可切换。"])
+                          f"例如回到新手池塘，发送\n{prefix}切换钓场 新手池塘"])
     if cmd=="巨物鱼讯":
         now=event["arrived"]
         sighting=giant_fish.current(db,key[0],area,now)
         if sighting.taken:
             return giant_fish.departure(key[0],area,sighting)
-        return f"📍 {area} · 本场每种鱼都可能出没\n{sighting.notice(now)}\n下竿　{prefix}抛竿"
+        return f"📍 {area} · 本场每种鱼都可能出没\n{sighting.notice(now)}\n下竿\n{prefix}抛竿"
     if cmd in ("水域","海域","水域列表","海域列表"):
         names=list(WATERS)
         rows=["、".join(names[i:i+3]) for i in range(0,len(names),3)]
@@ -359,7 +348,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     if cmd.startswith(("切换水域 ","切换海域 ")):
         target=cmd.split(maxsplit=1)[1]
         if target not in WATERS:
-            return "未找到钓场。发「水域」查看名称。"
+            return f"未找到钓场。查看可以去的水域\n{prefix}切换钓场"
         db.execute("""INSERT INTO fishing_waters(grp,member,area) VALUES(?,?,?) ON CONFLICT(grp,member)
                       DO UPDATE SET area=excluded.area""",(*key,target))
         return guide(target)
@@ -376,7 +365,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         return (f"📋 我的钓鱼信息\n{growth}\n\n"
                 f"🪙 当前余额　{coins} 鱼币\n🧰 鱼竿 {rod} 级　鱼线 {line_level} 级"
                 f"（{'已断' if broken else '完好'}）\n🎒 鱼包 {bag}/{bag_limit} 条　鱼塘 {pond}/{pond_limit} 条\n"
-                f"🐟 累计钓获　{landed} 条\n🏆 最重纪录　{best}\n\n处理鱼获　{prefix}查看鱼包")
+                f"🐟 累计钓获　{landed} 条\n🏆 最重纪录　{best}\n\n处理鱼获\n{prefix}查看鱼包")
     if cmd in ("鱼线","升级鱼线"):
         if cmd=="升级鱼线":
             if line_level==len(LINE_COST):
@@ -385,7 +374,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
                 return line_help(db,key,coins,area,prefix,event["arrived"])
             cost=LINE_COST[line_level]
             if coins<cost:
-                return f"升级需要 {cost} 鱼币。"
+                return fish_storage.shortfall(db,key,cost,prefix,event["arrived"],"升级")
             db.execute("UPDATE fishing_wallets SET coins=coins-? WHERE grp=? AND member=?",(cost,*key))
             line_level+=1
             db.execute("""INSERT INTO fishing_line_levels VALUES(?,?,?) ON CONFLICT(grp,member)
@@ -397,6 +386,9 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         effect="满级免断线；鱼竿仍可能折断。" if line_level==len(LINE_COST) else (
             f"安全承重 {limit:g} 公斤\n升级需要 {LINE_COST[line_level]} 鱼币。")
         paid=f"升级成功，消耗 {cost} 鱼币。\n" if cmd=="升级鱼线" else ""
+        remaining=coins-cost if paid else coins
+        if line_level<len(LINE_COST) and remaining>=LINE_COST[line_level]:
+            effect+=f"\n发送即扣费升级\n{prefix}升级鱼线"
         return f"{paid}🧵 鱼线 {line_level} 级　完好\n{effect}"
     if cmd in ("买鱼线","购买鱼线"):
         if not broken:
@@ -407,16 +399,18 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         db.execute("UPDATE fishing_tackle SET broken=0 WHERE grp=? AND member=?",key)
         return "新鱼线已装好，消耗 3 鱼币。"
     if cmd in gear.COMMANDS or gear.REFORGE.fullmatch(cmd):
-        return gear.change(db,key,cmd,rod,event["event_id"])
+        return gear.change(db,key,cmd,rod,event["event_id"],prefix,event["arrived"])
     upgrade=20*rod
     if cmd=="我的鱼竿":
         next_level=f"下级升级费 {upgrade} 币" if rod<5 else "已满级"
+        if rod<5 and coins>=upgrade:
+            next_level+=f"，发送即升级\n{prefix}升级鱼竿"
         return f"🎣 鱼竿 {rod} 级\n🪙 余额 {coins} 鱼币\n{next_level}\n\n"+gear.describe(rod,gear.levels(db,key))
     if cmd=="升级鱼竿":
         if rod==5:
             return "鱼竿已满 5 级。"
         if coins<upgrade:
-            return f"升级需要 {upgrade} 鱼币。当前 {coins} 币。"
+            return fish_storage.shortfall(db,key,upgrade,prefix,event["arrived"],"升级")
         db.execute("UPDATE fishing_wallets SET coins=coins-?,rod=rod+1 WHERE grp=? AND member=?",(upgrade,*key))
         return f"鱼竿升到 {rod+1} 级，稀有鱼和珍品鱼出现机会提高。剩余 {coins-upgrade} 鱼币。"
     bait_name = cmd.partition(" ")[2].strip() or "免费鱼饵"
@@ -437,7 +431,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         available = fishing_bait.balance(db,key)
         if available < bait.points:
             return (f"🪱 {bait_name}需要 {bait.points} 积分，你有 {available} 积分。\n"
-                    f"免费开钓　{prefix}抛竿")
+                    f"还差 {bait.points-available} 分。免费开钓\n{prefix}抛竿")
         db.execute("""INSERT INTO ledger(grp,member,round,kind,points,rule_version,event,at,reason)
                       VALUES(?,?,0,'鱼饵',?,'bait/1',?,?,?)""",
                    (*key,-bait.points,event["event_id"],now,bait_name))

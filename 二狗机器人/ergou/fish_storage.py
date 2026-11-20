@@ -15,7 +15,8 @@ TIERS = {
 NAMES = {"bag": "鱼包", "pond": "鱼塘"}
 PAGE = re.compile(r"(?:查看)?(鱼包|鱼塘)(?: (重量))?(?: ([1-9][0-9]{0,5}))?")
 ITEM = re.compile(r"(放入鱼塘|放入图鉴|点亮图鉴|卖鱼)\s*[#＃]([1-9][0-9]{0,17})")
-COMMANDS = {"升级鱼包", "升级鱼塘", "卖出鱼包", "一键卖鱼", "放入图鉴", "放入鱼塘", "卖鱼"}
+CHOOSERS = {"投喂","查看鱼","换入成长位","设为招牌鱼"}
+COMMANDS = CHOOSERS | {"鱼塘操作", "升级鱼包", "升级鱼塘", "卖出鱼包", "一键卖鱼", "放入图鉴", "放入鱼塘", "卖鱼"}
 
 
 def matches(cmd):
@@ -79,7 +80,15 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
     return "\n".join(lines)
 
 
-def upgrade(db, key, storage):
+def shortfall(db,key,cost,prefix,now,reason):
+    wallet=db.execute("SELECT coins FROM fishing_wallets WHERE grp=? AND member=?",key).fetchone()
+    coins=wallet[0] if wallet else 30
+    stock=db.execute("SELECT 1 FROM fishing_pond WHERE grp=? AND member=? LIMIT 1",key).fetchone()
+    step=f"先查一条鱼的售价\n{prefix}卖鱼" if stock else cast_step(db,key,prefix,now)
+    return f"{reason}需要 {cost} 鱼币，余额不足。\n当前 {coins} 币，还差 {cost-coins} 币。\n{step}"
+
+
+def upgrade(db, key, storage, prefix, now):
     name = NAMES[storage]
     level = level_for(db, key, storage)
     tiers = TIERS[storage]
@@ -90,7 +99,7 @@ def upgrade(db, key, storage):
     paid = db.execute("UPDATE fishing_wallets SET coins=coins-? WHERE grp=? AND member=? AND coins>=?",
                       (cost, *key, cost))
     if not paid.rowcount:
-        return f"升级{name}需要 {cost} 鱼币。"
+        return shortfall(db,key,cost,prefix,now,"升级"+name)
     db.execute("""INSERT INTO fishing_storage_levels(grp,member,storage,level) VALUES(?,?,?,?)
                   ON CONFLICT(grp,member,storage) DO UPDATE SET level=excluded.level""",
                (*key, storage, level+1))
@@ -160,7 +169,7 @@ def exhibit(db, key, item, prefix, now):
     catch = db.execute("""SELECT fish,grams,price,storage,grade,grade_upgraded FROM fishing_pond
                           WHERE grp=? AND member=? AND id=?""", (*key, item)).fetchone()
     if not catch:
-        return False, "你的鱼包和鱼塘里没有这条鱼。"
+        return False, f"你的鱼包和鱼塘里没有这条鱼。查看可展出的鱼\n{prefix}放入图鉴"
     fish = catch["fish"]
     if fish not in HABITAT:
         return False, "当前图鉴还没有这个鱼种，鱼仍在原处。"
@@ -199,6 +208,10 @@ def handle(db, key, cmd, prefix, now=None):
     action = pond_growth.ACTION.fullmatch(cmd)
     if action:
         return pond_growth.act(db,key,action[1],int(action[2]),now,prefix)
+    if cmd in CHOOSERS:
+        return pond_view.choose(db,key,cmd,prefix,now)
+    if cmd=="鱼塘操作":
+        return pond_view.actions(db,key,prefix)
     if cmd=="放入图鉴":
         return exhibit_batch.render(db,key,prefix,now)
     if detail:=pond_view.DETAIL.fullmatch(cmd):
@@ -235,7 +248,7 @@ def handle(db, key, cmd, prefix, now=None):
             return reply
         return sell(db, key, "id", number, prefix, now)
     if cmd in ("升级鱼包", "升级鱼塘"):
-        return upgrade(db, key, "bag" if cmd == "升级鱼包" else "pond")
+        return upgrade(db, key, "bag" if cmd == "升级鱼包" else "pond",prefix,now)
     if cmd in ("卖出鱼包", "一键卖鱼"):
         return sell(db, key, "storage", "bag" if cmd == "卖出鱼包" else "pond", prefix, now)
     raise ValueError("未识别的鱼获指令")
