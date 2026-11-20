@@ -49,6 +49,9 @@ CREATE TABLE IF NOT EXISTS ledger (
  event TEXT NOT NULL, at REAL NOT NULL, reason TEXT NOT NULL, UNIQUE(game,round,member,kind)
 );
 CREATE INDEX IF NOT EXISTS ledger_member_balance ON ledger(grp,member,points);
+-- 只索引签到流水；先取整秒，避免午夜前的小数秒被日期函数进位。
+CREATE UNIQUE INDEX IF NOT EXISTS ledger_checkin_day
+ ON ledger(grp,member,date(CAST(at AS INTEGER),'unixepoch','+8 hours')) WHERE kind='签到';
 CREATE TRIGGER IF NOT EXISTS ledger_no_update BEFORE UPDATE ON ledger BEGIN SELECT RAISE(ABORT,'immutable'); END;
 CREATE TRIGGER IF NOT EXISTS ledger_no_delete BEFORE DELETE ON ledger BEGIN SELECT RAISE(ABORT,'immutable'); END;
 CREATE TABLE IF NOT EXISTS outbox (

@@ -269,6 +269,9 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
             return play(db,e,"结束" if game[1] else "动作",(game[1] or game[2]).upper(),
                         "" if game[1] else "重置",False)
     prefix=prefix or cfg["prefix"]
+    if cmd in ("签到","打卡"):
+        from .group_tools import check_in
+        return check_in(db,e,cfg,prefix)
     canonical=intents.command_alias(cmd)
     menu=canonical.rstrip("。！？!?").strip()
     if menu in ("全菜单","全部功能"):

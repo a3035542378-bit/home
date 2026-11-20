@@ -6,6 +6,12 @@ import time
 from urllib.parse import quote
 
 
+def mention_sender(db, event):
+    # 仅有已授权微信点名事件才能随回执使用原生 @。
+    db.execute("""INSERT OR IGNORE INTO fishing_reply_mentions(biz)
+                  SELECT biz FROM directed_events WHERE biz=?""",(event["event_id"],))
+
+
 def refresh(db,client,group,members):
     binding=db.execute("SELECT binding FROM groups WHERE id=?",(group,)).fetchone()[0]
     now=time.time()

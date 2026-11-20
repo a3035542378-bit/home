@@ -275,8 +275,8 @@ def line_help(db, key, coins, area, prefix, now, heading="鱼线已断"):
 
 def play(db, event, cmd, prefix, cfg):
     if event["adapter_version"]=="agent-wechat-events/2.7.1":
-        db.execute("""INSERT OR IGNORE INTO fishing_reply_mentions
-                      SELECT biz FROM directed_events WHERE biz=?""",(event["event_id"],))
+        from .display_names import mention_sender
+        mention_sender(db,event)
     if cmd in ("资产榜","资产排行榜"):
         pond_growth.settle(db,event["grp"],event["arrived"])
         return gear.leaderboard(db,event["grp"],event["member"])

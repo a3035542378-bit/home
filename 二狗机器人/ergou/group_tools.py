@@ -156,6 +156,33 @@ def configure(db,user,group,data):
     return settings(db,user,group)
 
 
+CHECKIN_POINTS = 3
+
+
+def check_in(db, event, cfg, prefix):
+    from . import fishing_bait
+    from .display_names import mention_sender
+    key = (event["grp"], event["member"])
+    # 一条不可变流水同时是签到凭据和奖励；唯一索引裁决同日竞争。
+    credited = db.execute("""INSERT INTO ledger(grp,member,round,kind,points,rule_version,event,at,reason)
+                             VALUES(?,?,0,'签到',?,'checkin/1',?,?,'每日签到')
+                             ON CONFLICT DO NOTHING RETURNING id""",
+                          (*key,CHECKIN_POINTS,event["event_id"],event["arrived"])).fetchone()
+    points = fishing_bait.balance(db,key)
+    if credited is None:
+        mention_sender(db,event)
+        return f"今天已经签过啦，本群积分 {points} 分。"
+    receipt = f"✅ 签到到账 +{CHECKIN_POINTS} 积分，本群余额 {points} 分。"
+    if cfg["games"] and "钓鱼" not in cfg.get("disabled_games",[]):
+        cost = fishing_bait.BAITS["高级鱼饵"].points
+        if points < cost:
+            return f"{receipt}\n离高级鱼饵还差 {cost-points} 分。"
+        return f"{receipt}\n够用一次高级鱼饵啦，查看用法\n{prefix}鱼饵"
+    if db.execute("SELECT 1 FROM reward_offers WHERE grp=? LIMIT 1",(key[0],)).fetchone():
+        return f"{receipt}\n查看本群兑换奖励\n{prefix}兑换列表"
+    return f"{receipt}\n查看本群积分\n{prefix}积分"
+
+
 def redeem(db,event,arg,prefix="二狗"):
     """Runs inside the inbox transaction together with the reply and ledger debit."""
     group,member=event["grp"],event["member"]

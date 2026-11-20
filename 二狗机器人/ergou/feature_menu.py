@@ -4,7 +4,7 @@ from . import roles as permissions, voice_policy
 
 MAIN_MENU = """🐕 二狗菜单
 {mode}
-{games}🏅 {prefix}积分　📜 {prefix}群规
+{games}🏅 {prefix}积分　{prefix}签到　📜 {prefix}群规
 🎵 {prefix}点歌 茉莉花
 🌤 {prefix}天气 北京　🔎 {prefix}百科 大熊猫
 {interaction}📚 更多用法　{prefix}全菜单"""
@@ -64,7 +64,7 @@ def full_menu(db,group,event,cfg,prefix):
     lines.extend(["讲个笑话　/　讲个故事",f"接着听　{prefix}然后呢",
                   "\n🔎 查询与娱乐","百科 大熊猫","菜谱 土豆","运势","星座 白羊座",
                   "快递 圆通 单号（承运商需已接通）",
-                  "\n🏅 积分与群服务","周榜　/　月榜　/　总榜","资产榜","兑换列表","兑换 奖励名",f"群关键词也要加「{prefix}」"])
+                  "\n🏅 积分与群服务",f"{prefix}签到（也可发「{prefix}打卡」）","周榜　/　月榜　/　总榜","资产榜","兑换列表","兑换 奖励名",f"群关键词也要加「{prefix}」"])
     if cfg["games"]:
         start="开始 成语接龙" if "成语接龙" not in cfg.get("disabled_games",[]) else "开始 游戏名"
         lines.extend(["\n🎮 群游戏",start,"加入 G01","状态 G01","G01 动作","退出 G01",
