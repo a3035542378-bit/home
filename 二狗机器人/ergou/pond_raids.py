@@ -5,7 +5,7 @@ import random
 import re
 from datetime import datetime
 
-from . import fish_storage, pond_growth
+from . import breed_metrics, breeding, fish_storage, pond_growth
 from .db import BJ
 from .display_names import labels
 from .fishing_bait import balance
@@ -97,11 +97,15 @@ def play(db, event, cmd, prefix):
     rng = random.Random(event["event_id"])
     roll = rng.randrange(100)
     if roll<SUCCESS:
+        breeding.resolve(db,owner,now)
         pond_growth.settle(db,owner[0],now,owner[1])
         item = db.execute("SELECT id,fish,grams FROM fishing_pond WHERE "+eligible+" ORDER BY id LIMIT 1 OFFSET ?",(*owner,rng.randrange(count))).fetchone()
         pond_growth.leave(db,item["id"],now)
         db.execute("""UPDATE fishing_pond SET member=?,storage='bag'
                       WHERE id=? AND grp=? AND member=? AND storage='pond'""",(key[1],item["id"],*owner))
+        if breeding.fry(db,item["id"]):
+            db.execute("INSERT INTO breed_transfers(item,member,at) VALUES(?,?,?)",(item["id"],key[1],now))
+        breed_metrics.refresh(db,owner,now)
         return (f"🐟 你在{name}的塘边轻轻一捞，网里一沉！\n"
                 f"#{item['id']} {item['fish']}　{weight(item['grams'])}\n🎒 已收入你的鱼包。")
     if roll<SUCCESS+CAUGHT:

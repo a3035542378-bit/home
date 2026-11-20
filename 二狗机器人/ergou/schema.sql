@@ -372,3 +372,43 @@ WHEN new.coins!=old.coins BEGIN
  INSERT INTO pond_coin_flow VALUES(date('now','+8 hours'),new.grp,new.coins-old.coins)
  ON CONFLICT(day,grp) DO UPDATE SET net=net+excluded.net;
 END;
+CREATE TABLE IF NOT EXISTS breed_pairs (
+ id INTEGER PRIMARY KEY,grp TEXT NOT NULL,member TEXT NOT NULL,p1 INTEGER NOT NULL,p2 INTEGER NOT NULL,
+ fish TEXT NOT NULL,started REAL NOT NULL,due REAL NOT NULL,wins INTEGER NOT NULL,birth INTEGER NOT NULL,
+ fee INTEGER NOT NULL, claimed_at REAL, offspring INTEGER UNIQUE,state TEXT NOT NULL CHECK(state IN ('active','pending','failed','cancelled','claimed')),
+ CHECK(p1<p2),FOREIGN KEY(grp,member) REFERENCES fishing_wallets(grp,member)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS breed_one ON breed_pairs(grp,member) WHERE state IN ('active','pending');
+CREATE INDEX IF NOT EXISTS breed_history ON breed_pairs(grp,member,id);
+CREATE TABLE IF NOT EXISTS breed_fry (
+ item INTEGER PRIMARY KEY REFERENCES pond_growth(item) ON DELETE CASCADE,birth INTEGER NOT NULL,adult INTEGER NOT NULL,
+ breeder TEXT NOT NULL, firstborn INTEGER NOT NULL CHECK(firstborn IN (0,1))
+);
+CREATE TRIGGER IF NOT EXISTS breed_leave AFTER DELETE ON fishing_pond WHEN old.storage='pond' BEGIN
+ UPDATE breed_pairs SET state='cancelled' WHERE grp=old.grp AND member=old.member AND state='active'
+ AND (p1=old.id OR p2=old.id);
+END;
+CREATE TRIGGER IF NOT EXISTS breed_transfer AFTER UPDATE OF storage,member,grp ON fishing_pond
+WHEN old.storage='pond' AND (old.member!=new.member OR old.grp!=new.grp OR new.storage!='pond') BEGIN
+ UPDATE breed_pairs SET state='cancelled' WHERE grp=old.grp AND member=old.member AND state='active'
+ AND (p1=old.id OR p2=old.id);
+END;
+
+CREATE TABLE IF NOT EXISTS breed_pilots (
+ grp TEXT PRIMARY KEY REFERENCES groups(id),started REAL NOT NULL,enabled INTEGER NOT NULL CHECK(enabled IN (0,1))
+);
+CREATE TABLE IF NOT EXISTS breed_previews (
+ grp TEXT NOT NULL,member TEXT NOT NULL,p1 INTEGER NOT NULL,p2 INTEGER NOT NULL,expires REAL NOT NULL,
+ PRIMARY KEY(grp,member)
+);
+CREATE TABLE IF NOT EXISTS breed_eligible (
+ grp TEXT NOT NULL, member TEXT NOT NULL, ready REAL NOT NULL, PRIMARY KEY(grp,member)
+);
+CREATE TABLE IF NOT EXISTS breed_sales (
+ item INTEGER PRIMARY KEY,grp TEXT NOT NULL,member TEXT NOT NULL,at REAL NOT NULL,price INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS breed_sales_week ON breed_sales(grp,at);
+CREATE TABLE IF NOT EXISTS breed_transfers (
+ id INTEGER PRIMARY KEY,item INTEGER NOT NULL,member TEXT NOT NULL,at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS breed_transfers_item ON breed_transfers(item,at,id);

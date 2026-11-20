@@ -3,7 +3,7 @@ import math
 import re
 from random import Random
 
-from . import fish_grades
+from . import breeding, fish_grades
 from .display_names import labels
 from .fishing_waters import SPECIES, giant_max, size_grade, weight
 
@@ -76,6 +76,10 @@ SELECT = """SELECT g.*,p.grp,p.member,p.fish,p.grams,p.price,p.grade,
  WHERE p.storage='pond' AND p.grp=?"""
 
 
+def round_rng(item,round_no):
+    return Random(f"pond/v1:{item}:{round_no}")
+
+
 def settle(db, group, now, member=None):
     params = [group, now]
     query = SELECT + " AND g.next_at<=?"
@@ -84,10 +88,14 @@ def settle(db, group, now, member=None):
         params.append(member)
     changes = {}
     for row in db.execute(query, params).fetchall():
+        child = breeding.fry(db,row["item"])
+        if child:
+            changes[row["item"]] = breeding.settle_fry(db,row,child,now)
+            continue
         state = dict(row)
         fish, grams, grade, due = (row[k] for k in ("fish","grams","grade","next_at"))
         while due <= now and state["rounds"] < ROUNDS and grams < cap(fish, state["original_grams"]):
-            rng = Random(f"pond/v1:{row['item']}:{state['rounds']}")
+            rng = round_rng(row["item"],state["rounds"])
             grams, grade = advance(fish, state, grams, grade, row["level"], rng)
             due += SECONDS
         if state["rounds"] >= ROUNDS or grams >= cap(fish, state["original_grams"]):
@@ -125,7 +133,9 @@ def install(db, key, item, now, replace=False):
         return "请从自己的鱼塘选鱼。"
     if row["next_at"] is not None:
         return "这条鱼已经在成长位。"
-    if row["grade"] is None or row["rounds"] == ROUNDS or row["grams"] >= cap(row["fish"],row["original_grams"]):
+    child = breeding.fry(db,item)
+    limit = child["adult"] if child else cap(row["fish"],row["original_grams"])
+    if row["grade"] is None or row["rounds"] == ROUNDS or row["grams"] >= limit:
         return "🏁 这条鱼已定型。"
     slots = db.execute(SELECT+" AND p.member=? AND g.next_at IS NOT NULL ORDER BY p.id",key).fetchall()
     if len(slots) >= SLOTS[row["level"]-1]:
@@ -161,6 +171,8 @@ def act(db, key, action, item, now, prefix):
         if result.startswith("🌱"):
             mark(db,key,now,"tend")
         return result
+    if breeding.fry(db,item):
+        return "繁育鱼使用独立成长曲线，无需投喂。"
     if row["rounds"] == ROUNDS or row["grams"] >= cap(row["fish"],row["original_grams"]):
         return "🏁 已定型，饲料留给其他鱼吧。"
     if row["next_at"] is None:
@@ -181,6 +193,9 @@ def panel(db,key,item,changes,prefix,now):
     row = db.execute(SELECT+" AND p.member=? AND p.id=?",(*key,item)).fetchone()
     if not row:
         return []
+    child = breeding.fry(db,item)
+    if child:
+        return breeding.detail(row,child)
     fish = row["fish"]
     limit = cap(fish,row["original_grams"])
     finished = row["rounds"] == ROUNDS or row["grams"] >= limit or row["grade"] is None

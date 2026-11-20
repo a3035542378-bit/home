@@ -2,7 +2,7 @@
 import re
 import time
 
-from . import fish_grades, pond_growth
+from . import breed_metrics, breeding, fish_grades, pond_growth
 from .fishing_waters import HABITAT, size_grade, weight
 
 
@@ -47,6 +47,12 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
     if is_pond and count:
         active = db.execute(pond_growth.SELECT+" AND p.member=? AND g.next_at IS NOT NULL",key).fetchall()
         lines.insert(2,f"🌱 成长位 {len(active)}/{pond_growth.SLOTS[level-1]}")
+    if is_pond and breeding.enabled(db,key[0]):
+        pending=breeding.banner(breeding.state(db,key),prefix)
+        if pending:
+            lines[1:1]=[pending]
+        else:
+            lines.append(f"🥚 选亲鱼　{prefix}繁育配对")
     if count:
         order = "grams DESC,id DESC" if by_weight else "id DESC"
         rows = db.execute(f"""SELECT id,fish,grams,price,grade,grade_upgraded FROM fishing_pond
@@ -62,6 +68,9 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
             label=f" · {grade}" if grade else ""
             quality = fish_grades.label(row["grade"], row["grade_upgraded"])
             lines.append(f"#{row['id']} {row['fish']}　{weight(row['grams'])}{label}　{row['price']} 鱼币")
+            child = breeding.fry(db,row["id"])
+            if child:
+                lines.append("　🐣 "+breeding.source(child,key[1]))
             if quality:
                 lines.append("　🏷️ " + quality)
         if page < pages:
@@ -122,13 +131,14 @@ def move_to_pond(db, key, item, prefix, now):
     return f"已将 #{item} {fish[0]} 放入鱼塘（{count+1}/{capacity} 条）。\n{status}\n🛡️ 查看护塘　{prefix}鱼塘保护"
 
 
-def sell(db, key, column, value, prefix):
+def sell(db, key, column, value, prefix, now):
     # column 由指令分派固定为 id 或 storage。
     where = f"grp=? AND member=? AND {column}=?"
     params = (*key, value)
     count, total = db.execute("SELECT count(*),sum(price) FROM fishing_pond WHERE "+where, params).fetchone()
     if not count:
         return "你的鱼包和鱼塘里没有这条鱼。" if column == "id" else f"{NAMES[value]}是空的。"
+    breed_metrics.sale(db,where,params,now)
     db.execute("DELETE FROM pond_growth WHERE item IN (SELECT id FROM fishing_pond WHERE "+where+")",params)
     db.execute("DELETE FROM fishing_pond WHERE "+where, params)
     coins = db.execute("UPDATE fishing_wallets SET coins=coins+? WHERE grp=? AND member=? RETURNING coins",
@@ -196,9 +206,9 @@ def handle(db, key, cmd, prefix, now=None):
             return move_to_pond(db, key, number, prefix, now)
         if item[1] in ("放入图鉴", "点亮图鉴"):
             return exhibit(db, key, number, prefix, now)
-        return sell(db, key, "id", number, prefix)
+        return sell(db, key, "id", number, prefix, now)
     if cmd in ("升级鱼包", "升级鱼塘"):
         return upgrade(db, key, "bag" if cmd == "升级鱼包" else "pond")
     if cmd in ("卖出鱼包", "一键卖鱼"):
-        return sell(db, key, "storage", "bag" if cmd == "卖出鱼包" else "pond", prefix)
+        return sell(db, key, "storage", "bag" if cmd == "卖出鱼包" else "pond", prefix, now)
     raise ValueError("未识别的鱼获指令")

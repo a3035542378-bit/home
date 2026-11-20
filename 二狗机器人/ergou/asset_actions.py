@@ -2,7 +2,7 @@
 from contextlib import contextmanager
 from threading import Lock
 
-from . import fish_storage, fishing_bait, intents, pond_growth, pond_raids, rod
+from . import breeding, fish_storage, fishing_bait, intents, pond_growth, pond_raids, rod
 
 
 BUSY_REPLY = "操作太快啦，稍等一下哦"
@@ -20,7 +20,7 @@ def participants(cmd, member, target, cfg):
         return tuple(sorted({member, target}))
     cast = first in ("抛竿", "钓鱼") and (not args or args.strip() in fishing_bait.BAITS)
     redeem = cfg.get("aliases", {}).get(first, first) == "兑换" and args.strip()
-    if (cast or redeem or cmd in MUTATIONS or fish_storage.ITEM.fullmatch(cmd)
+    if (cmd=="领取幼鱼" or breeding.PAIR.fullmatch(cmd) or cast or redeem or cmd in MUTATIONS or fish_storage.ITEM.fullmatch(cmd)
             or pond_growth.ACTION.fullmatch(cmd) or pond_raids.BUY.fullmatch(cmd) or rod.REFORGE.fullmatch(cmd)):
         return (member,)
     return ()

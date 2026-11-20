@@ -2,7 +2,7 @@
 import math
 import random
 import re
-from . import exhibit_board, pond_growth, angler, fish_grades, fish_storage, fishing_bait, giant_fish, pond_raids
+from . import breed_metrics, breeding, exhibit_board, pond_growth, angler, fish_grades, fish_storage, fishing_bait, giant_fish, pond_raids
 from .db import DEFAULT
 from . import rod as gear
 
@@ -50,7 +50,7 @@ def book(db,key,match,current_area,prefix):
     records = {r["fish"]: r for r in db.execute(
         "SELECT fish,best_grams,best_grade,best_grade_upgraded FROM fishing_species WHERE grp=? AND member=?", key)}
     displays = {r["fish"]: r for r in db.execute(
-        """SELECT e.*,g.catcher,g.rounds FROM fishing_exhibits e LEFT JOIN pond_growth g ON g.item=e.item_id
+        """SELECT e.*,g.catcher,g.rounds,f.breeder,f.firstborn FROM fishing_exhibits e LEFT JOIN pond_growth g ON g.item=e.item_id LEFT JOIN breed_fry f ON f.item=e.item_id
            WHERE e.grp=? AND e.member=?""", key)}
     best = {fish: r["best_grams"] for fish, r in records.items()}
     exhibits = {fish: r["grams"] for fish, r in displays.items()}
@@ -124,7 +124,9 @@ def book(db,key,match,current_area,prefix):
             display = displays[fish]
             quality = fish_grades.label(display["grade"], display["grade_upgraded"])
             source = "亲钓" if display["catcher"] == key[1] else "群友钓获" if display["catcher"] else "历史来源未记录"
-            if display["rounds"]:
+            if display["breeder"] is not None:
+                source = breeding.source(display,key[1])
+            elif display["rounds"]:
                 source += "后塘养"
             lines.append("　来源 "+source)
             lines.append(f"　已点亮 {weight(grams)} · {size_grade(fish,grams)}" + (" · " + quality if quality else ""))
@@ -249,7 +251,7 @@ def game_list_entry(prefix):
 
 
 def matches(cmd):
-    return pond_raids.matches(cmd) or cmd=="鱼饵" or (cmd.startswith(("抛竿 ","钓鱼 ")) and cmd.endswith("鱼饵")) or help_requested(cmd) or cmd=="钓鱼进阶" or cmd in ("海域","海域列表","水域列表") or cmd.startswith(("切换水域 ","切换海域 ","水域介绍 ","海域介绍 ")) or cmd in COMMANDS or BOOK_PAGE.fullmatch(cmd) or gear.REFORGE.fullmatch(cmd) or fish_storage.matches(cmd) or requested_fish(cmd)
+    return breeding.matches(cmd) or pond_raids.matches(cmd) or cmd=="鱼饵" or (cmd.startswith(("抛竿 ","钓鱼 ")) and cmd.endswith("鱼饵")) or help_requested(cmd) or cmd=="钓鱼进阶" or cmd in ("海域","海域列表","水域列表") or cmd.startswith(("切换水域 ","切换海域 ","水域介绍 ","海域介绍 ")) or cmd in COMMANDS or BOOK_PAGE.fullmatch(cmd) or gear.REFORGE.fullmatch(cmd) or fish_storage.matches(cmd) or requested_fish(cmd)
 
 
 def full_bag_notice(count,capacity,prefix):
@@ -267,6 +269,13 @@ def play(db, event, cmd, prefix, cfg):
     if not cfg["games"] or "钓鱼" in cfg.get("disabled_games",[]):
         raise ValueError("本群已关闭钓鱼")
     key = (event["grp"], event["member"])
+    pilot = breeding.enabled(db,key[0])
+    breeding.resolve(db,key,event["arrived"])
+    if breeding.matches(cmd):
+        reply=breeding.play(db,key,event,cmd,prefix)
+        if pilot:
+            breed_metrics.refresh(db,key,event["arrived"])
+        return reply
     if cmd == "图鉴榜":
         return exhibit_board.board(db,key,prefix)
     if pond_raids.matches(cmd):
@@ -280,7 +289,7 @@ def play(db, event, cmd, prefix, cfg):
     if cmd=="鱼饵":
         return fishing_bait.menu(db,key,prefix)
     if help_requested(cmd):
-        return fishing_menu(prefix,cooldown)
+        return fishing_menu(prefix,cooldown)+(f"\n🥚 {prefix}繁育配对　挑选亲鱼" if pilot else "")
     if cmd=="钓鱼进阶":
         return (f"🎣 钓鱼进阶\n每条指令前加「{prefix}」。\n\n"
                 f"🎣 钓手等级\n常规鱼获前 {angler.PROTECTED_CASTS} 竿免脱钩。\n巨物、史诗和传说都可能跑鱼。\n装备扛住后再判脱钩。\n每升一级，脱钩率降 1 个百分点。\n池塘最低 2%，其他钓场最低 5%。\n\n"
@@ -294,7 +303,10 @@ def play(db, event, cmd, prefix, cfg):
                 "换线　买鱼线（3 鱼币）\n护线　升级鱼线（5 级免断线）\n"
                 "钓稀有鱼　升级鱼竿\n韧性与硬度　强化玩法\n巨物超载可能断线或折竿，新手塘也一样。")
     if fish_storage.matches(cmd):
-        return fish_storage.handle(db,key,cmd,prefix,event["arrived"])
+        reply=fish_storage.handle(db,key,cmd,prefix,event["arrived"])
+        if pilot:
+            breed_metrics.refresh(db,key,event["arrived"])
+        return reply
     location=db.execute("SELECT area FROM fishing_waters WHERE grp=? AND member=?",key).fetchone()
     area=location[0] if location else "新手池塘"
     if cmd=="切换水域":
