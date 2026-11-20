@@ -3,7 +3,7 @@ from random import Random
 from typing import NamedTuple
 
 from .display_names import labels
-from .fishing_waters import SPECIES, size_grade, weight
+from .fishing_waters import SPECIES, giant_max, giant_min, size_grade, weight
 
 GRADES = ("普通", "优良", "稀有", "史诗", "传说", "神话")
 TIERS = ("小型", "标准", "大型", "巨物")
@@ -16,7 +16,8 @@ TICKETS = {
     "大型": (8400, 1400, 170, 28, 2), "巨物": (9700, 290, 10, 0, 0),
 }
 POINTS = (0, 5, 20, 100, 500, 1000)
-PRICE_TENTHS = (10, 12, 15, 20, 30, 50)
+PRICE_TENTHS = (10, 16, 26, 45, 75, 120)
+GIANT_PREMIUM_PERCENT = 50
 
 
 class Grade(NamedTuple):
@@ -50,12 +51,21 @@ def final_grade(fish, grams, event_id, event_fish=False, rng=None):
     return Grade(base, min(5 if event_fish else 4, base + int(event_fish) + levels))
 
 
-def price(fish, grams, grade):
+def price(fish, grams, grade, appearance=0):
     _, low, high, base, _, _ = SPECIES[fish]
     span = high - low
     offset = max(0, min(span, grams - low))
     numerator = base * (8 * span + 7 * offset) * PRICE_TENTHS[grade]
-    return max(1, (numerator + 50 * span) // (100 * span))
+    denominator = 100 * span
+    species = SPECIES[fish]
+    threshold = giant_min(species)
+    if grams > threshold:
+        spread = max(1, giant_max(species) - threshold)
+        numerator *= 100 * spread + GIANT_PREMIUM_PERCENT * min(grams - threshold, spread)
+        denominator *= 100 * spread
+    numerator *= 100 + appearance
+    denominator *= 100
+    return max(1, (numerator + denominator // 2) // denominator)
 
 
 def label(grade, upgraded):

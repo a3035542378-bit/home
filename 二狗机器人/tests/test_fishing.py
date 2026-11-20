@@ -483,9 +483,9 @@ class FishingTests(unittest.TestCase):
         put(205)
         single=self.say("single","鱼塘",101)
         self.assertEqual(single.split("\n\n"),[
-            "🐟 我的鱼塘　1 级\n容量 1/1 条",
+            "🐟 我的鱼塘　1 级\n容量 1/1 条\n🌱 成长位 0/1",
             "#1 鲫鱼　205克 · 小型　4 鱼币",
-            "点亮图鉴　二狗放入图鉴#1\n卖这一条　二狗卖鱼#1",
+            "招牌免偷　二狗设为招牌鱼#1\n点亮图鉴　二狗放入图鉴#1\n卖这一条　二狗卖鱼#1",
             "扩到 4 条需 20 鱼币\n二狗升级鱼塘",
         ])
         self.say("upgrade","升级鱼塘",102)

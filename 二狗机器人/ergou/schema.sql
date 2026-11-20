@@ -344,3 +344,31 @@ CREATE TABLE IF NOT EXISTS binding_receipts (
  expires REAL NOT NULL, state TEXT NOT NULL DEFAULT 'PENDING', PRIMARY KEY(account,source)
 );
 CREATE INDEX IF NOT EXISTS binding_receipt_pending ON binding_receipts(account,state,expires);
+
+-- 鱼获编号在库存与展柜间迁移，养成档案独立于这两张表。
+CREATE TABLE IF NOT EXISTS pond_growth (
+ item INTEGER PRIMARY KEY, original_grams INTEGER NOT NULL, original_price INTEGER NOT NULL,
+ original_grade INTEGER, catcher TEXT, rounds INTEGER NOT NULL DEFAULT 0 CHECK(rounds BETWEEN 0 AND 10),
+ appearance INTEGER NOT NULL DEFAULT 0, promoted INTEGER NOT NULL DEFAULT 0,
+ food INTEGER NOT NULL DEFAULT 0, first_fed INTEGER NOT NULL DEFAULT 0,
+ fed_segment INTEGER NOT NULL DEFAULT 0, next_at REAL, remaining_seconds REAL,
+ flagship INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS pond_due ON pond_growth(next_at) WHERE next_at IS NOT NULL;
+CREATE TABLE IF NOT EXISTS pond_migrations (version INTEGER PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS pond_activity (
+ day TEXT NOT NULL, grp TEXT NOT NULL, member TEXT NOT NULL, action TEXT NOT NULL,
+ PRIMARY KEY(day,grp,member,action)
+);
+CREATE TABLE IF NOT EXISTS pond_coin_flow (
+ day TEXT NOT NULL, grp TEXT NOT NULL, net INTEGER NOT NULL, PRIMARY KEY(day,grp)
+);
+CREATE TRIGGER IF NOT EXISTS pond_wallet_open AFTER INSERT ON fishing_wallets BEGIN
+ INSERT INTO pond_coin_flow VALUES(date('now','+8 hours'),new.grp,new.coins)
+ ON CONFLICT(day,grp) DO UPDATE SET net=net+excluded.net;
+END;
+CREATE TRIGGER IF NOT EXISTS pond_wallet_change AFTER UPDATE OF coins ON fishing_wallets
+WHEN new.coins!=old.coins BEGIN
+ INSERT INTO pond_coin_flow VALUES(date('now','+8 hours'),new.grp,new.coins-old.coins)
+ ON CONFLICT(day,grp) DO UPDATE SET net=net+excluded.net;
+END;

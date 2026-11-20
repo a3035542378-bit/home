@@ -49,8 +49,8 @@ class GradeTests(unittest.TestCase):
             for level, count in expected.items():
                 self.assertEqual(actual[level], count)
         self.assertEqual(grades.price("鲤鱼", 500, 0), 4)
-        self.assertEqual(grades.price("鲤鱼", 4000, 4), 23)
-        self.assertEqual(grades.price("鲤鱼", 25000, 5), 38)
+        self.assertEqual(grades.price("鲤鱼", 4000, 4), 56)
+        self.assertEqual(grades.price("鲤鱼", 25000, 5), 135)
 
     def test_actual_catch_reward_replay_and_exhibit_swap(self):
         path = Path(self.enterContext(tempfile.TemporaryDirectory()))/"game.sqlite"

@@ -84,6 +84,8 @@ INSERT OR IGNORE INTO fishing_species(grp,member,fish,best_grams)
                                     SCHEMA.with_name("permissions.sql").read_text(encoding="utf-8"),
                                     group_tools_schema,moderation_schema,bulletin_schema,policy_schema,roster_schema,
                                     deliveries_schema,voice_policy_schema,voice_events_schema,backfill)))
+        from .pond_growth import migrate as migrate_pond
+        migrate_pond(db, time.time())
         if upgrade_holds:
             from .engine import reserve_requeued
             for pending in db.execute("SELECT * FROM inbox WHERE state='PENDING' ORDER BY seq"):

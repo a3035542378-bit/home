@@ -5,7 +5,7 @@ import random
 import re
 from datetime import datetime
 
-from . import fish_storage
+from . import fish_storage, pond_growth
 from .db import BJ
 from .display_names import labels
 from .fishing_bait import balance
@@ -78,6 +78,11 @@ def play(db, event, cmd, prefix):
     count = db.execute("SELECT count(*) FROM fishing_pond WHERE grp=? AND member=? AND storage='pond'",owner).fetchone()[0]
     if not count:
         return f"🌿 {name}的鱼塘空空如也，这次扑了个空。"
+    eligible = """grp=? AND member=? AND storage='pond' AND NOT EXISTS
+                  (SELECT 1 FROM pond_growth WHERE item=fishing_pond.id AND flagship=1)"""
+    count = db.execute("SELECT count(*) FROM fishing_pond WHERE "+eligible,owner).fetchone()[0]
+    if not count:
+        return f"🌟 {name}塘里只有受保护的招牌鱼。"
     last = db.execute("SELECT last_attempt FROM fishing_raids WHERE grp=? AND member=?",key).fetchone()
     if last and last[0] is not None and now<last[0]+COOLDOWN:
         return f"🐾 刚去过鱼塘，{math.ceil(last[0]+COOLDOWN-now)} 秒后再来。"
@@ -92,8 +97,9 @@ def play(db, event, cmd, prefix):
     rng = random.Random(event["event_id"])
     roll = rng.randrange(100)
     if roll<SUCCESS:
-        item = db.execute("""SELECT id,fish,grams FROM fishing_pond WHERE grp=? AND member=? AND storage='pond'
-                             ORDER BY id LIMIT 1 OFFSET ?""",(*owner,rng.randrange(count))).fetchone()
+        pond_growth.settle(db,owner[0],now,owner[1])
+        item = db.execute("SELECT id,fish,grams FROM fishing_pond WHERE "+eligible+" ORDER BY id LIMIT 1 OFFSET ?",(*owner,rng.randrange(count))).fetchone()
+        pond_growth.leave(db,item["id"],now)
         db.execute("""UPDATE fishing_pond SET member=?,storage='bag'
                       WHERE id=? AND grp=? AND member=? AND storage='pond'""",(key[1],item["id"],*owner))
         return (f"🐟 你在{name}的塘边轻轻一捞，网里一沉！\n"

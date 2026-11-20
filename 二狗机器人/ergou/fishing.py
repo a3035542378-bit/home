@@ -2,11 +2,11 @@
 import math
 import random
 import re
-from . import angler, fish_grades, fish_storage, fishing_bait, giant_fish, pond_raids
+from . import exhibit_board, pond_growth, angler, fish_grades, fish_storage, fishing_bait, giant_fish, pond_raids
 from .db import DEFAULT
 from . import rod as gear
 
-COMMANDS = {"切换水域", "鱼获品级", "巨物鱼讯", "钓鱼信息", "钓手等级", "钓鱼等级", "钓鱼", "抛竿", "我的鱼获", "钓鱼玩法", "鱼塘", "鱼市","鱼线","买鱼线","购买鱼线","升级鱼线","水域","切换水域 新手池塘","切换水域 外海","重量榜","重量排行榜","鱼类图鉴","钓鱼图鉴","图鉴", "一键卖鱼", "升级鱼竿", "我的鱼竿","资产榜","资产排行榜"} | gear.COMMANDS
+COMMANDS = {"图鉴榜", "切换水域", "鱼获品级", "巨物鱼讯", "钓鱼信息", "钓手等级", "钓鱼等级", "钓鱼", "抛竿", "我的鱼获", "钓鱼玩法", "鱼塘", "鱼市","鱼线","买鱼线","购买鱼线","升级鱼线","水域","切换水域 新手池塘","切换水域 外海","重量榜","重量排行榜","鱼类图鉴","钓鱼图鉴","图鉴", "一键卖鱼", "升级鱼竿", "我的鱼竿","资产榜","资产排行榜"} | gear.COMMANDS
 # 名称、最轻/最重克数、基础价格、每公斤加价、稀有度
 from .fishing_waters import FISH, HABITAT, TROPHY_PERCENT, WATERS, giant_min, guide, size_grade, weight
 RARITY_ICONS = {"普通": "🐟", "稀有": "💎", "珍品": "👑", "史诗": "🔮", "传说": "🌟"}
@@ -50,7 +50,8 @@ def book(db,key,match,current_area,prefix):
     records = {r["fish"]: r for r in db.execute(
         "SELECT fish,best_grams,best_grade,best_grade_upgraded FROM fishing_species WHERE grp=? AND member=?", key)}
     displays = {r["fish"]: r for r in db.execute(
-        "SELECT fish,grams,grade,grade_upgraded FROM fishing_exhibits WHERE grp=? AND member=?", key)}
+        """SELECT e.*,g.catcher,g.rounds FROM fishing_exhibits e LEFT JOIN pond_growth g ON g.item=e.item_id
+           WHERE e.grp=? AND e.member=?""", key)}
     best = {fish: r["best_grams"] for fish, r in records.items()}
     exhibits = {fish: r["grams"] for fish, r in displays.items()}
     giants=category=="巨物"
@@ -122,6 +123,10 @@ def book(db,key,match,current_area,prefix):
             grams=exhibits[fish]
             display = displays[fish]
             quality = fish_grades.label(display["grade"], display["grade_upgraded"])
+            source = "亲钓" if display["catcher"] == key[1] else "群友钓获" if display["catcher"] else "历史来源未记录"
+            if display["rounds"]:
+                source += "后塘养"
+            lines.append("　来源 "+source)
             lines.append(f"　已点亮 {weight(grams)} · {size_grade(fish,grams)}" + (" · " + quality if quality else ""))
         if caught and not shown and not giants and category not in TROPHY_PERCENT:
             lines[-1]+=f"　{weight(best[fish])} · {size_grade(fish,best[fish])}"
@@ -231,7 +236,8 @@ FISHING_MENU = """🎣 二狗钓鱼指南
 🐋 {prefix}巨物鱼讯　看出没时间
 🐾 {prefix}偷鱼 @群友
 📖 {prefix}图鉴　/　{prefix}全图鉴（{species} 种）
-🧭 {prefix}钓鱼进阶"""
+🌱 {prefix}鱼塘　养鱼或投喂
+🏆 {prefix}图鉴榜　/　{prefix}钓鱼进阶"""
 
 
 def fishing_menu(prefix,cooldown):
@@ -256,10 +262,13 @@ def play(db, event, cmd, prefix, cfg):
         db.execute("""INSERT OR IGNORE INTO fishing_reply_mentions
                       SELECT biz FROM directed_events WHERE biz=?""",(event["event_id"],))
     if cmd in ("资产榜","资产排行榜"):
+        pond_growth.settle(db,event["grp"],event["arrived"])
         return gear.leaderboard(db,event["grp"],event["member"])
     if not cfg["games"] or "钓鱼" in cfg.get("disabled_games",[]):
         raise ValueError("本群已关闭钓鱼")
     key = (event["grp"], event["member"])
+    if cmd == "图鉴榜":
+        return exhibit_board.board(db,key,prefix)
     if pond_raids.matches(cmd):
         return pond_raids.play(db,event,cmd,prefix)
     cooldown = cfg.get("fishing_cooldown_seconds", DEFAULT["fishing_cooldown_seconds"])
@@ -285,7 +294,7 @@ def play(db, event, cmd, prefix, cfg):
                 "换线　买鱼线（3 鱼币）\n护线　升级鱼线（5 级免断线）\n"
                 "钓稀有鱼　升级鱼竿\n韧性与硬度　强化玩法\n巨物超载可能断线或折竿，新手塘也一样。")
     if fish_storage.matches(cmd):
-        return fish_storage.handle(db,key,cmd,prefix)
+        return fish_storage.handle(db,key,cmd,prefix,event["arrived"])
     location=db.execute("SELECT area FROM fishing_waters WHERE grp=? AND member=?",key).fetchone()
     area=location[0] if location else "新手池塘"
     if cmd=="切换水域":
@@ -314,6 +323,7 @@ def play(db, event, cmd, prefix, cfg):
         return heavy_board(db,key)
     page=BOOK_PAGE.fullmatch(cmd)
     if page:
+        pond_growth.settle(db,key[0],event["arrived"],key[1])
         return book(db,key,page,area,prefix)
     name=requested_fish(cmd)
     if name:
@@ -433,6 +443,7 @@ def play(db, event, cmd, prefix, cfg):
     grade=size_grade(fish,grams)
     db.execute("""INSERT INTO fishing_tackle VALUES(?,?,0,?) ON CONFLICT(grp,member)
                   DO UPDATE SET last_attempt=excluded.last_attempt""",(*key,now))
+    pond_growth.mark(db,key,now,"cast")
     casts = angler.advance(db,key,record["count"] if record else 0)
     footer = receipt+"\n"+angler.progress(casts)
     progress_footer=footer
@@ -468,6 +479,7 @@ def play(db, event, cmd, prefix, cfg):
     price = fish_grades.price(fish, grams, quality.final)
     item = db.execute("""INSERT INTO fishing_pond(grp,member,fish,grams,price,grade,grade_upgraded,storage)
                          VALUES(?,?,?,?,?,?,?,'bag')""", (*key,fish,grams,price,quality.final,quality.upgraded)).lastrowid
+    pond_growth.register(db,item,key[1])
     if event_fish:
         db.execute("""INSERT INTO fishing_giant_claims(grp,area,start) VALUES(?,?,?)
                       ON CONFLICT(grp,area) DO UPDATE SET start=excluded.start""",(key[0],area,sighting.start))

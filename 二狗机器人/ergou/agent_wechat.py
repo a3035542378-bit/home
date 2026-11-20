@@ -291,13 +291,16 @@ class Listener:
                         refresh(self.db,self.client,self.group,targets)
                 from .intents import command_alias
                 cmd=command_alias(cmd) if cmd else cmd
-                if cmd in ("资产榜","资产排行榜","重量榜","重量排行榜","总榜","周榜","月榜","抽签 报名"):
+                if cmd in ("图鉴榜","资产榜","资产排行榜","重量榜","重量排行榜","总榜","周榜","月榜","抽签 报名"):
                     from .display_names import refresh
                     from .engine import ranking_rows
                     from .rod import ASSET_RANKS
                     members=[sender]
                     if cmd in ("资产榜","资产排行榜"):
                         members.extend(r["member"] for r in self.db.execute(ASSET_RANKS+" LIMIT 10",(self.group,self.group)))
+                    elif cmd == "图鉴榜":
+                        from .exhibit_board import ranked
+                        members.extend(r["member"] for r in ranked(self.db,self.group).fetchmany(10))
                     elif cmd in ("重量榜","重量排行榜"):
                         members.extend(r[0] for r in self.db.execute("SELECT member FROM fishing_records WHERE grp=? ORDER BY best_grams DESC,member LIMIT 10",(self.group,)))
                     elif cmd in ("总榜","周榜","月榜"):

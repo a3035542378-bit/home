@@ -91,6 +91,10 @@ def giant_min(species):
     return 12000 if species[0] == "鲤鱼" else low + ((high - low) * 97 + 99) // 100
 
 
+def giant_max(species):
+    return 25000 if species[0] == "鲤鱼" else species[2]
+
+
 def size_grade(fish, grams):
     species = SPECIES.get(fish)
     if not species:

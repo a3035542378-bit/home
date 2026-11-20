@@ -6,7 +6,7 @@ from typing import NamedTuple
 
 from . import fishing_bait, rod
 from .db import BJ
-from .fishing_waters import SPECIES, WATERS, giant_min
+from .fishing_waters import SPECIES, WATERS, giant_max, giant_min
 
 LEAD = 600
 DURATION = 180
@@ -72,6 +72,6 @@ def encounter(sighting, area, now, event_id):
         return None
     fish = sighting.fish if active else "鲤鱼"
     species = SPECIES[fish]
-    high = 25000 if fish == "鲤鱼" else species[2]
+    high = giant_max(species)
     low = giant_min(species)
     return species, round(rng.triangular(low, high, low))
