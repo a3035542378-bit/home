@@ -70,6 +70,42 @@ class FishingTests(unittest.TestCase):
             self.assertIn("配对亲鱼",result)
         self.assertEqual(self.db.execute("SELECT state FROM breed_pairs").fetchone()[0],"active")
 
+    def test_first_epic_shared_progress_runaway_and_landing(self):
+        from ergou import first_epic
+        self.assertIn("0/50",self.say("start","鱼讯",100))
+        self.db.execute("INSERT INTO fishing_first_epic VALUES('one','player',49,NULL)")
+        with patch("ergou.giant_fish.encounter",return_value=None), patch("ergou.fishing.fight",return_value=None):
+            with patch("ergou.angler.slip_percent",return_value=100):
+                missed=self.say("escape","抛竿",101)
+                self.assertIn("月斑青鳉",missed)
+                self.assertIn("脱钩",missed)
+                self.assertEqual(self.say("escape","抛竿",102),missed)
+            self.assertIn("50/50",self.say("stats","钓鱼信息",103))
+            self.assertIn("再来",self.say("too-soon","抛竿",104))
+            self.say("move","切换钓场 山涧溪流",105)
+            with patch("ergou.angler.slip_percent",return_value=0):
+                won=self.say("land","抛竿",200)
+            self.assertIn("首条亲钓史诗 · 金纹溪吻虾虎",won)
+            self.assertEqual(self.say("land","抛竿",201),won)
+        self.assertIn("已亲钓史诗",self.say("news","鱼讯",202))
+        self.assertEqual(first_epic.begin(self.db,("one","player"),"近海码头"),0)
+        self.assertEqual(first_epic.state(self.db,("two","player")),(0,None))
+        self.assertEqual(first_epic.state(self.db,("one","other")),(0,None))
+        self.assertEqual(tuple(self.db.execute("SELECT sum(casts),sum(epic_bites),sum(epic_landed) FROM fishing_area_attempts").fetchone()),(2,2,1))
+        self.assertTrue(all(r[0]=="钓鱼品级" for r in self.db.execute("SELECT kind FROM ledger")))
+
+    def test_first_epic_legacy_and_ineligible_water(self):
+        from ergou import first_epic
+        self.say("away","切换钓场 珊瑚浅礁",100)
+        self.assertIn("进度暂停",self.say("news","鱼讯",101))
+        self.say("cast","抛竿",102)
+        self.assertEqual(first_epic.state(self.db,("one","player")),(0,None))
+        self.db.execute("INSERT INTO fishing_species(grp,member,fish,best_grams) VALUES('one','player','苍背巨鲟',80000)")
+        self.assertIn("已亲钓史诗鱼：苍背巨鲟",self.say("old","钓鱼信息",103))
+        self.assertEqual(first_epic.begin(self.db,("one","player"),"新手池塘"),0)
+        self.assertFalse(first_epic.promoted(20,"test"))
+        self.assertTrue(first_epic.promoted(50,"test"))
+
     def test_giant_notice_only_prompts_starter_pond(self):
         for index, area in enumerate(giant_fish.WATERS):
             hour = (index + 1) * 3600
@@ -255,15 +291,15 @@ class FishingTests(unittest.TestCase):
 
     def test_collection_and_weight_board_survive_sale(self):
         self.say("a","钓鱼",100)
-        self.assertIn("1/114",self.say("b","全图鉴",101))
+        self.assertIn("1/117",self.say("b","全图鉴",101))
         self.assertIn("🐾 "+self.db.execute("SELECT fish FROM fishing_species").fetchone()[0]+"（",self.say("c","鱼类图鉴 1",102)+self.say("d","图鉴 2",103)+self.say("e","图鉴 3",104))
-        self.assertIn("0/114",self.say("f","全图鉴",105,group="two"))
+        self.assertIn("0/117",self.say("f","全图鉴",105,group="two"))
         self.assertIn("#",self.say("g","鱼包 重量",106))
         board=self.say("h","重量榜",107)
         self.assertIn("第 1 名",board)
         self.say("i","卖出鱼包",108)
         self.assertEqual(board,self.say("j","重量排行榜",109))
-        self.assertIn("1/114",self.say("k","全图鉴",110))
+        self.assertIn("1/117",self.say("k","全图鉴",110))
 
     @without_slips
     @patch("ergou.fishing.fight", new=lambda *_: None)
@@ -291,7 +327,7 @@ class FishingTests(unittest.TestCase):
         self.db.execute("INSERT INTO chat_models VALUES('one',1,'glm','fixture',?,100)",(b"fixture",))
         self.db.execute("INSERT INTO smart_controls(grp,enabled,generation) VALUES('one',1,1)")
         menu=self.say("menu","全图鉴",100)
-        for kind,count in (("普通",62),("稀有",27),("珍品",16),("史诗",6),("传说",3)):
+        for kind,count in (("普通",62),("稀有",27),("珍品",16),("史诗",9),("传说",3)):
             cmd=kind+"图鉴"
             self.assertIn(f"【{cmd}】{count} 种",menu)
             self.assertIn(f"（{kind}）",self.say(cmd,cmd,101))
@@ -302,15 +338,15 @@ class FishingTests(unittest.TestCase):
         self.db.execute("""INSERT INTO fishing_pond(id,grp,member,fish,grams,price,storage)
                            VALUES(25,'one','player','鲤鱼',13000,57,'bag')""")
         giant=self.say("giant","查看巨物图鉴",103)
-        for snippet in ("🐾 巨物鲤鱼","新手池塘 · 12.000 公斤起","已点亮 0/114","已发现 1/114",
+        for snippet in ("🐾 巨物鲤鱼","新手池塘 · 12.000 公斤起","已点亮 0/117","已发现 1/117",
                         "个人纪录 12.000 公斤 · 巨物","【收入图鉴#25】鲤鱼换展","【巨物图鉴 2】"):
             self.assertIn(snippet,giant)
         self.assertNotIn("1.286 公斤",giant)
-        self.assertIn("2/19",self.say("next","巨物图鉴第２页",104))
+        self.assertIn("2/20",self.say("next","巨物图鉴第２页",104))
         self.assertIn("珍品图鉴 2",self.say("rare","全图鉴 珍品",105))
         self.assertIn("已换入",self.say("store","收入图鉴#25",107))
-        self.assertIn("已点亮 1/114",self.say("done","巨物图鉴",108))
-        self.assertIn("已点亮 0/114",self.say("isolated","巨物图鉴",109,member="other"))
+        self.assertIn("已点亮 1/117",self.say("done","巨物图鉴",108))
+        self.assertIn("已点亮 0/117",self.say("isolated","巨物图鉴",109,member="other"))
         self.assertIsNone(self.db.execute("SELECT 1 FROM chat_requests").fetchone())
 
     def test_trophy_rates_by_bait_and_rod(self):
@@ -369,14 +405,14 @@ class FishingTests(unittest.TestCase):
     def test_exhibits_are_manual_scoped_and_display_only(self):
         self.say("cast","抛竿",100)
         item,name,grams=self.db.execute("SELECT id,fish,grams FROM fishing_pond").fetchone()
-        self.assertIn("已点亮 0/114",self.say("before","全图鉴",101))
+        self.assertIn("已点亮 0/117",self.say("before","全图鉴",101))
         self.assertIn("没有",self.say("foreign",f"放入图鉴#{item}",102,member="other"))
         self.assertIn("没有",self.say("wrong-room",f"放入图鉴#{item}",102,group="two"))
         put=self.say("exhibit",f"放入图鉴#{item}",103)
         self.assertIn("已点亮",put)
         self.assertEqual(put,self.say("exhibit",f"放入图鉴#{item}",104))
-        self.assertIn("已点亮 1/114",self.say("after","全图鉴",105))
-        self.assertIn("已点亮 0/114",self.say("another","全图鉴",105,member="other"))
+        self.assertIn("已点亮 1/117",self.say("after","全图鉴",105))
+        self.assertIn("已点亮 0/117",self.say("another","全图鉴",105,member="other"))
         self.assertIn("空",self.say("bag","查看鱼包",106))
         self.assertIn("没有",self.say("sell",f"卖鱼#{item}",107))
         self.assertIn("没有",self.say("pond",f"放入鱼塘#{item}",108))
@@ -675,8 +711,10 @@ class FishingTests(unittest.TestCase):
             for i,(suffix,factor,mode) in enumerate((("",1,.15),(" 高级鱼饵",2,.50),(" 顶级鱼饵",4,.85))):
                 self.say(f"cast{i}","抛竿"+suffix,100+i*20)
                 chances=rng.choices.call_args.kwargs["weights"]
-                for actual,weight in zip(chances,(90,8*factor,2*factor),strict=True):
-                    self.assertAlmostEqual(actual,100*weight/(90+10*factor))
+                epic = (0.12,0.18,0.24)[i]
+                self.assertAlmostEqual(chances[-1],epic)
+                for actual,weight in zip(chances[:-1],(90,8*factor,2*factor),strict=True):
+                    self.assertAlmostEqual(actual,(100-epic)*weight/(90+10*factor))
                 low,high,actual=rng.triangular.call_args.args
                 self.assertAlmostEqual(actual,low+(high-low)*mode)
         self.say("four","抛竿",160)

@@ -125,7 +125,7 @@ class GiantFishing(unittest.TestCase):
         self.assertNotIn("收入图鉴#1",say("other","图鉴",event.start+22,"other"))
         self.assertIn("已点亮",say("light","收入图鉴#1",event.start+23))
         self.assertIn(f"已点亮 {weight(grams)} · 巨物",say("detail","图鉴 新手池塘",event.start+24))
-        self.assertIn("已点亮 1/114",say("global","全图鉴",event.start+25))
+        self.assertIn("已点亮 1/117",say("global","全图鉴",event.start+25))
         self.assertIn("12～25 公斤",say("how","巨物鲤鱼怎么钓？",event.start+26))
         conn.execute("""INSERT INTO fishing_pond(grp,member,fish,grams,price,storage)
                         VALUES('one','owner',?,?,85,'bag')""",(fish,grams+1))

@@ -1,6 +1,7 @@
 """本群成员的钓鱼记录；随入站消息在同一事务提交。"""
 from . import rod_stats
 import math
+from . import first_epic
 import random
 import re
 from . import exhibit_batch, breed_metrics, breeding, exhibit_board, pond_growth, angler, fish_grades, fish_storage, fishing_bait, giant_fish, pond_raids
@@ -77,8 +78,10 @@ def book(db,key,match,current_area,prefix):
            f"✨ 已点亮 {lit}/{len(catalog)} 种　🐾 已发现 {found}/{len(catalog)} 种", ""]
     if area and not category_title:
         count = len(WATERS[area])
-        paid = db.execute("SELECT 1 FROM ledger WHERE grp=? AND member=? AND kind='区域图鉴' AND event=?",
+        paid = db.execute("SELECT points FROM ledger WHERE grp=? AND member=? AND kind='区域图鉴' AND event=?",
                           (*key,area)).fetchone()
+        if paid:
+            count = paid[0]//2
         lines.append(f"🏅 集齐奖励：{2*count} 积分和 {count} 鱼币"+("（已到账）" if paid else "（每场一次）"))
     bag_used,bag_limit,_=fish_storage.occupancy(db,key,"bag")
     picks={}
@@ -252,6 +255,8 @@ def help_requested(cmd):
 
 
 def matches(cmd):
+    if cmd == "鱼讯":
+        return True
     return breeding.matches(cmd) or pond_raids.matches(cmd) or cmd=="鱼饵" or (cmd.startswith(("抛竿 ","钓鱼 ")) and cmd.endswith("鱼饵")) or help_requested(cmd) or cmd=="钓鱼进阶" or cmd in ("海域","海域列表","水域列表") or cmd.startswith(("切换水域 ","切换海域 ","水域介绍 ","海域介绍 ")) or cmd in COMMANDS or BOOK_PAGE.fullmatch(cmd) or gear.REFORGE.fullmatch(cmd) or fish_storage.matches(cmd) or requested_fish(cmd)
 
 
@@ -325,6 +330,8 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         return reply
     location=db.execute("SELECT area FROM fishing_waters WHERE grp=? AND member=?",key).fetchone()
     area=location[0] if location else "新手池塘"
+    if cmd=="鱼讯":
+        return first_epic.guide(db,key,area,prefix)
     if cmd=="切换水域":
         names=list(WATERS)
         rows=["、".join(names[i:i+3]) for i in range(0,len(names),3)]
@@ -403,7 +410,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         landed=record["count"] if record else 0
         best=f"{record['best_name']}　{weight(record['best_grams'])}" if record else "暂无鱼获"
         growth=angler.profile(db,key,landed,area)
-        return (f"📋 我的钓鱼信息\n{growth}\n\n"
+        return (f"📋 我的钓鱼信息\n{growth}\n{first_epic.status(db,key)}\n【鱼讯】查本场鱼种和首获路线\n\n"
                 f"🪙 当前余额　{coins} 鱼币\n🧰 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）　鱼线 {line_level} 级"
                 f"（{'已断' if broken else '可用'}）\n🧵 线耐久 {0 if broken else durability.percent(wear.line,line_max)}% · 竿耐久 {durability.percent(wear.rod,rod_max)}%\n🎒 鱼包 {bag}/{bag_limit} 条　鱼塘 {pond}/{pond_limit} 条\n"
                 f"🐟 累计钓获　{landed} 条\n🏆 最重纪录　{best}\n{pending_note}\n处理鱼获\n{prefix}查看鱼包")
@@ -532,6 +539,14 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     if special:
         species,grams=special
         fish,_,_,_,_,rarity=species
+    trail = first_epic.begin(db,key,area)
+    if (rarity != "史诗" and (rarity != "传说" or trail == first_epic.LIMIT)
+            and first_epic.promoted(trail,event["event_id"])):
+        fish,low,high,_,_,rarity = rng.choice(first_epic.EPICS[area])
+        grams = round(rng.triangular(low,high,low+(high-low)*bait.weight_mode))
+    first_epic.record(db,key,area,now,cast=True,bite=rarity=="史诗")
+    if trail and rarity == "史诗":
+        progress_footer += f"\n🔮 本竿史诗踪迹 {trail}/{first_epic.LIMIT}"
     if sighting.taken and fish==sighting.fish:
         grams=min(grams,giant_fish.giant_min(giant_fish.SPECIES[fish])-1)
     grade=size_grade(fish,grams)
@@ -600,6 +615,10 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     item = db.execute("""INSERT INTO fishing_pond(grp,member,fish,grams,price,grade,grade_upgraded,storage)
                          VALUES(?,?,?,?,?,?,?,'bag')""", (*key,fish,grams,price,quality.final,quality.upgraded)).lastrowid
     pond_growth.register(db,item,key[1])
+    if rarity == "史诗":
+        first_epic.record(db,key,area,now,landed=True)
+        if trail:
+            db.execute("UPDATE fishing_first_epic SET landed=? WHERE grp=? AND member=?", (fish,*key))
     if event_fish:
         db.execute("""INSERT INTO fishing_giant_claims(grp,area,start) VALUES(?,?,?)
                       ON CONFLICT(grp,area) DO UPDATE SET start=excluded.start""",(key[0],area,sighting.start))
@@ -608,6 +627,8 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     news = fish_grades.announcement(db, key, fish, grams, quality, event_fish)
     if news:
         story = news + "\n" + story
+    if rarity == "史诗" and trail:
+        story += f"\n🏅 首条亲钓史诗 · {fish}！"
     badge = fish_grades.label(quality.final, quality.upgraded)
     reward = f"\n🎁 {fish}品级新高　＋{points} 积分" if points else ""
     used=bag_count+1

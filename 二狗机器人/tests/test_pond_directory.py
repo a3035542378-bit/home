@@ -89,7 +89,7 @@ class PondDirectoryTests(unittest.TestCase):
         self.assertEqual(command,"二狗点亮图鉴 编号82、77")
         result=self.send(command)
         self.assertIn("已点亮 2 种",result)
-        self.assertIn("2/114",result)
+        self.assertIn("2/117",result)
         self.fixture.seq-=1
         self.send(command)
         self.assertEqual(self.db.execute("SELECT count(*) FROM fishing_exhibits").fetchone()[0],2)

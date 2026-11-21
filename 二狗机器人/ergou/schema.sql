@@ -252,6 +252,15 @@ CREATE TABLE IF NOT EXISTS fishing_records (
  count INTEGER NOT NULL, grams INTEGER NOT NULL, best_name TEXT NOT NULL,
  best_grams INTEGER NOT NULL, last_cast REAL NOT NULL, PRIMARY KEY(grp,member)
 );
+CREATE TABLE IF NOT EXISTS fishing_first_epic (
+ grp TEXT NOT NULL REFERENCES groups, member TEXT NOT NULL, casts INTEGER NOT NULL CHECK(casts BETWEEN 0 AND 50),
+ landed TEXT, PRIMARY KEY(grp,member)
+);
+CREATE TABLE IF NOT EXISTS fishing_area_attempts (
+ grp TEXT NOT NULL REFERENCES groups, day TEXT NOT NULL, area TEXT NOT NULL,
+ casts INTEGER NOT NULL DEFAULT 0, epic_bites INTEGER NOT NULL DEFAULT 0, epic_landed INTEGER NOT NULL DEFAULT 0,
+ PRIMARY KEY(grp,day,area)
+);
 
 CREATE TABLE IF NOT EXISTS fishing_wallets (
  grp TEXT NOT NULL REFERENCES groups(id), member TEXT NOT NULL,
