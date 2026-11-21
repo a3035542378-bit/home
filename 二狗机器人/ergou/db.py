@@ -11,7 +11,7 @@ DEFAULT = dict(enabled=True, prefix="二狗", rules="友善交流，尊重隐私
                reward=10, max_games=3, words=[], allowlist=[], moderation="记录", city="",
                bots=[], games=True, polls=True, draws=True, quiet_start=0, quiet_end=0,
                welcome_window=0,daily_rewards=0,aliases={},disabled_games=[],exact_words=[],
-               fishing_cooldown_seconds=20,weekly_push=False,send_rate=5,command_rate=30,rules_url="")
+               fishing_cooldown_seconds=20,weekly_push=False,exhibit_board_push=False,send_rate=5,command_rate=30,rules_url="")
 SCHEMA = Path(__file__).with_name("schema.sql")
 
 

@@ -69,6 +69,18 @@ CREATE TABLE IF NOT EXISTS music_search_cards (
  title TEXT NOT NULL, url TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS sending_queue ON outbox(state,ready,id);
+CREATE TABLE IF NOT EXISTS exhibit_board_notices(
+ task INTEGER PRIMARY KEY REFERENCES outbox(id) ON DELETE CASCADE,
+ digest TEXT NOT NULL, revoked INTEGER NOT NULL DEFAULT 0
+);
+CREATE VIEW IF NOT EXISTS valid_exhibit_board_notices AS
+ SELECT o.id,o.biz,o.grp,o.account,o.binding,n.digest FROM exhibit_board_notices n
+ JOIN outbox o ON o.id=n.task JOIN groups g ON g.id=o.grp AND g.account=o.account AND g.binding=o.binding
+ LEFT JOIN group_profile p ON p.grp=g.id
+ WHERE n.revoked=0 AND NOT g.paused AND NOT coalesce(p.detached,0)
+ AND json_extract(g.config,'$.enabled') AND json_extract(g.config,'$.games')
+ AND json_extract(g.config,'$.exhibit_board_push')
+ AND NOT EXISTS(SELECT 1 FROM json_each(g.config,'$.disabled_games') WHERE value='钓鱼');
 CREATE TABLE IF NOT EXISTS attempts (
  task INTEGER NOT NULL REFERENCES outbox, n INTEGER NOT NULL, started REAL NOT NULL, ended REAL, result TEXT,
  PRIMARY KEY(task,n)

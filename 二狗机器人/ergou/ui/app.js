@@ -67,6 +67,7 @@ async function render(){
   clearSpeech();clearVoiceTest();
   for(const b of $("nav").children)b.classList.toggle("active",b.textContent===page);
   $("overview").hidden=page!=="运行概览";$("settings").hidden=page!=="群配置";$("modelPanel").hidden=page!=="大模型配置";
+  for(const field of $("config").elements)field.disabled=true;
   $("diagnosticBody").textContent=page==="运行概览"&&group?"正在读取回复诊断…":"";
   $("replyDiagnostics").hidden=!group;$("refreshDiagnostics").disabled=true;
   $("records").hidden=["运行概览","群配置","大模型配置","语音唤醒","自定义回复","成员通知","群组运营","我的群组","后台账号","微信扫码登录"].includes(page);
@@ -271,14 +272,14 @@ async function saveModel(action){
 }
 $("modelForm").onsubmit=e=>{e.preventDefault();saveModel("verify");};
 $("disableModel").onclick=()=>{if(confirm("停用本群模型并移除已保存的密钥？"))saveModel("disable");};
-for(const [k,v] of Object.entries({enabled:"启用本群",games:"游戏",polls:"投票",draws:"抽签"})){
+for(const [k,v] of Object.entries({enabled:"启用本群",games:"游戏",polls:"投票",draws:"抽签",exhibit_board_push:"结算后发送图鉴榜（前十名及到账积分）"})){
   const label=el("label",""),box=el("input","");label.className="check";box.type="checkbox";box.name=k;label.append(box,v);$("checks").append(label);
 }
 $("login").onsubmit=async e=>{e.preventDefault();try{await api("api/login",Object.fromEntries(new FormData(e.target)));e.target.reset();$("loginError").textContent="";await boot();}catch(err){$("loginError").textContent=err.message;}};
 $("logout").onclick=async()=>{try{await api("api/logout",{});loginView();}catch(e){error(e);}};
 $("group").onchange=()=>render().catch(error);$("refresh").onclick=()=>render().catch(error);
 $("config").oninput=preview;
-$("config").onsubmit=async e=>{e.preventDefault();const patch={};for(const input of e.target.elements){
+$("config").onsubmit=async e=>{e.preventDefault();if(e.target.elements.exhibit_board_push.disabled)return;const patch={};for(const input of e.target.elements){
   if(input.name)patch[input.name]=input.multiple?Array.from(input.selectedOptions,o=>o.value):input.type==="checkbox"?input.checked:input.type==="number"?input.valueAsNumber:input.name==="words"?input.value.split("\n").filter(Boolean):input.value;
 }try{const r=await api("api/config",{group:$("group").value,version:status.version,patch});await render();$("message").textContent="本群配置 v"+r.version+" 已保存，新局使用新规则。";}catch(err){error(err);}};
 $("scheduleForm").onsubmit=async e=>{e.preventDefault();try{

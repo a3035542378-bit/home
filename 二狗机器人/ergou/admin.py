@@ -112,6 +112,9 @@ def configure(db,u,group,version,patch):
         db.execute("INSERT OR IGNORE INTO config_history VALUES(?,?,?,?)",(group,version,time.time(),row["config"]))
         db.execute("INSERT INTO config_history VALUES(?,?,?,?)",(group,version+1,time.time(),dump(config)))
         db.execute("UPDATE groups SET config=?,version=version+1 WHERE id=?",(dump(config),group))
+        if patch.get("exhibit_board_push") is False:
+            from .exhibit_announcements import revoke
+            revoke(db,group)
         audit(db,u["name"],group,"保存群配置",f"v{version} → v{version+1}，字段 "+",".join(sorted(patch)))
         return version+1
 

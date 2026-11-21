@@ -307,6 +307,9 @@ class Listener:
                     elif cmd in ("总榜","周榜","月榜"):
                         members.extend(r["member"] for r in ranking_rows(self.db,self.group,cmd,time.time()))
                     refresh(self.db,self.client,self.group,members)
+                elif cmd and cmd.startswith(("放入图鉴","点亮图鉴","批量点亮图鉴","收入图鉴")):
+                    from .display_names import refresh
+                    refresh(self.db,self.client,self.group,[sender])
                 receipt = bridge.endpoint(self.db, "event", self.secret, {"group_id": self.group, "sender_id": sender,
                                           "source_message_id": source, "payload": payload})
                 sequence = receipt["ingest_sequence"]
@@ -486,7 +489,8 @@ def recovery_plan(db,slot,group=None):
     """Describe workers that can resume without granting a new permission."""
     row=db.execute("""SELECT l.grp, (p.grp IS NOT NULL OR EXISTS(SELECT 1 FROM active_native_member_notices c
         WHERE c.grp=g.id AND c.account=g.account AND c.binding=g.binding) OR EXISTS(SELECT 1 FROM active_native_voice v
-        WHERE v.grp=g.id AND v.account=g.account AND v.binding=g.binding)) AS replies FROM agent_wechat_links l
+        WHERE v.grp=g.id AND v.account=g.account AND v.binding=g.binding)
+        OR coalesce(json_extract(g.config,'$.exhibit_board_push'),0)=1) AS replies FROM agent_wechat_links l
         JOIN groups g ON g.id=l.grp AND g.account=l.account
         JOIN account a ON a.id=l.account
         JOIN node_grants n ON n.grp=l.grp AND n.account=l.account
@@ -518,6 +522,8 @@ def replies(db,client,node_secret,token,name=None,*,group=None,once=False):
                             WHERE directed_groups.account!=excluded.account OR directed_groups.binding!=excluded.binding""",
                            (listener.group,listener.account,group["binding"],time.time()))
         elif not recovery_plan(db,client.slot,listener.group)["replies"]:
+            if once:
+                return False
             raise ValueError("当前群绑定没有可恢复的回复授权")
         while listener.linked() and recovery_plan(db,client.slot,listener.group)["replies"]:
             task=jobs.claim(db,listener.account,directed_group=listener.group)
@@ -534,6 +540,9 @@ def replies(db,client,node_secret,token,name=None,*,group=None,once=False):
                     elif task["biz"].startswith("member/"):
                         from .member_notices import matches as member_matches
                         unconfirmed=not member_matches(db,task)
+                    elif task["biz"].startswith("exhibit-board/"):
+                        from .exhibit_announcements import matches as board_matches
+                        unconfirmed=not board_matches(db,task)
                     elif not task["biz"].startswith("schedule/"):
                         unconfirmed=not db.execute("""SELECT 1 FROM directed_events d JOIN inbox i ON i.event_id=d.biz
                             JOIN directed_groups p ON p.grp=i.grp AND p.account=i.account AND p.binding=i.binding

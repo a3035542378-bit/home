@@ -167,6 +167,18 @@ async function run(mount) {
     await page.locator("#login button").click();
     await say("二狗积分", false, "本群积分");
     await verifyReplyDiagnostics(page,mount);
+    await nav("群配置");
+    const boardPush=page.getByRole("checkbox",{name:"结算后发送图鉴榜（前十名及到账积分）"});
+    await boardPush.check();
+    await page.getByRole("button",{name:"保存配置",exact:true}).click();
+    await waitText("#message","已保存");
+    for(const [room,enabled] of [["ui-room-z",false],["ui-room",true]]){
+      await page.locator("#group").selectOption(room);
+      await page.waitForFunction(value=>{
+        const field=document.querySelector("input[name=exhibit_board_push]");
+        return !field.disabled && field.checked===value;
+      },enabled);
+    }
     await nav("成员通知");
     await page.getByRole("button",{name:"关闭新人入群欢迎",exact:true}).click();
     await page.getByRole("button",{name:"开启退群提醒",exact:true}).click();

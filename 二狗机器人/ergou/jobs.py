@@ -38,11 +38,17 @@ def claim(db, account, now=None, *, directed_group=None):
                  AND d.source_time>=p.since AND d.source_time>?) OR EXISTS (
                  SELECT 1 FROM valid_live_notices v WHERE v.biz=o.biz AND v.grp=o.grp AND v.account=o.account
                  AND v.binding=o.binding AND v.body=o.body AND v.due<=?)
-                 OR EXISTS(SELECT 1 FROM valid_member_deliveries m WHERE m.id=o.id))))))
+                 OR EXISTS(SELECT 1 FROM valid_member_deliveries m WHERE m.id=o.id)
+                 OR EXISTS(SELECT 1 FROM valid_exhibit_board_notices b WHERE b.id=o.id))))))
           AND g.paused=0 ORDER BY o.ready,o.id LIMIT 1""",
           (voice_version,account,now,directed_group,directed_group,now-30,now-120,now-120,now)).fetchone()
         if not row:
             return False
+        if row["biz"].startswith("exhibit-board/"):
+            from .exhibit_announcements import matches
+            if not matches(db,row):
+                db.execute("UPDATE outbox SET state='CANCELLED',body='',detail='图鉴榜公告授权或内容已变化' WHERE id=?",(row["id"],))
+                return True
         member=db.execute("SELECT 1 FROM membership WHERE account=? AND grp=?",(account,row["grp"])).fetchone()
         if not member or row["active"]!=row["account"] or row["current"]!=row["binding"] or not json.loads(row["config"])["enabled"]:
             db.execute("UPDATE outbox SET state='CANCELLED',detail='绑定或权限已变更' WHERE id=?",(row["id"],))

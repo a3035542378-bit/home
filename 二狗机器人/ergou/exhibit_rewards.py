@@ -48,6 +48,8 @@ def settle(db, group, now, enabled):
         for slot, (row, points) in enumerate(zip(ranked(db,group), PRIZES), 1):
             credit(db, (group,row["member"]), "图鉴日榜", period, points,
                    f"{period} 图鉴榜第 {slot} 席 · {row['lit']} 种", now)
+        from .exhibit_announcements import enqueue
+        enqueue(db,group,period,now)
     db.execute("UPDATE exhibit_reward_clock SET day=? WHERE grp=?", (day,group))
 
 
