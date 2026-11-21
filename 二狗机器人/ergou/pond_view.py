@@ -75,9 +75,9 @@ def home(db,key,page,by_weight,prefix,changes,now):
         target=page+1 if page<pages else page-1
         direction="下一页" if page<pages else "上一页"
         lines.extend(["",f"【{base.removeprefix(prefix)} {target}】{direction}（{page}/{pages}）"])
-    lines.extend(["","【鱼塘操作】看单鱼、出售或扩容"])
     if used > 1:
-        lines.append("【批量投喂】喂多条鱼　【批量收回鱼包】移出塘鱼　【批量卖出塘鱼】按编号出售")
+        lines.extend(["【批量投喂】喂多条鱼", "【批量收回鱼包】移出塘鱼", "【批量卖出塘鱼】按编号出售"])
+    lines.extend(["","【鱼塘操作】看单鱼、出售或扩容"])
     return "\n".join(lines)
 
 
@@ -143,7 +143,7 @@ def actions(db,key,prefix):
             lines.append(f"扩到 {capacity} 条需 {cost} 鱼币，还差 {cost-(coins[0] if coins else 30)} 鱼币。")
     if rows:
         total=sum(r["price"] for r in rows)
-        lines.append("【批量卖出塘鱼】选鱼出售　【批量收回鱼包】按鱼号移回　【批量投喂】查看饲料费")
+        lines.extend(["【批量卖出塘鱼】选鱼出售", "【批量收回鱼包】按鱼号移回", "【批量投喂】查看饲料费"])
         warning=fish_storage.breeding_sale_note(db,key)
         lines.extend(["","⚠ 整塘出售",f"【一键卖鱼】清空 {count} 条，共 {total} 鱼币"])
         if warning:

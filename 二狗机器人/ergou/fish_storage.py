@@ -65,7 +65,7 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
             lines.append(f"🐣 编号 {row['id']} · "+breeding.source(child,key[1]))
     lines.extend(["","🎒 处理鱼获","【放入图鉴】查看可展出的鱼",f"【卖鱼#{item}】立即出售，到账 {sample['price']} 鱼币"])
     if count>1:
-        lines.append("【批量放入鱼塘】选鱼入塘　【批量卖出鱼包】选鱼出售")
+        lines.extend(["【批量放入鱼塘】选鱼入塘", "【批量卖出鱼包】选鱼出售"])
         total=db.execute("SELECT sum(price) FROM fishing_pond WHERE grp=? AND member=? AND storage='bag'",key).fetchone()[0]
         lines.append(f"【卖出鱼包】清空 {count} 条，共 {total} 鱼币")
     lines.extend(["", "💬 "+purpose,step])
