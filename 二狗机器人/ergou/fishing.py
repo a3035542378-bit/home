@@ -75,6 +75,11 @@ def book(db,key,match,current_area,prefix):
     title=(area or "")+category_title or "鱼类"
     lines=[f"📖 {title}图鉴 {page}/{pages}",
            f"✨ 已点亮 {lit}/{len(catalog)} 种　🐾 已发现 {found}/{len(catalog)} 种", ""]
+    if area and not category_title:
+        count = len(WATERS[area])
+        paid = db.execute("SELECT 1 FROM ledger WHERE grp=? AND member=? AND kind='区域图鉴' AND event=?",
+                          (*key,area)).fetchone()
+        lines.append(f"🏅 集齐奖励：{2*count} 积分和 {count} 鱼币"+("（已到账）" if paid else "（每场一次）"))
     bag_used,bag_limit,_=fish_storage.occupancy(db,key,"bag")
     picks={}
     for row in db.execute("""SELECT fish,id,grams,storage FROM fishing_pond

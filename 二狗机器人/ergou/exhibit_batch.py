@@ -103,9 +103,10 @@ def render(db,key,prefix,now,ids=None):
     report=[]
     first=[]
     swaps=[]
+    rewards=[]
     for row in batch:
         if not preview:
-            moved,reason=exhibit(db,key,row["id"],prefix,now)
+            moved,reason=exhibit(db,key,row["id"],prefix,now,rewards)
             if not moved:
                 skipped[row["id"]]=reason
                 continue
@@ -139,5 +140,5 @@ def render(db,key,prefix,now,ids=None):
         numbers="、".join(str(row["id"]) for row in report)
         lines.extend(["",f"👇 发送这句，{action}这 {len(batch)} 种鱼",f"{prefix}点亮图鉴 编号{numbers}"])
     else:
-        lines.extend(["","查看收藏",prefix+"图鉴"])
+        lines.extend([*rewards,"","查看收藏",prefix+"图鉴"])
     return "\n".join(lines)

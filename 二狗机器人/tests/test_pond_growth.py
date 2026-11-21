@@ -236,6 +236,62 @@ class PondGrowthTests(unittest.TestCase):
         self.say(f"收入图鉴#{self.put(key=('one','third'))}",102,("one","third"))
         self.assertIn("你排第 2",self.say("图鉴榜",104,("one","third")))
 
+    def test_daily_exhibit_rewards_midnight_ties_and_restart(self):
+        from datetime import datetime
+        from ergou import exhibit_rewards, jobs
+        start = datetime(2026,11,21,23,59,tzinfo=db.BJ).timestamp()
+        for i in range(12):
+            key=("one",f"m{i:02}")
+            self.con.execute("INSERT INTO fishing_wallets(grp,member) VALUES(?,?)",key)
+            self.con.execute("""INSERT INTO fishing_exhibits(grp,member,fish,item_id,grams,price)
+                VALUES(?,?,'白条',?,100,3)""",(*key,i+1000))
+        jobs.cleanup(self.con,start)
+        self.assertEqual(self.con.execute("SELECT count(*) FROM ledger").fetchone()[0],0)
+        # 首个跨日点亮事件在维护定时器之前抵达，也只能按点亮前的榜单发奖。
+        key=("one","m11")
+        self.say(f"收入图鉴#{self.put(name='鲤鱼',key=key)}",start+61,key)
+        with db.closing_db(self.path) as reopened:
+            jobs.cleanup(reopened,start+90)
+        prizes=self.con.execute("SELECT member,points,event FROM ledger WHERE kind='图鉴日榜' ORDER BY id").fetchall()
+        self.assertEqual([tuple(row) for row in prizes],[(f"m{i:02}",p,"2026-11-21") for i,p in enumerate(exhibit_rewards.PRIZES)])
+        self.assertEqual(sum(p[1] for p in prizes),200)
+        self.assertIn("最近到账",self.say("图鉴榜",start+100,("one","m00")))
+        self.assertIn("最近到账",self.say("图鉴排行榜",start+101,("one","m00")))
+        jobs.cleanup(self.con,start+4*86400)
+        self.assertEqual(self.con.execute("SELECT count(DISTINCT event) FROM ledger WHERE kind='图鉴日榜'").fetchone()[0],2)
+        self.con.execute("UPDATE groups SET paused=1 WHERE id='one'")
+        jobs.cleanup(self.con,start+5*86400)
+        self.assertEqual(self.con.execute("SELECT count(*) FROM ledger WHERE kind='图鉴日榜'").fetchone()[0],20)
+
+    def test_region_reward_single_batch_and_legacy(self):
+        from ergou import jobs
+        from ergou.fishing_waters import WATERS
+        area="珊瑚浅礁"
+        school=WATERS[area]
+        for i,key in enumerate((self.key,("one","other"),("two","member"))):
+            ids=[self.put(name=row[0],key=key) for row in school]
+            if i==2:
+                for item,row in zip(ids,school):
+                    self.con.execute("""INSERT INTO fishing_exhibits(grp,member,fish,item_id,grams,price)
+                        VALUES(?,?,?,?,1200,12)""",(*key,row[0],item+1000))
+                continue
+            numbers="、".join(map(str,ids))
+            if i==0:
+                for j,item in enumerate(ids):
+                    reply=self.say(f"收入图鉴#{item}",100+5*j,key)
+                    self.assertEqual("集齐珊瑚浅礁" in reply,j==len(ids)-1)
+            else:
+                self.assertNotIn("积分，+",self.say("放入图鉴",200,key))
+                reply=self.say("批量点亮图鉴 "+numbers,201,key)
+                self.assertIn("+12 积分，+6 鱼币",reply)
+            swap=self.put(grams=1800,name=school[0][0],key=key)
+            self.assertNotIn("集齐珊瑚浅礁",self.say(f"收入图鉴#{swap}",310,key))
+        jobs.cleanup(self.con,1700000400)
+        jobs.cleanup(self.con,1700000460)
+        self.assertEqual([r[0] for r in self.con.execute("SELECT points FROM ledger WHERE kind='区域图鉴'")],[12]*3)
+        self.assertEqual([r[0] for r in self.con.execute("SELECT coins FROM fishing_wallets")],[1006]*3)
+        self.assertIn("已到账",self.say("图鉴 珊瑚浅礁",470))
+
     def test_week_counts_active_actions_only(self):
         for stamp,action in [(0,"cast"),(5,"store"),(86400,"tend"),(100,"light")]:
             growth.mark(self.con,self.key,stamp,action)

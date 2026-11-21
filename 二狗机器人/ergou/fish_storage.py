@@ -3,7 +3,7 @@ import math
 import re
 import time
 
-from . import breed_metrics, breeding, exhibit_batch, fish_grades, pond_growth, pond_view, storage_batch
+from . import breed_metrics, breeding, exhibit_batch, exhibit_rewards, fish_grades, pond_growth, pond_view, storage_batch
 from .fish_receipts import grid, mass
 from .fishing_waters import HABITAT, size_grade, weight
 
@@ -154,7 +154,7 @@ def sell(db, key, column, value, prefix, now):
     return (f"🪙 已卖出 {count} 条鱼\n到账 {total} 枚鱼币，当前余额　{coins} 鱼币。")
 
 
-def exhibit(db, key, item, prefix, now):
+def exhibit(db, key, item, prefix, now, batch_rewards=None):
     catch = db.execute("""SELECT fish,grams,price,storage,grade,grade_upgraded FROM fishing_pond
                           WHERE grp=? AND member=? AND id=?""", (*key, item)).fetchone()
     if not catch:
@@ -172,6 +172,8 @@ def exhibit(db, key, item, prefix, now):
         if used >= capacity:
             return False, f"旧展品需要放回鱼包。请先发「{prefix}查看鱼包」腾出一格，再换入这条鱼。"
 
+    if not old:
+        exhibit_rewards.settle(db,key[0],now,True)
     pond_growth.register(db,item)
     pond_growth.leave(db,item,now)
     if not old:
@@ -184,7 +186,11 @@ def exhibit(db, key, item, prefix, now):
                   grade=excluded.grade,grade_upgraded=excluded.grade_upgraded""",
                (*slot, item, catch["grams"], catch["price"], catch["grade"], catch["grade_upgraded"]))
     if not old:
-        return True, f"✨ 已点亮　{fish}\n展品 #{item}　{weight(catch['grams'])}\n\n展出期间受保护。\n可用更重的同种鱼替换。"
+        rewards = exhibit_rewards.regions(db,key,(HABITAT[fish],),now)
+        if batch_rewards is not None:
+            batch_rewards.extend(rewards)
+        receipt = f"✨ 已点亮　{fish}\n展品 #{item}　{weight(catch['grams'])}\n\n展出期间受保护。\n可用更重的同种鱼替换。"
+        return True, "\n".join([receipt,*rewards])
     db.execute("""INSERT INTO fishing_pond(grp,member,fish,id,grams,price,grade,grade_upgraded,storage)
                   VALUES(?,?,?,?,?,?,?,?,'bag')""", (*slot, old["item_id"], old["grams"], old["price"], old["grade"], old["grade_upgraded"]))
     return True, (f"✨ 已换入 #{item} {fish} · {weight(catch['grams'])}。\n"

@@ -49,6 +49,11 @@ CREATE TABLE IF NOT EXISTS ledger (
  event TEXT NOT NULL, at REAL NOT NULL, reason TEXT NOT NULL, UNIQUE(game,round,member,kind)
 );
 CREATE INDEX IF NOT EXISTS ledger_member_balance ON ledger(grp,member,points);
+CREATE UNIQUE INDEX IF NOT EXISTS ledger_exhibit_prize ON ledger(grp,member,kind,event)
+ WHERE kind IN ('图鉴日榜','区域图鉴');
+CREATE TABLE IF NOT EXISTS exhibit_reward_clock (
+ grp TEXT PRIMARY KEY REFERENCES groups, day TEXT NOT NULL, checked INTEGER NOT NULL DEFAULT 0
+);
 -- 只索引签到流水；先取整秒，避免午夜前的小数秒被日期函数进位。
 CREATE UNIQUE INDEX IF NOT EXISTS ledger_checkin_day
  ON ledger(grp,member,date(CAST(at AS INTEGER),'unixepoch','+8 hours')) WHERE kind='签到';

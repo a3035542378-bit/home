@@ -178,8 +178,10 @@ def tick(db,now=None):
 def cleanup(db,now):
     from .retention import CACHE
     from .monitor import sample_alerts
+    from . import exhibit_rewards
     CACHE.purge(now)
     with transaction(db):
+        exhibit_rewards.maintenance(db,now)
         sample_alerts(db,now)
         db.execute("DELETE FROM tokens WHERE expires<=?",(now,))
         db.execute("DELETE FROM voice_test_tickets WHERE expires<=?",(now,))
