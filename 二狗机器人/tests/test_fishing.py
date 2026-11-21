@@ -23,6 +23,53 @@ class FishingTests(unittest.TestCase):
         engine.step(self.db)
         return self.db.execute("SELECT body FROM outbox JOIN inbox ON biz=event_id WHERE seq=?",(seq,)).fetchone()[0]
 
+    def test_bulk_storage_moves_sales_and_replay(self):
+        for who in ("player","other"):
+            self.db.execute("INSERT INTO fishing_wallets(grp,member) VALUES('one',?)",(who,))
+        for i in range(1,6):
+            self.db.execute("""INSERT INTO fishing_pond(id,grp,member,fish,grams,price,grade,storage)
+                VALUES(?,'one',?,'白条',35,7,1,'bag')""",(i,"other" if i==5 else "player"))
+        self.db.execute("INSERT INTO fishing_storage_levels VALUES('one','player','pond',2)")
+        preview=self.say("preview","批量放入鱼塘",100)
+        self.assertIn("可处理 4 条",preview)
+        cmd="批量放入鱼塘 ＃１、2、2、3、5"
+        receipt=self.say("move",cmd,101)
+        self.assertIn("已处理 3 条",receipt)
+        self.assertIn("#5 不在你的鱼包",receipt)
+        self.assertEqual(self.say("move",cmd,102),receipt)
+        self.assertIn("本次未执行",self.say("invalid","批量卖出塘鱼 1、oops",103))
+        self.assertIn("已处理 1 条",self.say("back","批量收回鱼包 2",104))
+        self.assertIn("已处理 1 条",self.say("bag","批量卖出鱼包 1、2",105))
+        self.db.execute("UPDATE pond_growth SET flagship=1 WHERE item=1")
+        self.assertIn("已处理 1 条",self.say("pond","批量卖出塘鱼 1、3、3",106))
+        self.assertEqual(self.db.execute("SELECT coins FROM fishing_wallets WHERE member='player'").fetchone()[0],44)
+        self.assertEqual([r[0] for r in self.db.execute("SELECT id FROM fishing_pond ORDER BY id")],[1,4,5])
+        self.assertIn("可处理 1 条",self.say("meal","批量投喂",107))
+        self.assertIn("已处理 1 条",self.say("fed","批量投喂 #1、#5",108))
+        balance=self.db.execute("SELECT coins FROM fishing_wallets WHERE member='player'").fetchone()[0]
+        self.assertLess(balance,44)
+        self.assertIn("已处理 0 条",self.say("already","批量投喂 #1",109))
+        self.assertEqual(self.db.execute("SELECT coins FROM fishing_wallets WHERE member='player'").fetchone()[0],balance)
+
+    def test_bulk_storage_capacity_limit_and_parents(self):
+        self.db.execute("INSERT INTO fishing_wallets(grp,member) VALUES('one','player')")
+        for i in range(1,7):
+            self.db.execute("""INSERT INTO fishing_pond(id,grp,member,fish,grams,price,grade,storage)
+                VALUES(?,'one','player','白条',35,7,1,'bag')""",(i,))
+        self.assertIn("未执行",self.say("limit","批量卖出鱼包 "+ "、".join(map(str,range(1,12))),100))
+        result=self.say("store","批量放入鱼塘 2、1",101)
+        self.assertIn("已处理 1 条",result)
+        self.assertIn("#1 鱼塘已满",result)
+        self.assertIn("#2 鱼包已满",self.say("full","批量收回鱼包 2",102))
+        self.db.execute("UPDATE fishing_pond SET storage='pond' WHERE id=1")
+        self.db.execute("""INSERT INTO breed_pairs(grp,member,p1,p2,fish,started,due,wins,birth,fee,state)
+            VALUES('one','player',1,2,'白条',100,10000,0,0,0,'active')""")
+        for i,action in enumerate(("批量收回鱼包","批量卖出塘鱼")):
+            result=self.say("protected"+str(i),action+" 1、2",103+i)
+            self.assertIn("已处理 0 条",result)
+            self.assertIn("配对亲鱼",result)
+        self.assertEqual(self.db.execute("SELECT state FROM breed_pairs").fetchone()[0],"active")
+
     def test_giant_notice_only_prompts_starter_pond(self):
         for index, area in enumerate(giant_fish.WATERS):
             hour = (index + 1) * 3600

@@ -2,7 +2,7 @@
 from contextlib import contextmanager
 from threading import Lock
 
-from . import breeding, exhibit_batch, fish_storage, fishing_bait, intents, pond_growth, pond_raids, rod
+from . import breeding, exhibit_batch, fish_storage, fishing_bait, intents, pond_growth, pond_raids, rod, storage_batch
 
 
 BUSY_REPLY = "操作太快啦，稍等一下哦"
@@ -14,6 +14,9 @@ _registry_lock = Lock()
 
 
 def participants(cmd, member, target, cfg):
+    batch = storage_batch.match(cmd)
+    if batch and batch[2]:
+        return (member,)
     if exhibit_batch.parse(cmd) is not None:
         return (member,)
     cmd = intents.interpret(intents.command_alias(cmd), cfg)

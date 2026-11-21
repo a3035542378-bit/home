@@ -325,7 +325,9 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     if cmd in ("签到","打卡"):
         from .group_tools import check_in
         return check_in(db,e,cfg,prefix)
-    from . import exhibit_batch
+    from . import exhibit_batch, storage_batch
+    if storage_batch.match(cmd):
+        return fishing.play(db,e,cmd,prefix,cfg)
     batch=exhibit_batch.parse(cmd)
     if batch is not None:
         return fishing.play(db,e,cmd,prefix,cfg,batch_ids=batch)

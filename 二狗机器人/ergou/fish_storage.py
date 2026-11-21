@@ -3,7 +3,7 @@ import math
 import re
 import time
 
-from . import breed_metrics, breeding, exhibit_batch, fish_grades, pond_growth, pond_view
+from . import breed_metrics, breeding, exhibit_batch, fish_grades, pond_growth, pond_view, storage_batch
 from .fish_receipts import grid, mass
 from .fishing_waters import HABITAT, size_grade, weight
 
@@ -19,7 +19,7 @@ COMMANDS = CHOOSERS | {"鱼塘操作", "升级鱼包", "升级鱼塘", "卖出�
 
 
 def matches(cmd):
-    return pond_view.DETAIL.fullmatch(cmd) or pond_growth.ACTION.fullmatch(cmd) or cmd in COMMANDS or PAGE.fullmatch(cmd) or ITEM.fullmatch(cmd)
+    return storage_batch.match(cmd) or pond_view.DETAIL.fullmatch(cmd) or pond_growth.ACTION.fullmatch(cmd) or cmd in COMMANDS or PAGE.fullmatch(cmd) or ITEM.fullmatch(cmd)
 
 
 def pond_level(db, key):
@@ -65,6 +65,7 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
             lines.append(f"🐣 编号 {row['id']} · "+breeding.source(child,key[1]))
     lines.extend(["","🎒 处理鱼获","【放入图鉴】查看可展出的鱼",f"【卖鱼#{item}】立即出售，到账 {sample['price']} 鱼币"])
     if count>1:
+        lines.append("【批量放入鱼塘】选鱼入塘　【批量卖出鱼包】选鱼出售")
         total=db.execute("SELECT sum(price) FROM fishing_pond WHERE grp=? AND member=? AND storage='bag'",key).fetchone()[0]
         lines.append(f"【卖出鱼包】清空 {count} 条，共 {total} 鱼币")
     lines.extend(["", "💬 "+purpose,step])
@@ -195,6 +196,8 @@ def handle(db, key, cmd, prefix, now=None):
     if cmd=="升级鱼包":
         return f"🎒 鱼包固定放 {BAG_CAPACITY} 条。想多留鱼，可以升级鱼塘。\n{prefix}鱼塘操作"
     changes = pond_growth.settle(db,key[0],now,key[1])
+    if batch := storage_batch.match(cmd):
+        return storage_batch.handle(db, key, batch, prefix, now)
     action = pond_growth.ACTION.fullmatch(cmd)
     if action:
         return pond_growth.act(db,key,action[1],int(action[2]),now,prefix)

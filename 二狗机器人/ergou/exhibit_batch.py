@@ -21,6 +21,10 @@ def parse(text):
         return None  # 已有的显式单鱼指令沿用原路由。
     if not re.match(r"[#0-9]|编号|序号",value):
         return None
+    return parse_numbers(value)
+
+
+def parse_numbers(value):
     numbers={}
     pos=0
     while True:
