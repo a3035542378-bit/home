@@ -268,6 +268,10 @@ CREATE TABLE IF NOT EXISTS fishing_first_epic (
  grp TEXT NOT NULL REFERENCES groups, member TEXT NOT NULL, casts INTEGER NOT NULL CHECK(casts BETWEEN 0 AND 50),
  landed TEXT, PRIMARY KEY(grp,member)
 );
+CREATE TABLE IF NOT EXISTS fishing_hotspot_catch (
+ grp TEXT NOT NULL REFERENCES groups, member TEXT NOT NULL, hour INTEGER NOT NULL,
+ PRIMARY KEY(grp,member)
+);
 CREATE TABLE IF NOT EXISTS fishing_area_attempts (
  grp TEXT NOT NULL REFERENCES groups, day TEXT NOT NULL, area TEXT NOT NULL,
  casts INTEGER NOT NULL DEFAULT 0, epic_bites INTEGER NOT NULL DEFAULT 0, epic_landed INTEGER NOT NULL DEFAULT 0,

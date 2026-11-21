@@ -1,7 +1,7 @@
 """本群成员的钓鱼记录；随入站消息在同一事务提交。"""
 from . import rod_stats
 import math
-from . import first_epic
+from . import first_epic, hotspot
 import random
 import re
 from . import exhibit_batch, breed_metrics, breeding, exhibit_board, pond_growth, angler, fish_grades, fish_storage, fishing_bait, giant_fish, pond_raids
@@ -255,7 +255,7 @@ def help_requested(cmd):
 
 
 def matches(cmd):
-    if cmd == "鱼讯":
+    if cmd in ("鱼讯","热点鱼讯","传说热点","热点钓场"):
         return True
     return breeding.matches(cmd) or pond_raids.matches(cmd) or cmd=="鱼饵" or (cmd.startswith(("抛竿 ","钓鱼 ")) and cmd.endswith("鱼饵")) or help_requested(cmd) or cmd=="钓鱼进阶" or cmd in ("海域","海域列表","水域列表") or cmd.startswith(("切换水域 ","切换海域 ","水域介绍 ","海域介绍 ")) or cmd in COMMANDS or BOOK_PAGE.fullmatch(cmd) or gear.REFORGE.fullmatch(cmd) or fish_storage.matches(cmd) or requested_fish(cmd)
 
@@ -331,7 +331,9 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     location=db.execute("SELECT area FROM fishing_waters WHERE grp=? AND member=?",key).fetchone()
     area=location[0] if location else "新手池塘"
     if cmd=="鱼讯":
-        return first_epic.guide(db,key,area,prefix)
+        return first_epic.guide(db,key,area,prefix)+"\n\n"+hotspot.guide(db,key,area,event["arrived"],prefix)
+    if cmd in ("热点鱼讯","传说热点","热点钓场"):
+        return hotspot.guide(db,key,area,event["arrived"],prefix)
     if cmd=="切换水域":
         names=list(WATERS)
         rows=["、".join(names[i:i+3]) for i in range(0,len(names),3)]
@@ -544,6 +546,13 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
             and first_epic.promoted(trail,event["event_id"])):
         fish,low,high,_,_,rarity = rng.choice(first_epic.EPICS[area])
         grams = round(rng.triangular(low,high,low+(high-low)*bait.weight_mode))
+    bonus = None
+    if not special and rarity not in TROPHY_PERCENT:
+        bonus = hotspot.encounter(db,key,area,now,event["event_id"],bait)
+        if bonus:
+            _,species,grams = bonus
+            fish,_,_,_,_,rarity = species
+            progress_footer += f"\n🌊 热点咬钩 · {rarity}鱼「{fish}」"
     first_epic.record(db,key,area,now,cast=True,bite=rarity=="史诗")
     if trail and rarity == "史诗":
         progress_footer += f"\n🔮 本竿史诗踪迹 {trail}/{first_epic.LIMIT}"
@@ -560,10 +569,11 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     # 新手塘普通鱼保底；外海初次抛竿时，已有的严重磨损仍参与判定。
     toughness=rod_stats.power(levels,"toughness")
     rounding=random.Random("wear/"+event["event_id"]).random() if toughness else 0
-    load=durability.pull_load(grams,line_level,toughness,rounding)
+    pull_grams = hotspot.assisted_load(grams) if bonus else grams
+    load=durability.pull_load(pull_grams,line_level,toughness,rounding)
     worn=wear.line+load.line>=line_max or wear.rod+load.rod>=rod_max
     fatigue=durability.fatigue(wear.line,line_max) or durability.fatigue(wear.rod,rod_max)
-    damage=fight(rng,grams,rod,levels,line_level,wear,load) if risk or offshore and (worn or fatigue) else None
+    damage=fight(rng,pull_grams,rod,levels,line_level,wear,load) if risk or offshore and (worn or fatigue) else None
     crown_landing=rod==5 and fish=="星渊冠鲨" and grams==giant_fish.giant_max(giant_fish.SPECIES[fish])
     chance=angler.slip_percent(casts-1,not offshore,heavy_encounter,rod_stats.power(levels,"hardness"))
     slipped=(damage is None or crown_landing) and chance and rng.random()<chance/100
@@ -604,6 +614,9 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         return "💨 脱钩了，这一竿没带回鱼。\n"+story+footer+f"\n{prefix}钓鱼信息"
     event_fish = sighting.active(now) and fish == sighting.fish and grade == "巨物"
     quality = fish_grades.final_grade(fish, grams, event["event_id"], event_fish)
+    if bonus:
+        floor = fish_grades.GRADES.index(rarity)
+        quality = quality._replace(final=max(quality.final,floor))
     points = fish_grades.award_first_grade_points(db, key, fish, grams, quality, event)
     db.execute("""INSERT INTO fishing_records(grp,member,count,grams,best_name,best_grams,last_cast)
                   VALUES(?,?,1,?,?,?,?) ON CONFLICT(grp,member) DO UPDATE SET
@@ -615,6 +628,9 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     item = db.execute("""INSERT INTO fishing_pond(grp,member,fish,grams,price,grade,grade_upgraded,storage)
                          VALUES(?,?,?,?,?,?,?,'bag')""", (*key,fish,grams,price,quality.final,quality.upgraded)).lastrowid
     pond_growth.register(db,item,key[1])
+    if bonus:
+        hotspot.land(db,key,bonus[0])
+        footer += "\n本场活动鱼已入包，下个整点可再参与。"
     if rarity == "史诗":
         first_epic.record(db,key,area,now,landed=True)
         if trail:
