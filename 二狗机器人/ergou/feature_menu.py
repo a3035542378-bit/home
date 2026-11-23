@@ -46,7 +46,9 @@ TOPICS = (
     Topic('抽签', '🎟 报名或退出抽签', section='detail', gate='draws'),
     Topic('点歌', '🎵 找一首歌',
         """🎵 找歌
-【点歌 茉莉花】获取这首歌的搜索入口""", aliases=('找歌帮助',)),
+【点歌 许嵩 有何不可】按歌手和歌名找歌
+点 ▶ 收听，部分歌曲仅提供试听。
+没有音源时，点链接找歌。""", aliases=('找歌帮助',)),
     Topic('生活', '🔎 查百科、做菜或看运势',
         """🔎 查资料
 【百科 大熊猫】读一段百科
@@ -319,7 +321,7 @@ def page(db,group,event,cfg,prefix,t):
                      entry("绑定状态","查看本群激活状态"),entry("停用本群","立即停用，保留数据")])
     if name=="群服务":
         body=blocks(body,section("⚙️ 群管理",topic_rows(t for t in TOPICS if t.name in ("管理","绑定") and flags[t.gate])))
-    next_step={"天气":"天气 抚州","积分":"积分","游戏":"游戏列表","鱼塘":"查看鱼包","点歌":"点歌 茉莉花",
+    next_step={"天气":"天气 抚州","积分":"积分","游戏":"游戏列表","鱼塘":"查看鱼包","点歌":"点歌 许嵩 有何不可",
                "鱼包":"查看鱼包","繁育":"繁育配对","图鉴":"放入图鉴","钓场":"切换钓场","绑定":"绑定状态"}.get(name)
     gap="\n\n" if body and not body[0].isalnum() else "\n"
     return blocks(title+gap+body,example(prefix,next_step) if next_step else "")

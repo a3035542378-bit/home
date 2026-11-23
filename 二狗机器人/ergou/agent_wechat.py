@@ -1,5 +1,6 @@
 """One-group, receive-only Agent WeChat event consumer."""
 import argparse
+import asyncio
 from contextlib import contextmanager
 import errno
 import hashlib
@@ -434,7 +435,9 @@ def inspect_text_send(client, token, task, timeout=8):
                     card=task.get("share")
                     if card:
                         link=message.get("link") or {}
-                        matches=(message.get("type")==49 and message.get("appMessageType")==5
+                        is_music=card.get("kind")=="music"
+                        matches=(message.get("type")==49 and message.get("appMessageType")== (3 if is_music else 5)
+                                 and (not is_music or link.get("description")==card["author"])
                                  and link.get("url")==card["url"] and link.get("title")==card["title"])
                     elif task.get("mention_sender"):
                         mentions=message.get("mentions") or {}
@@ -471,7 +474,7 @@ def send_direct(client, token, task):
     conn=http.client.HTTPConnection("127.0.0.1",client.port,timeout=5)
     try:
         payload={"threadId":task["grp"],**(task.get("share") or {"text":task["body"]})}
-        if task.get("mention_sender"):
+        if not task.get("share") and task.get("mention_sender"):
             payload["mentions"]={"userIds":[task["mention_sender"]]}
         conn.request("POST",client.base+"/sends",body=dump(payload).encode(),
                      headers={"Authorization":"Bearer "+token,"Content-Type":"application/json","Idempotency-Key":"ergou-"+task["biz"]})
@@ -506,6 +509,12 @@ def replies(db,client,node_secret,token,name=None,*,group=None,once=False):
     listener=Listener(db,client,node_secret,group=group)
     if name is not None and client.resolve(name)[0]!=listener.group:
         raise ValueError("申请回复的群与已绑定群不一致")
+    def directed_authorized(task):
+        return db.execute("""SELECT 1 FROM directed_events d JOIN inbox i ON i.event_id=d.biz
+            JOIN directed_groups p ON p.grp=i.grp AND p.account=i.account AND p.binding=i.binding
+            WHERE d.biz=? AND i.grp=? AND i.account=? AND i.binding=? AND d.source_time>=p.since""",
+            (task["biz"],listener.group,listener.account,task["binding"])).fetchone()
+
     def verify_identity():
         if (client.get("/v1/status").get("serverId")!=listener.server or client.identity()!=listener.account
                 or not client.member(listener.group,listener.account)):
@@ -544,10 +553,7 @@ def replies(db,client,node_secret,token,name=None,*,group=None,once=False):
                         from .exhibit_announcements import matches as board_matches
                         unconfirmed=not board_matches(db,task)
                     elif not task["biz"].startswith("schedule/"):
-                        unconfirmed=not db.execute("""SELECT 1 FROM directed_events d JOIN inbox i ON i.event_id=d.biz
-                            JOIN directed_groups p ON p.grp=i.grp AND p.account=i.account AND p.binding=i.binding
-                            WHERE d.biz=? AND i.grp=? AND i.account=? AND i.binding=? AND d.source_time>=p.since""",
-                            (task["biz"],listener.group,listener.account,task["binding"])).fetchone()
+                        unconfirmed=not directed_authorized(task)
                     if not listener.linked() or not recovery_plan(db,client.slot,listener.group)["replies"] or stale or unconfirmed:
                         state,detail="FAILED","群绑定、通知授权或智能对话状态已变化"
                     elif time.time()>=task["expires"]:
@@ -569,7 +575,18 @@ def replies(db,client,node_secret,token,name=None,*,group=None,once=False):
                     else:
                         if model_reply_authorized(db,task["biz"]):
                             card=db.execute("SELECT title,url FROM music_search_cards WHERE task=?",(task["id"],)).fetchone()
-                            if card:
+                            if card and os.getenv("ERGOU_QQ_MUSIC")=="1":
+                                from . import qq_music
+                                task["share"]=asyncio.run(qq_music.resolve(card["title"],card["url"]))
+                                verify_identity()
+                                if (not listener.linked() or not directed_authorized(task)
+                                        or not recovery_plan(db,client.slot,listener.group)["replies"]
+                                        or time.time()>=min(task["expires"],task["lease"])):
+                                    jobs.finish(db,listener.account,task["id"],task["attempt"],"FAILED","点歌已过期或群授权已变化")
+                                    if once:
+                                        return True
+                                    continue
+                            elif card:
                                 task["share"]=dict(kind="share",title=card["title"],url=card["url"],
                                                    description="在 Apple Music 查看搜索结果")
                             state,detail=send_direct(client,token,task)

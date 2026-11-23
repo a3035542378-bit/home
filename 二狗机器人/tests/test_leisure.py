@@ -37,6 +37,14 @@ class Leisure(unittest.TestCase):
             self.assertIn("青椒炒蛋",self.reply(self.say("二狗查菜谱 鸡蛋")))
             self.assertIn("本地菜谱还没有",self.reply(self.say("二狗菜谱 不存在的菜")))
 
+    def test_explicit_song_request_in_api_mode(self):
+        with patch("ergou.models.api_first",return_value=True),patch("ergou.models.submit") as model:
+            seq=self.say("二狗 点歌 周杰伦 晴天")
+            self.assertIn("music.apple.com",self.reply(seq))
+            model.assert_not_called()
+            self.say("二狗 点歌是什么意思")
+            model.assert_not_called()
+
     def test_live_music_creates_one_share_for_the_original_event(self):
         args=("sim-account","private-room","private-member","card-1",{"text":"二狗点歌 周杰伦 晴天"})
         for _ in range(2):

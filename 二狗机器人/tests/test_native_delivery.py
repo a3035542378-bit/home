@@ -60,6 +60,23 @@ class NativeDelivery(unittest.TestCase):
         self.get.side_effect=ConnectionError()
         self.assertEqual(self.inspect()[0],"UNKNOWN")
 
+    def test_native_music_sends_one_card_and_checks_artist_and_subtype(self):
+        card=dict(kind="music", title="有何不可", author="许嵩", url="https://c.y.qq.com/song",
+                  musicUrl="https://stream.qq.com/preview.mp3", thumbnailUrl="https://y.qq.com/art.jpg")
+        self.task.update(share=card, mention_sender="requester")
+        self.message.update(type=49, appMessageType=3, link=dict(title=card["title"],url=card["url"],description=card["author"]))
+        with patch.object(aw.http.client,"HTTPConnection") as factory:
+            conn=factory.return_value
+            conn.getresponse.side_effect=ConnectionResetError()
+            self.assertEqual(aw.send_direct(self.client,"send-fixture",self.task)[0],"ACKNOWLEDGED")
+            conn.request.assert_called_once()
+            payload=json.loads(conn.request.call_args.kwargs["body"])
+            self.assertEqual(payload,dict(threadId=self.task["grp"],**card))
+        self.message["link"]["description"]="其他歌手"
+        self.assertEqual(self.inspect()[0],"UNKNOWN")
+        self.message.update(appMessageType=5)
+        self.assertEqual(self.inspect()[0],"UNKNOWN")
+
     def test_lost_post_receipt_reads_original_key_without_resending(self):
         with patch.object(aw.http.client,"HTTPConnection") as factory:
             connection=factory.return_value
