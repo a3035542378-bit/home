@@ -342,6 +342,20 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
         return feature_menu.render(db,g,e,cfg,prefix)
     if canonical in ("钓鱼玩法","切换水域","查看鱼包") or canonical.startswith("切换水域 "):
         return fishing.play(db,e,canonical,prefix,cfg)
+    # 已开放江湖的固定玩法按整条原指令匹配，优先于本群关键词。
+    from . import jianghu
+    if jianghu.matches(cmd):
+        if cmd in jianghu.SWITCHES:
+            return jianghu.switch(db,e,cmd=="开启江湖")
+        generation = jianghu.enabled(db,g["id"])
+        if generation:
+            reply = jianghu.handle(db,e,cmd,prefix)
+            queue(db,g,e["event_id"],reply,e["arrived"])
+            db.execute("""INSERT OR IGNORE INTO jh_replies SELECT id,? FROM outbox WHERE biz=?""",
+                       (generation[0],e["event_id"]))
+            return None
+        if cmd == "闯江湖":
+            return "本群江湖尚未开启，可由主人或已授权的群主开启。"
     try:
         matched=reply_rules.match(db,e,cmd)
     except (ValueError,TypeError,KeyError,IndexError,AttributeError):

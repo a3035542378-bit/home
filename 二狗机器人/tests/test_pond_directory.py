@@ -192,7 +192,9 @@ class PondDirectoryTests(unittest.TestCase):
         self.scenario()
         for topic in feature_menu.TOPICS:
             reply=self.send("二狗"+topic.name+"帮助")
-            if topic.gate in ("admin","binding","parcel"):
+            if topic.gate == "jianghu":
+                self.assertIn("本群暂未开启江湖录功能",reply)
+            elif topic.gate in ("admin","binding","parcel"):
                 self.assertIn("二狗菜单",reply)
             else:
                 self.assertIn(topic.title.split()[0],reply)

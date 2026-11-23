@@ -2,7 +2,7 @@
 import os
 from dataclasses import dataclass
 
-from . import breeding, exhibit_batch, models, pond_growth, roles, voice_policy
+from . import jianghu, breeding, exhibit_batch, models, pond_growth, roles, voice_policy
 from .group_tools import CHECKIN_POINTS
 from .db import DEFAULT
 from .fishing_waters import SPECIES
@@ -19,6 +19,12 @@ class Topic:
 
 
 TOPICS = (
+    Topic('江湖录', '🏮 闯江湖与切磋', """【闯江湖】选身份、分配先天属性
+【主线】继续客栈镖信剧情
+【面板】查看角色进度
+【打坐】开始修炼或领取潜能
+【客栈】看包子价格
+【切磋 @群友】邀群友无损比试""", gate='jianghu', aliases=('江湖帮助', '江湖菜单', '江湖录菜单')),
     Topic('钓鱼', '🎣 钓第一条鱼', gate='fish', aliases=('钓鱼菜单', '钓鱼玩法', '怎么钓鱼', '如何钓鱼', '钓鱼怎么玩')),
     Topic('天气', '🌤 查城市天气',
         """把示例里的城市换成你想查的地方。
@@ -186,7 +192,7 @@ def access(db,group,member,cfg):
     manager=level>=3 if governed else bool(db.execute("SELECT 1 FROM managers WHERE grp=? AND member=?",(grp,member)).fetchone())
     model_admin=level>=4 if governed else bool(db.execute("SELECT 1 FROM smart_controls,json_each(admins) WHERE grp=? AND value=?",(grp,member)).fetchone())
     fish=cfg["games"] and "钓鱼" not in cfg.get("disabled_games",())
-    return dict(fish=fish,breed=fish and breeding.enabled(db,grp),games=cfg["games"],
+    return dict(jianghu=bool(jianghu.enabled(db,grp)),fish=fish,breed=fish and breeding.enabled(db,grp),games=cfg["games"],
                 interaction=cfg["polls"] or cfg["draws"],polls=cfg["polls"],draws=cfg["draws"],admin=manager or model_admin,
                 binding=bool(administrator(db,bot,member)),parcel=bool(parcel_carriers()),
                 manager=manager,model_admin=model_admin,level=level,
@@ -222,7 +228,7 @@ def directory(db, group, event, cfg, prefix, full):
     intro = f"{heading}\n发送时加「{prefix}」，例如：{prefix}积分"
     main = blocks(intro, section("⭐ 常用", [entry("签到", f"每天领 {CHECKIN_POINTS} 积分"),
                   *topic_rows(available[n] for n in ("钓鱼","积分","天气") if n in available)]),
-                  topics("🎮 群里一起玩", ("游戏","互动","点歌","聊天")),
+                  topics("🎮 群里一起玩", ("游戏","互动","点歌","聊天","江湖录")),
                   topics("🔎 群服务", ("生活","群服务","快递","绑定","管理")))
     if full:
         return blocks(main, topics("🎣 钓鱼和养鱼", [t.name for t in TOPICS if t.section=="fish" or t.name=="强化"]),
@@ -321,7 +327,7 @@ def page(db,group,event,cfg,prefix,t):
                      entry("绑定状态","查看本群激活状态"),entry("停用本群","立即停用，保留数据")])
     if name=="群服务":
         body=blocks(body,section("⚙️ 群管理",topic_rows(t for t in TOPICS if t.name in ("管理","绑定") and flags[t.gate])))
-    next_step={"天气":"天气 抚州","积分":"积分","游戏":"游戏列表","鱼塘":"查看鱼包","点歌":"点歌 许嵩 有何不可",
+    next_step={"江湖录":"闯江湖","天气":"天气 抚州","积分":"积分","游戏":"游戏列表","鱼塘":"查看鱼包","点歌":"点歌 许嵩 有何不可",
                "鱼包":"查看鱼包","繁育":"繁育配对","图鉴":"放入图鉴","钓场":"切换钓场","绑定":"绑定状态"}.get(name)
     gap="\n\n" if body and not body[0].isalnum() else "\n"
     return blocks(title+gap+body,example(prefix,next_step) if next_step else "")

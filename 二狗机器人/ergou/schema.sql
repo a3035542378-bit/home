@@ -447,3 +447,34 @@ CREATE TABLE IF NOT EXISTS breed_transfers (
  id INTEGER PRIMARY KEY,item INTEGER NOT NULL,member TEXT NOT NULL,at REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS breed_transfers_item ON breed_transfers(item,at,id);
+
+-- 江湖角色、货币、章节及群开关与既有玩法隔离。
+CREATE TABLE IF NOT EXISTS jh_group_config (
+ grp TEXT PRIMARY KEY REFERENCES groups, enabled INTEGER NOT NULL, version INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS jh_drafts (
+ grp TEXT NOT NULL REFERENCES groups, member TEXT NOT NULL, identity TEXT, stats TEXT,
+ PRIMARY KEY(grp,member)
+);
+CREATE TABLE IF NOT EXISTS jh_players (
+ grp TEXT NOT NULL REFERENCES groups, member TEXT NOT NULL, identity TEXT NOT NULL,
+ strength INTEGER NOT NULL, agility INTEGER NOT NULL, constitution INTEGER NOT NULL,
+ insight INTEGER NOT NULL, luck INTEGER NOT NULL, title TEXT NOT NULL,
+ route TEXT, level INTEGER NOT NULL DEFAULT 0, karma INTEGER NOT NULL DEFAULT 0,
+ hunger INTEGER NOT NULL DEFAULT 100 CHECK(hunger BETWEEN 0 AND 100),
+ silver INTEGER NOT NULL DEFAULT 30 CHECK(silver>=0), potential INTEGER NOT NULL DEFAULT 0 CHECK(potential>=0),
+ first_defeat INTEGER NOT NULL DEFAULT 0, first_win_at REAL, meditate_at REAL,
+ next_state TEXT NOT NULL DEFAULT 'unopened', stage_at REAL, defeated INTEGER NOT NULL DEFAULT 0,
+ ending TEXT, completed_at REAL, PRIMARY KEY(grp,member)
+);
+CREATE TABLE IF NOT EXISTS jh_events (
+ grp TEXT NOT NULL, member TEXT NOT NULL, chapter INTEGER NOT NULL, event_type TEXT NOT NULL,
+ source_event TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(grp,member,chapter,event_type)
+);
+CREATE TABLE IF NOT EXISTS jh_invites (
+ grp TEXT NOT NULL REFERENCES groups, inviter TEXT NOT NULL, invitee TEXT NOT NULL, expires REAL NOT NULL,
+ PRIMARY KEY(grp,inviter), UNIQUE(grp,invitee), CHECK(inviter<>invitee)
+);
+CREATE TABLE IF NOT EXISTS jh_replies (
+ task INTEGER PRIMARY KEY REFERENCES outbox(id) ON DELETE CASCADE, version INTEGER NOT NULL
+);

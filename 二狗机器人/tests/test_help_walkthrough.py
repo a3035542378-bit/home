@@ -13,7 +13,8 @@ from ergou import breed_metrics, feature_menu, games, pond_growth, queries
 def business_state(db):
     tables=("ledger","redemptions","games","players","ballots","candidates","draws","fishing_pond",
             "fishing_wallets","fishing_exhibits","pond_growth","pond_activity","breed_pairs","breed_previews",
-            "rod_enhancements","group_member_role","permission_audit_log","smart_controls","queries","chat_requests")
+            "rod_enhancements","group_member_role","permission_audit_log","smart_controls","queries","chat_requests",
+            "jh_players","jh_drafts","jh_events","jh_invites")
     return {t:[tuple(row) for row in db.execute("SELECT * FROM "+t+" ORDER BY rowid")] for t in tables}
 
 
@@ -72,6 +73,8 @@ class HelpWalkthrough(unittest.TestCase):
                 continue
             with self.subTest(topic=topic.name):
                 f=self.player()
+                if topic.name=="江湖录":
+                    f.db.execute("INSERT INTO jh_group_config VALUES(?,1,1)",(f.api.room,))
                 before=business_state(f.db)
                 command="二狗"+topic.name+"帮助"
                 body=f.send(command)

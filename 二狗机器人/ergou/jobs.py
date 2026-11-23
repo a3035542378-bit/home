@@ -44,6 +44,10 @@ def claim(db, account, now=None, *, directed_group=None):
           (voice_version,account,now,directed_group,directed_group,now-30,now-120,now-120,now)).fetchone()
         if not row:
             return False
+        from .jianghu import reply_valid
+        if not reply_valid(db,row["id"]):
+            db.execute("UPDATE outbox SET state='CANCELLED',body='',detail='江湖授权已变化' WHERE id=?", (row["id"],))
+            return True
         if row["biz"].startswith("exhibit-board/"):
             from .exhibit_announcements import matches
             if not matches(db,row):

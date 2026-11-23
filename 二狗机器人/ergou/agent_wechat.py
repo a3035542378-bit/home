@@ -282,6 +282,11 @@ class Listener:
                     ids=mentions.get("userIds",[]) if isinstance(mentions,dict) else []
                     if isinstance(ids,list) and any(uid!=self.account for uid in ids) and not target:
                         payload["invalid_role_target"]=True
+                from . import jianghu
+                if cmd in jianghu.SWITCHES and roles.owner(self.db,self.account):
+                    wechat_roles.refresh_owner(self.db,self.client,self.account,self.group)
+                if cmd and jianghu.DUEL.fullmatch(cmd) and jianghu.enabled(self.db,self.group):
+                    payload["duel_target"]=wechat_roles.target_member(self.db,self.client,self.account,self.group,message)
                 from .pond_raids import TARGET
                 if (cmd and (TARGET.fullmatch(cmd.strip()) or cmd == "偷鱼")
                         and isinstance(mentions,dict) and mentions.get("state")=="known"
@@ -540,7 +545,8 @@ def replies(db,client,node_secret,token,name=None,*,group=None,once=False):
                 try:
                     verify_identity()
                     from .models import reply_authorized as model_reply_authorized
-                    stale=not model_reply_authorized(db,task["biz"])
+                    from .jianghu import reply_valid
+                    stale=not model_reply_authorized(db,task["biz"]) or not reply_valid(db,task["id"])
                     from .live_notice import matches
                     unconfirmed=task["biz"].startswith("schedule/") and not matches(db,listener.group,task["biz"],task["body"])
                     if task.get("voice_seq") is not None:
