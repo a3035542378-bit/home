@@ -344,6 +344,30 @@ class JianghuReplay(unittest.TestCase):
             self.assertIn(f"Lv.{before['level']}", self.say("闯江湖", member=member))
             self.assertEqual(before, self.record(member))
 
+    def test_personal_panel_previews_meditation_without_claiming(self):
+        self.create((20, 10, 10, 40))
+        self.assertIn("当前状态：待决定镖信去向", self.say("面板"))
+        self.say("选 1")
+        self.assertIn("当前状态：未开始打坐", self.say("面板"))
+        self.say("练拳")
+        self.say("打坐")
+        before = self.record()
+        self.now += 3599
+        self.assertIn("打坐中 · 尚未满一小时", self.say("面板"))
+        self.now += 1
+        for cmd in ("面板", "江湖面板", "闯江湖"):
+            self.assertIn("打坐中 · 可领 4 潜能", self.say(cmd))
+        self.assertEqual(self.record(), before)
+        self.now += 86400
+        panel = self.say("面板")
+        self.assertIn("打坐中 · 可领 48 潜能", panel)
+        self.assertIn("镖信续章已开放", panel)
+        self.assertEqual(self.record(), before)
+        self.say("主线")
+        self.assertIn("主线：待迎战蒙面人", self.say("面板"))
+        self.assertIn("常规潜能 +48", self.say("打坐"))
+        self.assertIn("打坐中 · 尚未满一小时", self.say("面板"))
+
     def test_invites_close_and_dispatch(self):
         for member in ("a", "b", "c"):
             self.start((40, 10, 10, 20), "拳", member)

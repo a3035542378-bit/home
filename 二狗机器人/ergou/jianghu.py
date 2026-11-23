@@ -182,6 +182,34 @@ def meditation_tip(p, prefix):
     return f"打坐每小时得 {rate} 点，北京时间 {ready:%m-%d %H:%M:%S} 起领够升级。\n{prefix}打坐"
 
 
+def panel_status(p, now):
+    if not p["route"]:
+        return "📜 当前状态：待决定镖信去向"
+    if p["first_win_at"] is None:
+        return "⚔️ 当前状态：首战待再战"
+
+    cursor = p["meditate_at"]
+    if cursor is None:
+        activity = "🍵 当前状态：未开始打坐"
+    else:
+        hours, gain, _ = rules.meditation(cursor, now, p["constitution"])
+        activity = "🧘 当前状态：打坐中"
+        if hours:
+            activity += f" · 可领 {gain} 潜能"
+        else:
+            activity += " · 尚未满一小时"
+
+    stage = {
+        "fight": "可再去渡口找引路人" if p["defeated"] else "待迎战蒙面人",
+        "resolve": "待了结追索",
+        "offer": "待答复镖头",
+        "done": "第一章已完成" if p["completed_at"] is not None else "镖信已了结，武学待升三级",
+    }.get(p["next_state"])
+    if not stage and now >= chapter_opens_at(p).timestamp():
+        stage = "镖信续章已开放"
+    return activity + (f"\n📜 主线：{stage}" if stage else "")
+
+
 def record(db, event, kind):
     return db.execute(
         """INSERT OR IGNORE INTO jh_events VALUES(?,?,1,?,?,?)""",
@@ -344,7 +372,8 @@ def handle(db, event, cmd, prefix):
             for a, k in zip(rules.ATTRIBUTES, ("strength", "agility", "constitution", "insight"))
         )
         return (
-            f"👤 {p['identity']} · 16岁 · {p['title']}\n{stats}　福缘{p['luck']}\n"
+            f"👤 {p['identity']} · 16岁 · {p['title']}\n{panel_status(p, now)}\n"
+            f"{stats}　福缘{p['luck']}\n"
             f"{route}　气血上限 {100 + 10 * p['strength']}　善恶 {p['karma']}\n"
             f"饥饿 {p['hunger']}　银两 {p['silver']}　潜能 {p['potential']}\n{history}"
             + instruction(p, prefix)
