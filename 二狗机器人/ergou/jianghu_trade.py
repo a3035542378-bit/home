@@ -32,6 +32,30 @@ REFORGE_PRICE = 5000
 HOME_PRICE = 80
 
 
+def statement(db, key, p):
+    row = db.execute(
+        "SELECT gold FROM jh_world WHERE grp=? AND member=?", key
+    ).fetchone()
+    rows = db.execute(
+        """SELECT reason,silver,gold FROM jh_money_log WHERE grp=? AND member=?
+                     ORDER BY id DESC LIMIT 5""",
+        key,
+    )
+    lines = [f"🪙 银两 {p['silver']}　金条 {row[0] if row else 0}"]
+    for reason, silver, gold in rows:
+        amount = "、".join(
+            filter(
+                None,
+                (f"{silver:+} 两" if silver else "", f"{gold:+} 金条" if gold else ""),
+            )
+        )
+        if amount:
+            lines.append(f"{reason}　{amount}")
+    if len(lines) == 1:
+        lines.append("还没有可展示的流水。")
+    return "\n".join(lines)
+
+
 def handle(db, key, p, w, event, cmd, prefix, rng):
     grp, member = key
     now = event["arrived"]
@@ -180,14 +204,6 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
             "UPDATE jh_players SET potential=potential+5 WHERE grp=? AND member=?", key
         )
         return "🏡 庭院修习，到账 5 潜能。"
-    if cmd == "江湖账本":
-        rows = db.execute(
-            "SELECT reason,silver,gold FROM jh_money_log WHERE grp=? AND member=? ORDER BY id DESC LIMIT 5",
-            key,
-        )
-        return f"🪙 银两 {p['silver']}　金条 {w['gold']}\n" + "\n".join(
-            f"{a}　{b:+} 两 / {c:+} 金条" for a, b, c in rows
-        )
     if cmd == "金条商店":
         return (
             "🪙 每项花 1 金条\n【兑换免死金牌】抵一次遇袭损失\n【兑换大还丹】换一颗回满饱腹的丹药\n"

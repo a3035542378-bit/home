@@ -1,6 +1,7 @@
 """江湖天下命令分发；使用第一章相同的群权限、事务与事件身份。"""
 
 from . import jianghu_adventure as adventure
+from . import jianghu_lanterns as lanterns
 from . import jianghu_trade as trade
 from . import jianghu_society as society
 from . import jianghu_contests as contests
@@ -14,6 +15,7 @@ COMMANDS = (
     | {"第二章", "第三章"}
 )
 PATTERNS = (
+    lanterns.ANSWER,
     adventure.LEARN,
     trade.GOODS,
     trade.PAGE,
@@ -37,8 +39,14 @@ def handle(db, key, p, event, cmd, prefix, rng):
         return text
     if cmd in adventure.GUIDES:
         return adventure.guide(cmd, prefix)
+    if cmd == "江湖账本":
+        return trade.statement(db, key, p)
+    if cmd in contests.QUERIES:
+        return contests.overview(db, key, event["arrived"], cmd, prefix)
     if p["completed_at"] is None:
         return f"🏮 先办完第一章的镖信，再闯荡江湖天下。\n{prefix}面板"
+    if cmd=="夜市" or lanterns.ANSWER.fullmatch(cmd):
+        return lanterns.play(db,key,event,cmd,prefix)
     db.execute(
         "INSERT OR IGNORE INTO jh_world(grp,member,born) VALUES(?,?,?)",
         (*key, p["first_win_at"]),

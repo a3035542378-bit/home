@@ -383,3 +383,122 @@ def test_tournament_opponents_and_insight_limit(room):
     receipt = s.say("华山论剑", member="b")
     assert "本次论剑贡献" in receipt and "擂主" not in receipt
     assert s.record()["silver"] == 100
+
+
+def test_live_progress_and_bonded_preview(room):
+    s = room
+    ready(s)
+    ready(s, "b")
+    s.say("独行江湖")
+    s.say("运镖")
+    assert "运镖途中" in s.say("面板")
+    mention(s, "结拜 @b", "b")
+    s.say("接受结拜", member="b")
+    assert "攒 5 点" in s.say("打坐")
+    s.now += 180
+    body = s.say("面板")
+    assert "镖货已到" in body and "可领 5 潜能" in body
+    assert "到账 20" in s.send(body.splitlines()[-1])
+    assert "获得 5 点潜能" in s.say("打坐")
+    story = s.say("江湖故事")
+    assert story.endswith("二狗取回账册")
+    assert "第二章已完成" in s.send(story.splitlines()[-1])
+    assert s.say("面板").endswith("二狗决战黑木崖")
+
+
+def test_first_chapter_statement_pending_and_replay(room):
+    s = room
+    s.create((30, 10, 20, 20))
+    assert "初入江湖盘缠　+30 两" in s.say("江湖账本")
+    s.say("选 2", source="win")
+    s.say("选 2", source="win")
+    assert "首战奖励　+20 两" in s.say("江湖账本")
+    assert "吃一份" in s.say("客栈")
+    s.say("吃包子", source="eat")
+    s.say("吃包子", source="eat")
+    s.say("打坐")
+    s.now += 120
+    from unittest.mock import patch
+
+    with patch("ergou.jianghu.random.Random.randrange", return_value=0):
+        s.say("打坐", source="reward")
+        s.say("打坐", source="reward")
+    body = s.say("江湖账本")
+    assert "打坐奇遇　+1 两" in body and "客栈包子　-5 两" in body
+    assert (
+        s.record()["silver"]
+        == 46
+        == scalar(s, "SELECT sum(silver) FROM jh_money_log WHERE member='leaf'")
+    )
+    assert scalar(s, "SELECT count(*) FROM jh_world") == 0
+
+
+def test_contest_views_safe_even_without_player(room):
+    s = room
+    s.now = datetime(2026, 11, 28, 20, 20, tzinfo=storage.BJ).timestamp()
+    for cmd in ("大会赛程", "阵营榜", "首领榜", "论剑榜"):
+        body = s.say(cmd)
+        assert "报个名" not in body and body and "没看懂" not in body
+    assert scalar(s, "SELECT count(*) FROM jh_drafts") == 0
+    assert scalar(s, "SELECT count(*) FROM jh_encounters") == 0
+    assert s.say("江湖恩怨").endswith("二狗江湖保护")
+    assert s.say("江湖大会").endswith("二狗大会赛程")
+    for member in ("leaf", "b"):
+        ready(s, member)
+    s.say("投身正道")
+    s.say("加入魔教", member="b")
+    s.say("阵营战")
+    s.say("阵营战", member="b")
+    line = s.say("阵营榜")
+    assert "交锋中" in line and "你为正道贡献" in line
+    s.now += 86400
+    after = s.say("阵营榜")
+    assert "已收场" in after and "2026-11-28" in after
+    assert "到账" in s.send(after.splitlines()[-1])
+
+
+def test_boss_rank_sharing_and_repeated_claim(room):
+    s = room
+    for name, score in (("leaf", 310), ("b", 310), ("c", 180)):
+        ready(s, name)
+        s.conn.execute(
+            "INSERT INTO jh_encounters VALUES('east','首领','2026-11-28',?,?,0,'',0)",
+            (name, score),
+        )
+    s.now = datetime(2026, 11, 28, 21, 59, 59, tzinfo=storage.BJ).timestamp()
+    body = s.say("首领榜")
+    assert "已击退" in body and "第 1" in body and "名次奖 4 两" in body
+    assert "还没有" in s.say("大会领奖")
+    s.now += 1
+    for name, award in (("leaf", 4), ("b", 4), ("c", 1)):
+        assert f"另得 {award} 两" in s.say("大会领奖", member=name)
+        assert "还没有" in s.say("大会领奖", member=name)
+    assert (
+        scalar(s, "SELECT sum(silver) FROM jh_money_log WHERE reason='首领名次奖'") == 9
+    )
+
+
+def test_lanterns_daily_scoped_and_restart(room):
+    s = room
+    for n in ("leaf", "b"):
+        ready(s, n)
+    s.now = datetime(2026, 11, 23, 23, 59, 59, tzinfo=storage.BJ).timestamp()
+    body = s.say("夜市")
+    answers = [line for line in body.splitlines() if line.startswith("二狗夜市答 ")]
+    assert len(answers) == 3
+    for cmd in answers:
+        result = s.send(cmd, process=True)
+        if "猜中了" in result:
+            break
+        assert "再看看谜面" in result
+    assert "猜中了" in result
+    assert "已点亮今日" in s.send(cmd)
+    assert "已点亮 1 盏" in s.say("江湖身世")
+    assert s.say("夜市", member="b") == body
+    s.now += 1
+    assert "谜面已经换了" in s.send(cmd)
+    assert s.say("夜市") != body
+    s.group = "west"
+    s.say("开启江湖", member="owner")
+    ready(s)
+    assert "已点亮 0 盏" in s.say("江湖身世")

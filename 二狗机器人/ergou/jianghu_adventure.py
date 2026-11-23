@@ -52,18 +52,19 @@ GUIDES = {
         ("家园", "购宅或领取收益"),
         ("胭脂铺", "修整仪容"),
         ("江湖天赋", "查看积分兑换"),
-        ("夜市", "看戏听曲"),
+        ("夜市", "猜今天的灯谜，点亮花灯"),
     ),
     "江湖结缘": (
         "🤝 江湖结缘",
+        ("我的羁绊", "查看关系和待回应邀请"),
         ("拜师 @群友", "请对方收你为徒"),
         ("结拜 @群友", "邀请结为兄弟"),
         ("结为道侣 @群友", "邀请结伴"),
-        ("我的羁绊", "查看关系和待回应邀请"),
         ("师门援手 @群友", "替近期遇袭的徒弟向对手挑战"),
     ),
     "江湖恩怨": (
         "⚔️ 江湖恩怨",
+        ("江湖保护", "先看自己的参战状态和保护时间"),
         ("加入恩怨", "自愿参加，落败会失去一成银两"),
         ("退出恩怨", "退出争斗"),
         ("悬赏榜", "查看悬赏与撤单指令"),
@@ -72,9 +73,12 @@ GUIDES = {
     ),
     "江湖大会": (
         "🏆 江湖大会",
+        ("大会赛程", "看本群什么时候能参加、什么时候能领奖"),
         ("围攻", "北京时间20点起合力挑战首领"),
         ("首领榜", "查看本日有效伤害"),
         ("阵营战", "周六晚代表阵营出战"),
+        ("阵营榜", "查看最近一场双方比分和自己的贡献"),
+        ("论剑榜", "查看本周论剑排名"),
         ("华山论剑", "参加本周论剑"),
         ("大会领奖", "领取最近一期已结束的奖励"),
     ),
@@ -223,6 +227,34 @@ PERSONAL = {
 }
 
 
+def progress(w, now, prefix):
+    stage = w["stage"] if w else 0
+    if stage == 0:
+        return "第二章 · 渡口失镖", f"渡口的船夫等你选定立场。\n{prefix}主线"
+    if stage == 1:
+        if w["escort"] is None:
+            return "第二章 · 待接镖", f"接一趟镖去渡口找失页。\n{prefix}运镖"
+        if now < w["escort"]:
+            ready = datetime.fromtimestamp(w["escort"], BJ)
+            return (
+                "第二章 · 运镖途中",
+                f"镖货将在北京时间 {ready:%H:%M:%S} 到达，到时交镖。\n{prefix}交镖",
+            )
+        return "第二章 · 镖货已到", f"镖货到了，交镖领20两并取回线索。\n{prefix}交镖"
+    if stage == 2:
+        return (
+            "第二章 · 待拼账册",
+            f"镖货里藏着失页，把它和账册拼起来。\n{prefix}取回账册",
+        )
+    if stage == 3:
+        hint = "带老船夫上崖作证。" if w["mercy"] else "带账册上黑木崖，与守崖人对质。"
+        return "第三章 · 黑木崖", f"{hint}\n{prefix}决战黑木崖"
+    return (
+        "第三章 · 已结案",
+        f"黑木崖旧案已了。还可以学武、摆摊或赴会。\n{prefix}江湖天下",
+    )
+
+
 def handle(db, key, p, w, event, cmd, prefix, rng):
     now = event["arrived"]
     weather, luck = season(*key, now)
@@ -230,19 +262,8 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
     if cmd in ("主线", "第二章", "第三章"):
         if w["stage"] == 0:
             return f"📜 第二章 · 渡口失镖\n昨夜那枚燕印又出现了。船夫递来一本浸湿的账册，三路人马都在等你表态。\n正道护镖，魔教追查内鬼，散人替船夫讨个公道。选一条路：\n{prefix}投身正道\n{prefix}加入魔教\n{prefix}独行江湖"
-        if w["stage"] == 1:
-            return (
-                f"📜 渡口的旧账\n账册最后一页被撕走了。运一次镖，顺着水印去找失页。\n{prefix}交镖"
-                if w["escort"]
-                else f"📜 渡口的旧账\n跟下一趟镖去渡口，找回账册的最后一页。\n{prefix}运镖"
-            )
-        if w["stage"] == 2:
-            return (
-                f"📜 镖货里夹着失页。拼好账册，就知道谁劫了那趟镖。\n{prefix}取回账册"
-            )
-        if w["stage"] == 3:
-            return f"⛰ 第三章 · 黑木崖\n账册上的燕印属于当年的老乞丐。上崖与他对质。\n{prefix}决战黑木崖"
-        return f"🏮 黑木崖风波已平。你如今是{w['faction']}中人，可赴武馆、论剑或结交同伴。\n{prefix}江湖天下"
+        title, hint = progress(w, now, prefix)
+        return f"📜 {title}\n{hint}"
     if cmd in FACTIONS:
         if w["stage"] != 0:
             return f"你已选定{w['faction']}。\n{prefix}主线"
@@ -368,12 +389,17 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
     if cmd == "江湖天气":
         return f"🌦 今日{weather}，你的福缘为 {luck}。暴雨使历练出手变慢，瑞雪利于修习。"
     if cmd == "江湖身世":
+        lights = db.execute(
+            "SELECT count(*) FROM jh_events WHERE grp=? AND member=? AND chapter=2 AND event_type GLOB 'lantern/*'",
+            key,
+        ).fetchone()[0]
         f = fighter(db, p, "你", now)
         return (
             f"👤 {w['faction'] or '尚未选阵营'} · {age(w, now)}岁 · 转生{w['cycles']}次\n"
             f"攻击 {f.attack}　防御 {f.defense}　气血 {f.hp}\n"
             f"武学上限 {skill_limit} 级　内力上限 {30 + p['constitution'] * 2}　名声 {'大侠' if p['karma'] > 200 else '穷凶极恶' if p['karma'] < -100 else '初入江湖'}\n"
             f"外功 {w['outer_art'] or '未习'} {w['outer_level']}级　内功 {w['inner_art'] or '未习'} {w['inner_level']}级\n"
+            f"🏮 夜市已点亮 {lights} 盏花灯\n"
             f"仪容 {appearance(p, w)} · 今日福缘 {luck} · {w['training'] or '江湖客'}\n{prefix}武馆"
         )
     match = LEARN.fullmatch(cmd)
@@ -421,8 +447,6 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
         db.execute("UPDATE jh_players SET level=1 WHERE grp=? AND member=?", key)
         change(db, key, respec=w["respec"] + 1)
         return f"🌙 你洗髓归来，有100点属性可重新分配。\n{prefix}江湖洗点"
-    if cmd == "夜市":
-        return f"🎭 戏台正演燕印失镖记。台上的小二把错送的信塞进了自己袖子。\n{prefix}江湖天下"
     if cmd in ("胭脂铺", "修整仪容"):
         if cmd == "胭脂铺":
             return f"🌸 修整仪容需 8 两，可提升仪容评分。\n{prefix}修整仪容"

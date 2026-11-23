@@ -98,14 +98,17 @@ def chapter_opens_at(p):
     return datetime.fromtimestamp(p["first_win_at"] + rules.CHAPTER_WAIT_MINUTES * 60, BJ)
 
 
-def instruction(p, prefix, now):
+def instruction(db, p, prefix, now):
     if not p["route"]:
         return f"掌柜递给你一封错送的镖信。封口的印记像半只燕子。柜台旁的生客一直盯着你手里的信。\n选 1 拆开查看，学拳；选 2 原封退还，学剑。\n{prefix}选 1\n{prefix}选 2"
     if p["first_win_at"] is None:
         return f"老镖头守在一旁。准备好了，就再试一次。\n{prefix}再战"
     if p["completed_at"] is not None:
-        return f"渡口的镖队还等着你。回主线继续闯荡。\n{prefix}主线"
+        w = jianghu_adventure.world(db,(p["grp"],p["member"]))
+        return jianghu_adventure.progress(w,now,prefix)[1]
     if p["next_state"] == "fight":
+        if p["defeated"]:
+            return f"渡口的引路人正等着你，去问问他。\n{prefix}历练"
         return f"准备好就迎战，二狗会一次报完这场比试。\n{prefix}历练"
     if p["next_state"] == "resolve":
         return f"把镖信交给引路人，请他帮你解围。\n{prefix}了结追索"
@@ -122,7 +125,8 @@ def instruction(p, prefix, now):
     return f"镖信还在路上。北京时间 {ready:%Y-%m-%d %H:%M:%S} 起，回客栈看看：\n{prefix}主线"
 
 
-def create(db, key, cmd, prefix, rng, now):
+def create(db, key, cmd, prefix, rng, event):
+    now = event["arrived"]
     draft = db.execute("SELECT * FROM jh_drafts WHERE grp=? AND member=?", key).fetchone()
     if not draft:
         if cmd != "闯江湖":
@@ -160,15 +164,16 @@ def create(db, key, cmd, prefix, rng, now):
     if cmd == "确认加点" and draft and draft["stats"]:
         stats = json.loads(draft["stats"])
         db.execute(
-            """INSERT INTO jh_players(grp,member,identity,strength,agility,constitution,insight,luck,title)
-            VALUES(?,?,?,?,?,?,?,?,?)""",
+            """INSERT INTO jh_players(grp,member,identity,strength,agility,constitution,insight,luck,title,silver)
+            VALUES(?,?,?,?,?,?,?,?,?,0)""",
             (*key, draft["identity"], *stats, rng.randint(1, 10), rules.title(*stats)),
         )
+        jianghu_adventure.funds(db, key, event, "初入江湖盘缠", silver=30)
         db.execute("DELETE FROM jh_drafts WHERE grp=? AND member=?", key)
         stats_line = "　".join(f"{name}{value}" for name, value in zip(rules.ATTRIBUTES, stats))
         return (
             f"🏮 16 岁 · {draft['identity']} · {rules.title(*stats)}\n{stats_line}\n"
-            + instruction(player(db, key), prefix, now)
+            + instruction(db, player(db, key), prefix, now)
         )
     if cmd == "闯江湖" and draft and draft["stats"]:
         return f"📜 上次加点草稿仍在，可重新加点或确认。\n{prefix}确认加点"
@@ -197,7 +202,7 @@ def meditation_tip(p, prefix, now):
             f"{day} {ready:%H:%M:%S}（北京时间）就能攒够，到时发这句领取：\n{prefix}打坐")
 
 
-def panel_status(p, now):
+def panel_status(p, now, *, stage_label=None, bond=False):
     if not p["route"]:
         return "📜 当前状态：等你决定拆信还是还信"
     if p["first_win_at"] is None:
@@ -210,7 +215,7 @@ def panel_status(p, now):
         rounds, gain, _ = rules.meditation(cursor, now, p["constitution"])
         activity = "🧘 当前状态：打坐中"
         if rounds:
-            activity += f" · 可领 {gain} 潜能"
+            activity += f" · 可领 {min(rules.POTENTIAL_CAP, gain + rounds*int(bond))} 潜能"
         else:
             activity += f" · 这一轮还没满 {rules.MEDITATION_MINUTES} 分钟"
 
@@ -222,6 +227,7 @@ def panel_status(p, now):
     }.get(p["next_state"])
     if not stage and now >= chapter_opens_at(p).timestamp():
         stage = "镖信续章已开放"
+    stage = stage_label or stage
     return activity + (f"\n📜 主线：{stage}" if stage else "")
 
 
@@ -236,7 +242,7 @@ def conclude(db, key, event, prefix):
     now = event["arrived"]
     p = player(db, key)
     if not p["ending"] or p["level"] < 3 or not record(db, event, "chapter_done"):
-        return instruction(p, prefix, now)
+        return instruction(db, p, prefix, now)
     update(db, key, completed_at=event["arrived"])
     result = f"🏮 第一章·客栈风云 已完成\n{ENDINGS[p['ending']]}\n【切磋 @群友】邀一位朋友试试身手"
     if p["ending"] == "加入" and record(db, event, "join_broadcast"):
@@ -269,17 +275,25 @@ def first_battle(db, key, event, prefix, rng):
             db,
             key,
             first_win_at=event["arrived"],
-            silver=p["silver"] + 20,
             potential=p["potential"] + 10,
         )
+        jianghu_adventure.funds(db, key, event, "首战奖励", silver=20)
     outcome = "老镖头出手解围" if result <= 0 else "你赢了"
     return report + f"\n{outcome}！首胜奖励已到账：20 两银子和 10 点潜能。\n{rules.CHAPTER_WAIT_MINUTES} 分钟后可以发【主线】回客栈听下文。现在可以先提升武学：\n{prefix}练{p['route']}"
 
 
-def meditate(db, key, p, now, prefix, rng):
+def bonded(db, key):
+    return db.execute(
+        """SELECT 1 FROM jh_relations WHERE grp=? AND accepted=1 AND kind IN ('结拜','道侣')
+           AND (inviter=? OR invitee=?) LIMIT 1""", (*key, key[1]),
+    ).fetchone() is not None
+
+
+def meditate(db, key, p, event, prefix, rng):
+    now = event["arrived"]
     if p["meditate_at"] is None:
         update(db, key, meditate_at=now)
-        rate = 2 + p["constitution"] // 5
+        rate = 2 + p["constitution"] // 5 + int(p["completed_at"] is not None and bonded(db, key))
         ready = datetime.fromtimestamp(ceil(now + rules.MEDITATION_SECONDS), BJ)
         return (f"🧘 已开始打坐，离线也会攒潜能。每 {rules.MEDITATION_MINUTES} 分钟攒 {rate} 点。\n"
                 f"北京时间 {ready:%m月%d日 %H:%M:%S} 就能领第一份潜能。到时发：\n{prefix}打坐")
@@ -292,8 +306,7 @@ def meditate(db, key, p, now, prefix, rng):
     luck = p["luck"]
     if p["completed_at"] is not None:
         _,luck = jianghu_adventure.season(*key,now)
-        if db.execute("""SELECT 1 FROM jh_relations WHERE grp=? AND accepted=1 AND kind IN ('结拜','道侣')
-                      AND (inviter=? OR invitee=?)""",(*key,key[1])).fetchone():
+        if bonded(db, key):
             gain=min(rules.POTENTIAL_CAP,gain+rounds)
     extra = int(any(rng.randrange(100) < luck for _ in range(rounds)))
     update(
@@ -302,14 +315,14 @@ def meditate(db, key, p, now, prefix, rng):
         meditate_at=cursor,
         hunger=hunger,
         potential=p["potential"] + gain,
-        silver=p["silver"] + extra,
     )
     text = f"🧘 出关 · {rounds} 轮，这次打坐获得 {gain} 点潜能。\n现有潜能 {p['potential'] + gain} 点　饱腹值 {p['hunger']} → {hunger}"
     if extra:
+        jianghu_adventure.funds(db, key, event, "打坐奇遇", silver=extra)
         text += "\n🍀 奇遇：蒲团下拾得 1 两"
     if hunger < 20:
         return text + f"\n你饿得使不上劲了。下场出招伤害减半，先去客栈看看包子吧。\n{prefix}客栈"
-    return text + "\n" + instruction(player(db, key), prefix, now)
+    return text + "\n" + instruction(db, player(db, key), prefix, now)
 
 
 def duel(db, key, event, p, cmd, prefix, rng):
@@ -366,10 +379,10 @@ def handle(db, event, cmd, prefix):
         cmd = "加点 " + cmd
     if cmd.startswith("赐金条") and jianghu_world.society.TARGET.fullmatch(cmd):
         return jianghu_world.society.grant(db,key,event,cmd)
-    if cmd in jianghu_adventure.GUIDES:
+    if cmd in jianghu_adventure.GUIDES or cmd in jianghu_world.contests.QUERIES:
         return jianghu_world.handle(db,key,p,event,cmd,prefix,rng)
     if p is None:
-        return create(db, key, cmd, prefix, rng, now)
+        return create(db, key, cmd, prefix, rng, event)
     if jianghu_world.matches(cmd) or (cmd in ("主线","历练") and p["completed_at"] is not None):
         return jianghu_world.handle(db,key,p,event,cmd,prefix,rng)
     if cmd.startswith("加点") or cmd == "确认加点":
@@ -390,8 +403,9 @@ def handle(db, event, cmd, prefix):
             lines.append("老镖头回客栈谢你，还给你留了个镖局的位置。")
         extended=jianghu_adventure.world(db,key)
         if extended and extended["stage"]:
-            lines.append(f"你以{extended['faction']}身份追查失镖。" + ("黑木崖的旧案已了，神兵由你保管。" if extended["stage"]==4 else "渡口的人还记得那枚燕印。"))
-        lines.extend(("", "👇 接下来", instruction(p, prefix, now)))
+            lines.append(f"你以{extended['faction']}身份追查失镖。" + ("黑木崖的旧案已了，你曾领到一把屠龙刀。" if extended["stage"]==4 else "渡口的人还记得那枚燕印。"))
+        hint = jianghu_adventure.progress(extended,now,prefix)[1] if p["completed_at"] is not None else instruction(db, p, prefix, now)
+        lines.extend(("", "👇 接下来", hint))
         return "\n".join(lines)
     if cmd in ("面板", "江湖面板", "闯江湖"):
         extended = jianghu_adventure.world(db,key)
@@ -399,6 +413,13 @@ def handle(db, event, cmd, prefix):
         ending = ENDINGS.get(p["ending"], "")
         if ending:
             history += ending + "\n"
+        if p["completed_at"] is not None:
+            stage_label, next_step = jianghu_adventure.progress(extended, now, prefix)
+            _, luck = jianghu_adventure.season(*key, now)
+        else:
+            stage_label, next_step = None, instruction(db, p, prefix, now)
+            luck = p["luck"]
+        status = panel_status(p, now, stage_label=stage_label, bond=bool(stage_label) and bonded(db, key))
         age = 16
         if extended:
             age = jianghu_adventure.age(extended,now)
@@ -413,31 +434,31 @@ def handle(db, event, cmd, prefix):
             for a, k in zip(rules.ATTRIBUTES, ("strength", "agility", "constitution", "insight"))
         )
         return (
-            f"👤 {p['identity']} · {age}岁 · {p['title']}\n{panel_status(p, now)}\n"
-            f"{stats}　福缘{p['luck']}\n"
+            f"👤 {p['identity']} · {age}岁 · {p['title']}\n{status}\n"
+            f"{stats}　福缘{luck}\n"
             f"{route}　气血上限 {jianghu_adventure.fighter(db,p,'你',now).hp}　善恶 {p['karma']}\n"
             f"饱腹值 {p['hunger']}/100　银两 {p['silver']}　潜能 {p['potential']}\n{history}"
-            + instruction(p, prefix, now)
+            + next_step
         )
     if not p["route"]:
         choice = CHOICE.fullmatch(cmd)
         if not choice:
-            return instruction(p, prefix, now)
+            return instruction(db, p, prefix, now)
         fist = choice[1] == "1"
         update(db, key, route="拳" if fist else "剑", karma=-10 if fist else 10, level=1)
         intro = "你拆开镖信，里面只写着“渡口相见”。柜台边的假镖师劈手来夺。老镖头喝道：“收肘，出拳！”你照着他的招式打出了第一拳。" if fist else "你把信还给老镖头。他拿出半枚燕印，正好和封口的印记合上。他送你一把铁剑，刚教完第一招，门口的野狗就叼走了他的肉包！"
         return intro + "\n" + first_battle(db, key, event, prefix, rng)
     if p["first_win_at"] is None:
         return (
-            first_battle(db, key, event, prefix, rng) if cmd == "再战" else instruction(p, prefix, now)
+            first_battle(db, key, event, prefix, rng) if cmd == "再战" else instruction(db, p, prefix, now)
         )
     if cmd == "打坐":
-        return meditate(db, key, p, now, prefix, rng)
+        return meditate(db, key, p, event, prefix, rng)
     if cmd in ("练拳", "练剑"):
         if p["level"] >= 3:
-            return f"你的{p['route']}法已练到本章最高的三级。\n" + instruction(p, prefix, now)
+            return f"你的{p['route']}法已练到本章最高的三级。\n" + instruction(db, p, prefix, now)
         if cmd != "练" + p["route"]:
-            return f"你学的是基础{p['route']}法。\n" + instruction(p, prefix, now)
+            return f"你学的是基础{p['route']}法。\n" + instruction(db, p, prefix, now)
         cost = price(p)
         if p["potential"] < cost:
             return meditation_tip(p, prefix, now)
@@ -452,10 +473,11 @@ def handle(db, event, cmd, prefix):
             return ("你已经吃饱了。" if p["hunger"] == 100 else "你身上没有银两买包子。") + f"这次没扣钱。\n{prefix}面板"
         if cmd == "客栈":
             return f"🥟 吃一份花 {cost} 两。吃完后，饱腹值 {p['hunger']} → {p['hunger'] + gain}。\n{prefix}吃包子"
-        update(db, key, silver=p["silver"] - cost, hunger=p["hunger"] + gain)
+        jianghu_adventure.funds(db, key, event, "客栈包子", silver=-cost)
+        update(db, key, hunger=p["hunger"] + gain)
         return (
             f"🥟 你吃了包子，花了 {cost} 两银子。饱腹值回到 {p['hunger'] + gain}，身上还剩 {p['silver'] - cost} 两。\n"
-            + instruction(player(db, key), prefix, now)
+            + instruction(db, player(db, key), prefix, now)
         )
     if DUEL.fullmatch(cmd) or cmd in ("拒绝", "应战"):
         return duel(db, key, event, p, cmd, prefix, rng)
@@ -494,8 +516,8 @@ def chapter(db, key, event, p, cmd, prefix, rng):
         }.get(state, "")
         if state == "unopened" and cmd == "历练":
             _, report = encounter(db, key, p, "野狗", rng)
-            return report + "\n" + instruction(p, prefix, now)
-        return "\n".join(filter(None, (intro, instruction(player(db, key), prefix, now))))
+            return report + "\n" + instruction(db, p, prefix, now)
+        return "\n".join(filter(None, (intro, instruction(db, player(db, key), prefix, now))))
     update(db, key, ending=ending, next_state="done", stage_at=now)
     text = ENDINGS[ending]
     if ending == "自胜":
