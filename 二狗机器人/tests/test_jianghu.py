@@ -290,6 +290,31 @@ class JianghuReplay(unittest.TestCase):
         self.now = midnight
         self.assertIn("蒙面人", self.say("主线"))
 
+    def test_receipt_guidance_across_midnight_with_group_prefix(self):
+        self.now = datetime(2026, 11, 22, 23, 30, 47, tzinfo=db.BJ).timestamp()
+        self.start((20, 20, 30, 10), "剑", "leaf")
+        self.conn.execute(
+            "UPDATE groups SET config=json_set(config,'$.prefix','小侠') WHERE id='east'"
+        )
+        meal = self.send("小侠吃包子")
+        self.assertEqual(meal.splitlines()[-1], "小侠打坐")  # 当前潜能不足以升级。
+        before = self.record()
+        self.now += 3599
+        waiting = self.send(meal.splitlines()[-1])
+        self.assertIn("北京时间 2026-11-23 00:30:47", waiting)
+        self.assertEqual(waiting.splitlines()[-1], "小侠打坐")
+        self.assertEqual(self.record(), before)
+        self.now += 1
+        self.send(waiting.splitlines()[-1])
+        self.assertEqual(self.record()["potential"], before["potential"] + 8)
+
+        self.send("小侠主线")
+        self.assertEqual(self.record()["next_state"], "offer")
+        meal = self.send("小侠吃包子")
+        self.assertEqual(meal.splitlines()[-1], "小侠主线")
+        offer = self.send(meal.splitlines()[-1])
+        self.assertEqual(offer.splitlines()[-2:], ["小侠选 1", "小侠选 2"])
+
     def test_invites_close_and_dispatch(self):
         for member in ("a", "b", "c"):
             self.start((40, 10, 10, 20), "拳", member)

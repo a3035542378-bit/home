@@ -3,7 +3,8 @@
 import json
 import random
 import re
-from datetime import datetime
+from datetime import datetime, time, timedelta
+from math import ceil
 
 from . import jianghu_rules as rules
 from . import roles
@@ -88,24 +89,29 @@ def update(db, key, **fields):
     )
 
 
+def chapter_opens_at(p):
+    next_day = datetime.fromtimestamp(p["first_win_at"], BJ).date() + timedelta(days=1)
+    return datetime.combine(next_day, time.min, tzinfo=BJ)
+
+
 def instruction(p, prefix):
     if not p["route"]:
         return f"掌柜递给你一封错送的镖信。拆开查看或原封退还？\n{prefix}选 1\n{prefix}选 2"
     if p["first_win_at"] is None:
         return f"老镖头会助你再战。\n{prefix}再战"
     if p["completed_at"] is not None:
-        return f"【切磋 @群友】邀同群少侠过招"
+        return f"想邀群友切磋，可以查看江湖玩法。\n{prefix}江湖录帮助"
     if p["next_state"] == "fight":
         return f"{prefix}历练"
     if p["next_state"] == "resolve":
         return f"{prefix}了结追索"
     if p["next_state"] == "offer":
-        return f"加入镖局，或婉拒邀请\n{prefix}选 1\n{prefix}选 2"
+        return f"镖头在等你的答复。\n{prefix}主线"
     if p["level"] < 3:
         if p["potential"] < price(p):
             return f"{prefix}打坐"
         return f"{prefix}练{p['route']}"
-    return f"{prefix}主线"
+    return f"镖信续章从北京时间 {chapter_opens_at(p):%Y-%m-%d %H:%M:%S} 起开放。\n{prefix}主线"
 
 
 def create(db, key, cmd, prefix, rng):
@@ -204,7 +210,7 @@ def first_battle(db, key, event, prefix, rng):
             potential=p["potential"] + 10,
         )
     outcome = "老镖头出手解围" if result <= 0 else "你赢了"
-    return report + f"\n{outcome}！到账 20 两、10 潜能。明日可发【主线】。\n{prefix}练{p['route']}"
+    return report + f"\n{outcome}！到账 20 两、10 潜能。镖信明日零点有后续。\n现在可以升一级武学\n{prefix}练{p['route']}"
 
 
 def meditate(db, key, p, now, prefix, rng):
@@ -213,7 +219,8 @@ def meditate(db, key, p, now, prefix, rng):
         return f"🧘 已开始打坐，每满 1 小时可领 {2 + p['constitution'] // 5} 潜能。\n{prefix}打坐"
     hours, gain, cursor = rules.meditation(p["meditate_at"], now, p["constitution"])
     if not hours:
-        return "🧘 尚未满一小时，进度已保留。"
+        ready = datetime.fromtimestamp(ceil(cursor + 3600), BJ)
+        return f"🧘 尚未满一小时，进度已保留。\n北京时间 {ready:%Y-%m-%d %H:%M:%S} 起可领。\n{prefix}打坐"
     hunger = max(0, p["hunger"] - hours * (5 + p["strength"]))
     # 原型候选值：每有效小时福缘/100 的机会，单次至多拾得一两。
     extra = int(any(rng.randrange(100) < p["luck"] for _ in range(hours)))
@@ -330,7 +337,8 @@ def handle(db, event, cmd, prefix):
             return f"🥟 吃一份花 {cost} 两，饥饿 {p['hunger']} → {p['hunger'] + gain}。\n{prefix}吃包子"
         update(db, key, silver=p["silver"] - cost, hunger=p["hunger"] + gain)
         return (
-            f"🥟 已吃包子，花 {cost} 两。饥饿 {p['hunger'] + gain}，余额 {p['silver'] - cost} 两。"
+            f"🥟 已吃包子，花 {cost} 两。饥饿 {p['hunger'] + gain}，余额 {p['silver'] - cost} 两。\n"
+            + instruction(player(db, key), prefix)
         )
     if DUEL.fullmatch(cmd) or cmd in ("拒绝", "应战"):
         return duel(db, key, event, p, cmd, prefix, rng)
@@ -341,13 +349,12 @@ def chapter(db, key, event, p, cmd, prefix, rng):
     now = event["arrived"]
     state = p["next_state"]
     if cmd == "主线" and state == "unopened":
-        if (
-            datetime.fromtimestamp(now, BJ).date()
-            <= datetime.fromtimestamp(p["first_win_at"], BJ).date()
-        ):
+        if now < chapter_opens_at(p).timestamp():
             return f"镖信有了下落，北京时间明日零点后再来。\n{prefix}主线"
         state = "fight" if p["route"] == "拳" else "offer"
         update(db, key, next_state=state, stage_at=now)
+    if cmd == "主线" and state == "offer":
+        return f"昨天收信的镖头赶来道谢。加入镖局，或婉拒邀请？\n{prefix}选 1\n{prefix}选 2"
     if cmd == "历练" and state == "fight":
         if p["defeated"]:
             update(db, key, next_state="resolve", stage_at=now)
@@ -364,7 +371,6 @@ def chapter(db, key, event, p, cmd, prefix, rng):
     else:
         intro = {
             "fight": "那封镖信招来了蒙面人。",
-            "offer": "昨天收信的镖头赶来道谢。愿意加入镖局吗？",
             "resolve": "引路人认出了你的信物。",
             "done": ENDINGS.get(p["ending"], ""),
         }.get(state, "")

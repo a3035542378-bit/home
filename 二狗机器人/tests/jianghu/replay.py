@@ -1,11 +1,14 @@
 """同一份逐跳断言同时供 pytest 和 Markdown 预览使用。"""
 
+import re
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime, time, timedelta
 from html import escape
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from ergou.db import BJ
 from ergou.engine import UNKNOWN_COMMAND
 
 from . import audit
@@ -45,8 +48,8 @@ class Trace:
         lines = [
             f"### {self.name}",
             "",
-            "| 跳 | 玩家发送 | 微信回执正文 | 原文提取的下一句 | 非兜底 / 业务态 / 模型增量 | 本群业务态 |",
-            "|---:|---|---|---|---|---|",
+            "| 跳 | 北京时间 | 玩家发送 | 微信回执正文 | 原文提取的下一句 | 非兜底 / 业务态 / 模型增量 | 本群业务态 |",
+            "|---:|---|---|---|---|---|---|",
         ]
         for row in self.rows:
             cells = [
@@ -108,6 +111,7 @@ def run(path, scenario):
             trace.rows.append(
                 (
                     hop,
+                    datetime.fromtimestamp(now, BJ).strftime("%m-%d %H:%M:%S"),
                     command,
                     receipt,
                     selected,
@@ -117,15 +121,16 @@ def run(path, scenario):
             )
             if finished or not selected:
                 break
-            if (
-                "已开始打坐" in receipt
-                or "尚未满一小时" in receipt
-                or "出关 ·" in receipt
-                and selected.endswith("打坐")
-            ):
+            # 只有当前复制的动作需要等待时才拨钟；首胜的次日预告不会延迟当场练功。
+            ready = re.search(r"北京时间 (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})", receipt)
+            if ready and selected in ("二狗打坐", "二狗主线"):
+                at = datetime.strptime(ready[1], "%Y-%m-%d %H:%M:%S").replace(tzinfo=BJ)
+                now = max(now, at.timestamp())
+            elif selected == "二狗打坐" and ("已开始打坐" in receipt or "出关 ·" in receipt):
                 now += scenario.rest
-            elif "明日零点" in receipt:
-                now += 86400
+            elif selected == "二狗主线" and "明日零点" in receipt:
+                tomorrow = datetime.fromtimestamp(now, BJ).date() + timedelta(days=1)
+                now = datetime.combine(tomorrow, time.min, tzinfo=BJ).timestamp()
             command = selected
         else:
             trace.check(False, hop, "Lint-A 回执循环，超过 25 跳")
