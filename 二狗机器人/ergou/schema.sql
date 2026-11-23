@@ -482,3 +482,55 @@ CREATE TABLE IF NOT EXISTS jh_invite_mentions (
 CREATE TABLE IF NOT EXISTS jh_replies (
  task INTEGER PRIMARY KEY REFERENCES outbox(id) ON DELETE CASCADE, version INTEGER NOT NULL
 );
+
+-- 第一章通关后按需创建扩展档案；既有角色、鱼币和积分无需搬迁。
+CREATE TABLE IF NOT EXISTS jh_world (
+ grp TEXT NOT NULL, member TEXT NOT NULL, born REAL NOT NULL,
+ stage INTEGER NOT NULL DEFAULT 0, faction TEXT NOT NULL DEFAULT '', cycles INTEGER NOT NULL DEFAULT 0,
+ gold INTEGER NOT NULL DEFAULT 0 CHECK(gold>=0), escort REAL, patrol REAL,
+ house INTEGER NOT NULL DEFAULT 0, house_day TEXT, pvp INTEGER NOT NULL DEFAULT 0,
+ protected REAL NOT NULL DEFAULT 0, inner_art TEXT NOT NULL DEFAULT '', outer_art TEXT NOT NULL DEFAULT '',
+ inner_level INTEGER NOT NULL DEFAULT 0, outer_level INTEGER NOT NULL DEFAULT 0,
+ ward INTEGER NOT NULL DEFAULT 0, pill INTEGER NOT NULL DEFAULT 0, respec INTEGER NOT NULL DEFAULT 0,
+ training TEXT NOT NULL DEFAULT '', mercy INTEGER NOT NULL DEFAULT 0, looks INTEGER NOT NULL DEFAULT 0,
+ PRIMARY KEY(grp,member), FOREIGN KEY(grp,member) REFERENCES jh_players(grp,member)
+);
+CREATE TABLE IF NOT EXISTS jh_goods (
+ id INTEGER PRIMARY KEY, grp TEXT NOT NULL, member TEXT NOT NULL, name TEXT NOT NULL,
+ power INTEGER NOT NULL DEFAULT 0, guard INTEGER NOT NULL DEFAULT 0, equipped INTEGER NOT NULL DEFAULT 0,
+ price INTEGER NOT NULL DEFAULT 0 CHECK(price>=0), FOREIGN KEY(grp,member) REFERENCES jh_players(grp,member)
+);
+CREATE INDEX IF NOT EXISTS jh_goods_owner ON jh_goods(grp,member);
+CREATE INDEX IF NOT EXISTS jh_market ON jh_goods(grp,price) WHERE price>0;
+CREATE UNIQUE INDEX IF NOT EXISTS jh_equipped ON jh_goods(grp,member) WHERE equipped=1;
+CREATE TABLE IF NOT EXISTS jh_contracts (
+ id INTEGER PRIMARY KEY, grp TEXT NOT NULL, member TEXT NOT NULL, target TEXT NOT NULL,
+ amount INTEGER NOT NULL CHECK(amount>0), created REAL NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS jh_contract_owner ON jh_contracts(grp,member);
+CREATE INDEX IF NOT EXISTS jh_contract_target ON jh_contracts(grp,target);
+CREATE TABLE IF NOT EXISTS jh_relations (
+ grp TEXT NOT NULL, kind TEXT NOT NULL, inviter TEXT NOT NULL, invitee TEXT NOT NULL,
+ accepted INTEGER NOT NULL DEFAULT 0, expires REAL NOT NULL, PRIMARY KEY(grp,kind,invitee)
+);
+CREATE INDEX IF NOT EXISTS jh_relation_out ON jh_relations(grp,kind,inviter);
+CREATE TABLE IF NOT EXISTS jh_encounters (
+ grp TEXT NOT NULL, activity TEXT NOT NULL, period TEXT NOT NULL, member TEXT NOT NULL,
+ score INTEGER NOT NULL, last_action REAL NOT NULL, side TEXT NOT NULL DEFAULT '', claimed INTEGER NOT NULL DEFAULT 0,
+ PRIMARY KEY(grp,activity,period,member)
+);
+CREATE TABLE IF NOT EXISTS jh_money_log (
+ id INTEGER PRIMARY KEY, grp TEXT NOT NULL, member TEXT NOT NULL, source TEXT NOT NULL,
+ reason TEXT NOT NULL, silver INTEGER NOT NULL, gold INTEGER NOT NULL, at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS jh_money_owner ON jh_money_log(grp,member,id);
+CREATE TABLE IF NOT EXISTS jh_packets (
+ id INTEGER PRIMARY KEY, grp TEXT NOT NULL, sender TEXT NOT NULL, remaining INTEGER NOT NULL CHECK(remaining>=0)
+);
+CREATE TABLE IF NOT EXISTS jh_packet_claims (
+ packet INTEGER NOT NULL REFERENCES jh_packets, member TEXT NOT NULL, PRIMARY KEY(packet,member)
+);
+CREATE TABLE IF NOT EXISTS jh_strikes (
+ grp TEXT NOT NULL, attacker TEXT NOT NULL, victim TEXT NOT NULL, at REAL NOT NULL, won INTEGER NOT NULL,
+ PRIMARY KEY(grp,attacker,victim)
+);

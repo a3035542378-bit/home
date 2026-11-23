@@ -13,17 +13,17 @@ CHAPTER_WAIT_MINUTES = 5
 POTENTIAL_CAP = 60
 
 
-def allocation(text):
+def allocation(text, *, budget=80, limit=40):
     fields = FIELD.findall(text)
     if FIELD.sub("", text).strip() or sorted(name for name, _ in fields) != sorted(ATTRIBUTES):
         raise ValueError("请把臂力、身法、根骨、悟性各写一次")
     values = {name: int(n) for name, n in fields}
-    if max(values.values()) > 40:
-        raise ValueError("每项最多 40 点，请调整后再发")
+    if max(values.values()) > limit:
+        raise ValueError(f"每项最多 {limit} 点，请调整后再发")
     total = sum(values.values())
-    if total != 80:
+    if total != budget:
         raise ValueError(
-            f"你分了 {total} 点，{'多' if total > 80 else '少'}了 {abs(total - 80)} 点"
+            f"你分了 {total} 点，{'多' if total > budget else '少'}了 {abs(total - budget)} 点"
         )
     return [values[name] for name in ATTRIBUTES]
 

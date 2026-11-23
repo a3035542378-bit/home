@@ -7,6 +7,7 @@ from datetime import datetime
 from math import ceil
 
 from . import jianghu_rules as rules
+from . import jianghu_world, jianghu_adventure
 from . import roles
 from .db import BJ
 from .display_names import labels, mention_sender
@@ -30,6 +31,7 @@ COMMANDS = {
     "拒绝",
     "了结追索",
     *SWITCHES,
+    *jianghu_world.COMMANDS,
 }
 CHOICE = re.compile(r"选\s*([12])")
 STATS_ONLY = re.compile(rf"(?:{rules.FIELD.pattern}\s*){{4}}")
@@ -43,7 +45,7 @@ ENDINGS = {
 
 
 def matches(cmd):
-    return cmd in COMMANDS or cmd.startswith("加点") or CHOICE.fullmatch(cmd) or DUEL.fullmatch(cmd) or STATS_ONLY.fullmatch(cmd)
+    return cmd in COMMANDS or jianghu_world.matches(cmd) or cmd.startswith("加点") or CHOICE.fullmatch(cmd) or DUEL.fullmatch(cmd) or STATS_ONLY.fullmatch(cmd)
 
 
 def enabled(db, grp):
@@ -71,6 +73,7 @@ def switch(db, event, on):
     )
     if not on and changed.rowcount:
         db.execute("DELETE FROM jh_invites WHERE grp=?", (group,))
+        db.execute("DELETE FROM jh_relations WHERE grp=? AND accepted=0",(group,))
         db.execute(
             """UPDATE outbox SET state='CANCELLED',body='',detail='本群已关闭江湖'
             WHERE grp=? AND state IN ('PENDING','RETRY_WAIT') AND id IN (SELECT task FROM jh_replies)""",
@@ -101,7 +104,7 @@ def instruction(p, prefix, now):
     if p["first_win_at"] is None:
         return f"老镖头守在一旁。准备好了，就再试一次。\n{prefix}再战"
     if p["completed_at"] is not None:
-        return f"想邀群友切磋，可以查看江湖玩法。\n{prefix}江湖录帮助"
+        return f"渡口的镖队还等着你。回主线继续闯荡。\n{prefix}主线"
     if p["next_state"] == "fight":
         return f"准备好就迎战，二狗会一次报完这场比试。\n{prefix}历练"
     if p["next_state"] == "resolve":
@@ -241,7 +244,7 @@ def conclude(db, key, event, prefix):
         result += (
             f"\n🎉 恭喜{labels(db, key[0])(key[1])}正式成为镖局弟子！江湖人称【{p['title']}】。"
         )
-    return result
+    return result + f"\n去渡口听听下一章的消息\n{prefix}主线"
 
 
 def encounter(db, key, p, enemy, rng):
@@ -286,7 +289,13 @@ def meditate(db, key, p, now, prefix, rng):
         return f"🧘 这轮还没满 {rules.MEDITATION_MINUTES} 分钟，进度已保留。\n北京时间 {ready:%Y-%m-%d %H:%M:%S} 起可领。\n{prefix}打坐"
     hunger = max(0, p["hunger"] - rounds * (5 + p["strength"]))
     # 原型候选值：每个结算轮次福缘/100 的机会，单次至多拾得一两。
-    extra = int(any(rng.randrange(100) < p["luck"] for _ in range(rounds)))
+    luck = p["luck"]
+    if p["completed_at"] is not None:
+        _,luck = jianghu_adventure.season(*key,now)
+        if db.execute("""SELECT 1 FROM jh_relations WHERE grp=? AND accepted=1 AND kind IN ('结拜','道侣')
+                      AND (inviter=? OR invitee=?)""",(*key,key[1])).fetchone():
+            gain=min(rules.POTENTIAL_CAP,gain+rounds)
+    extra = int(any(rng.randrange(100) < luck for _ in range(rounds)))
     update(
         db,
         key,
@@ -318,9 +327,12 @@ def duel(db, key, event, p, cmd, prefix, rng):
             return "已婉拒这场切磋。"
         opponent = player(db, (group, invite[0]))
         show = labels(db, group)
-        result, report = rules.fight(
-            rules.fighter(p, show(member)), rules.fighter(opponent, show(invite[0])), rng
-        )
+        if jianghu_adventure.world(db,key) or jianghu_adventure.world(db,(group,invite[0])):
+            from .jianghu_martial import resolve
+            result,report=resolve(jianghu_adventure.duelist(db,p,show(member),now),
+                                  jianghu_adventure.duelist(db,opponent,show(invite[0]),now),rng)
+        else:
+            result,report=rules.fight(rules.fighter(p,show(member)),rules.fighter(opponent,show(invite[0])),rng)
         winner = "平手" if result == 0 else f"{show(member if result > 0 else invite[0])}胜"
         return f"⚔️ 无损切磋\n{report}\n{winner}，点到为止。"
     target = json.loads(event["payload"]).get("duel_target")
@@ -352,8 +364,14 @@ def handle(db, event, cmd, prefix):
     p = player(db, key)
     if STATS_ONLY.fullmatch(cmd):
         cmd = "加点 " + cmd
+    if cmd.startswith("赐金条") and jianghu_world.society.TARGET.fullmatch(cmd):
+        return jianghu_world.society.grant(db,key,event,cmd)
+    if cmd in jianghu_adventure.GUIDES:
+        return jianghu_world.handle(db,key,p,event,cmd,prefix,rng)
     if p is None:
         return create(db, key, cmd, prefix, rng, now)
+    if jianghu_world.matches(cmd) or (cmd in ("主线","历练") and p["completed_at"] is not None):
+        return jianghu_world.handle(db,key,p,event,cmd,prefix,rng)
     if cmd.startswith("加点") or cmd == "确认加点":
         return f"📜 你已经选好出身（{p['identity']}），属性已锁定。想看看自己的本事，可以发：\n{prefix}面板"
     if cmd == "江湖故事":
@@ -370,13 +388,21 @@ def handle(db, event, cmd, prefix):
             lines.append("渡口的蒙面人认出了信封，他是替假镖师来追这封信的。")
         elif p["next_state"] == "offer":
             lines.append("老镖头回客栈谢你，还给你留了个镖局的位置。")
+        extended=jianghu_adventure.world(db,key)
+        if extended and extended["stage"]:
+            lines.append(f"你以{extended['faction']}身份追查失镖。" + ("黑木崖的旧案已了，神兵由你保管。" if extended["stage"]==4 else "渡口的人还记得那枚燕印。"))
         lines.extend(("", "👇 接下来", instruction(p, prefix, now)))
         return "\n".join(lines)
     if cmd in ("面板", "江湖面板", "闯江湖"):
+        extended = jianghu_adventure.world(db,key)
         history = "老镖头曾助你脱险。\n" if p["first_defeat"] else ""
         ending = ENDINGS.get(p["ending"], "")
         if ending:
             history += ending + "\n"
+        age = 16
+        if extended:
+            age = jianghu_adventure.age(extended,now)
+            history += f"🏮 {extended['faction'] or '未选阵营'} · 金条 {extended['gold']} · {extended['training'] or '江湖客'}\n"
         route = (
             ("基础拳法" if p["route"] == "拳" else "铁剑 · 基础剑法") + f" Lv.{p['level']}"
             if p["route"]
@@ -387,9 +413,9 @@ def handle(db, event, cmd, prefix):
             for a, k in zip(rules.ATTRIBUTES, ("strength", "agility", "constitution", "insight"))
         )
         return (
-            f"👤 {p['identity']} · 16岁 · {p['title']}\n{panel_status(p, now)}\n"
+            f"👤 {p['identity']} · {age}岁 · {p['title']}\n{panel_status(p, now)}\n"
             f"{stats}　福缘{p['luck']}\n"
-            f"{route}　气血上限 {100 + 10 * p['strength']}　善恶 {p['karma']}\n"
+            f"{route}　气血上限 {jianghu_adventure.fighter(db,p,'你',now).hp}　善恶 {p['karma']}\n"
             f"饱腹值 {p['hunger']}/100　银两 {p['silver']}　潜能 {p['potential']}\n{history}"
             + instruction(p, prefix, now)
         )

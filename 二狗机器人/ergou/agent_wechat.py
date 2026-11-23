@@ -283,9 +283,9 @@ class Listener:
                     if isinstance(ids,list) and any(uid!=self.account for uid in ids) and not target:
                         payload["invalid_role_target"]=True
                 from . import jianghu
-                if cmd in jianghu.SWITCHES and roles.owner(self.db,self.account):
+                if (cmd in jianghu.SWITCHES or (cmd and cmd.startswith("赐金条"))) and roles.owner(self.db,self.account):
                     wechat_roles.refresh_owner(self.db,self.client,self.account,self.group)
-                if cmd and jianghu.DUEL.fullmatch(cmd) and jianghu.enabled(self.db,self.group):
+                if cmd and (jianghu.DUEL.fullmatch(cmd) or jianghu.jianghu_world.society.TARGET.fullmatch(cmd)) and jianghu.enabled(self.db,self.group):
                     payload["duel_target"]=wechat_roles.target_member(self.db,self.client,self.account,self.group,message)
                 from .pond_raids import TARGET
                 if (cmd and (TARGET.fullmatch(cmd.strip()) or cmd == "偷鱼")
