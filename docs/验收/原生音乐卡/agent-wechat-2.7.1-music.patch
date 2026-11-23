@@ -1,0 +1,400 @@
+--- a/packages/native-client-rust/crates/wechat-api/src/media.rs
++++ b/packages/native-client-rust/crates/wechat-api/src/media.rs
+@@ -630,7 +630,10 @@
+     if input.get("quote").is_some() && input.get("kind").is_some_and(|v| v != "text") {
+         return Err(ApiError(StatusCode::BAD_REQUEST, "invalid_request"));
+     }
+-    if input.get("kind").is_some_and(|v| v == "share") {
++    if input
++        .get("kind")
++        .is_some_and(|v| v == "share" || v == "music")
++    {
+         let request: wechat_core::ShareSendRequest = serde_json::from_value(input)
+             .map_err(|_| ApiError(StatusCode::BAD_REQUEST, "invalid_request"))?;
+         request
+--- a/packages/native-client-rust/crates/wechat-core/src/links.rs
++++ b/packages/native-client-rust/crates/wechat-core/src/links.rs
+@@ -10,6 +10,16 @@
+ #[serde(tag = "kind", rename_all = "snake_case")]
+ #[serde(deny_unknown_fields)]
+ pub enum ShareSendRequest {
++    /// Native music-card experiment. The audio URL is distinct from the landing page.
++    Music {
++        #[serde(rename = "threadId")]
++        thread_id: String,
++        title: String,
++        author: String,
++        url: String,
++        #[serde(rename = "musicUrl")]
++        music_url: String,
++    },
+     /// Send a link card to a chat.
+     Share {
+         /// ID of the chat to send to.
+@@ -32,8 +42,15 @@
+ }
+ impl ShareSendRequest {
+     pub fn destination(&self) -> &str {
+-        let Self::Share { thread_id, .. } = self;
+-        thread_id
++        match self {
++            Self::Share { thread_id, .. } | Self::Music { thread_id, .. } => thread_id,
++        }
++    }
++    pub(crate) fn subtype(&self) -> u64 {
++        match self {
++            Self::Share { .. } => 5,
++            Self::Music { .. } => 3,
++        }
+     }
+     pub fn validate(&self) -> anyhow::Result<()> {
+         let destination = self.destination();
+@@ -49,20 +66,28 @@
+         Ok(())
+     }
+     pub(crate) fn xml(&self, sender: &str) -> anyhow::Result<String> {
+-        let Self::Share {
+-            title,
+-            url,
+-            description,
+-            thumbnail_url,
+-            ..
+-        } = self;
+-        wechat_protocol::media_send::share_xml(
+-            sender,
+-            title,
+-            url,
+-            description.as_deref(),
+-            thumbnail_url.as_deref(),
+-        )
++        match self {
++            Self::Music {
++                title,
++                url,
++                author,
++                music_url,
++                ..
++            } => wechat_protocol::media_send::music_xml(sender, title, url, author, music_url),
++            Self::Share {
++                title,
++                url,
++                description,
++                thumbnail_url,
++                ..
++            } => wechat_protocol::media_send::share_xml(
++                sender,
++                title,
++                url,
++                description.as_deref(),
++                thumbnail_url.as_deref(),
++            ),
++        }
+     }
+ }
+ 
+@@ -568,3 +593,34 @@
+         }
+     }
+ }
++
++#[cfg(test)]
++mod native_music_probe {
++    use super::*;
++
++    #[test]
++    fn accepts_structured_music_and_preserves_normal_share_and_receipt_type() {
++        let body = serde_json::json!({"kind":"music","threadId":"offline@chatroom",
++            "title":"任天堂","author":"G.E.M.邓紫棋","url":"https://example.invalid/song",
++            "musicUrl":"https://example.invalid/synthetic-audio"});
++        let music: ShareSendRequest = serde_json::from_value(body.clone()).unwrap();
++        music.validate().unwrap();
++        assert_eq!(music.subtype(), 3);
++        let xml = format!("<msg>{}</msg>", music.xml("test").unwrap());
++        let document = roxmltree::Document::parse(&xml).unwrap();
++        let app = document
++            .descendants()
++            .find(|n| n.has_tag_name("appmsg"))
++            .unwrap();
++        let card = parse(app, 3).unwrap().card;
++        assert_eq!(card.title.as_deref(), Some("任天堂"));
++        assert_eq!(card.description.as_deref(), Some("G.E.M.邓紫棋"));
++        let mut no_audio = body;
++        no_audio.as_object_mut().unwrap().remove("musicUrl");
++        assert!(serde_json::from_value::<ShareSendRequest>(no_audio).is_err());
++        let link: ShareSendRequest = serde_json::from_value(serde_json::json!({"kind":"share",
++            "threadId":"offline@chatroom","title":"test","url":"https://example.invalid/"}))
++        .unwrap();
++        assert_eq!(link.subtype(), 5);
++    }
++}
+--- a/packages/native-client-rust/crates/wechat-core/src/native_account.rs
++++ b/packages/native-client-rust/crates/wechat-core/src/native_account.rs
+@@ -308,7 +308,7 @@
+     forward!(contact_sync(cursor: &[u8], message_cursor: &[u8], continuation: bool) -> wechat_protocol::contact_sync::ContactSyncBatch => contact_sync);
+     forward!(download_voice(server_id: u64, length: u32, offset: u32) -> wechat_protocol::VoiceChunk => download_voice_chunk);
+     forward!(notify_read(request: &wechat_protocol::SessionReadNotification) -> wechat_protocol::SessionReadReply => notify_read_session);
+-    forward!(send_share(destination: &str, client_id: &str, created_at: u32, content: &str) -> wechat_protocol::media_send::MediaSendResult => send_share);
++    forward!(send_share(destination: &str, client_id: &str, created_at: u32, content: &str, subtype: u64) -> wechat_protocol::media_send::MediaSendResult => send_share);
+     forward!(send_quote(destination: &str, client_id: &str, created_at: u32, content: &str, source: Option<&str>) -> wechat_protocol::media_send::MediaSendResult => send_quote);
+ 
+     fn send_text(
+--- a/packages/native-client-rust/crates/wechat-core/src/runtime.rs
++++ b/packages/native-client-rust/crates/wechat-core/src/runtime.rs
+@@ -1724,6 +1724,7 @@
+                         &payload.client_id.to_string(),
+                         payload.created_at,
+                         &xml,
++                        share.subtype(),
+                     )
+                     .map(|result| SendReceipt {
+                         accepted: result.status
+@@ -2874,6 +2875,29 @@
+     }
+     #[tokio::test]
+     async fn share_intents_are_encrypted_idempotent_and_never_requeued_after_uncertain_restart() {
++        check_card_intent(crate::ShareSendRequest::Share {
++            thread_id: "peer".into(),
++            title: "Private share title".into(),
++            url: "https://example.invalid/private-article".into(),
++            description: Some("Description".into()),
++            thumbnail_url: None,
++        })
++        .await;
++    }
++
++    #[tokio::test]
++    async fn native_music_intent_is_idempotent_and_preserved_across_restart() {
++        check_card_intent(crate::ShareSendRequest::Music {
++            thread_id: "peer".into(),
++            title: "Private share title".into(),
++            author: "Kevin MacLeod".into(),
++            url: "https://mdn.github.io/webaudio-examples/audio-basics/".into(),
++            music_url: "https://mdn.github.io/webaudio-examples/audio-basics/outfoxing.mp3".into(),
++        })
++        .await;
++    }
++
++    async fn check_card_intent(request: crate::ShareSendRequest) {
+         let temp = tempfile::tempdir().unwrap();
+         let root = temp.path().join("data");
+         let store = Arc::new(Store::open(&root).unwrap());
+@@ -2888,13 +2912,6 @@
+             .unwrap();
+         core.install_login_state("one", &state(), None).unwrap();
+         core.stopping.store(true, Ordering::SeqCst);
+-        let request = crate::ShareSendRequest::Share {
+-            thread_id: "peer".into(),
+-            title: "Private share title".into(),
+-            url: "https://example.invalid/private-article".into(),
+-            description: Some("Description".into()),
+-            thumbnail_url: None,
+-        };
+         let first = core
+             .send_share("one", "share-key", request.clone())
+             .await
+@@ -2914,7 +2931,7 @@
+                 .unwrap(),
+         )
+         .unwrap();
+-        assert!(payload.share.is_some());
++        assert_eq!(payload.share.as_ref().unwrap().subtype(), request.subtype());
+         assert_eq!(payload.thread_id, "peer");
+         let mut changed = serde_json::to_value(&request).unwrap();
+         changed["title"] = "Changed title".into();
+--- a/packages/native-client-rust/crates/wechat-core/src/upstream.rs
++++ b/packages/native-client-rust/crates/wechat-core/src/upstream.rs
+@@ -304,6 +304,7 @@
+         _client_id: &str,
+         _created_at: u32,
+         _content: &str,
++        _subtype: u64,
+     ) -> Result<MediaSendResult> {
+         bail!(
+             "{}",
+--- a/packages/native-client-rust/crates/wechat-protocol/src/account_operations.rs
++++ b/packages/native-client-rust/crates/wechat-protocol/src/account_operations.rs
+@@ -204,6 +204,7 @@
+         client_id: &str,
+         created_at: u32,
+         content: &str,
++        subtype: u64,
+     ) -> Result<crate::media_send::MediaSendResult> {
+         let (destination, client_id, content) = (
+             destination.to_owned(),
+@@ -211,7 +212,14 @@
+             content.to_owned(),
+         );
+         self.account_request(move |transport, state, _| {
+-            transport.send_share_snapshot(state, &destination, &client_id, created_at, &content)
++            transport.send_share_snapshot(
++                state,
++                &destination,
++                &client_id,
++                created_at,
++                &content,
++                subtype,
++            )
+         })
+         .await
+     }
+--- a/packages/native-client-rust/crates/wechat-protocol/src/account_request.rs
++++ b/packages/native-client-rust/crates/wechat-protocol/src/account_request.rs
+@@ -219,7 +219,7 @@
+     operation!(recall_message(request: &crate::MessageRecall) -> crate::MessageRecallReply => recall_message_snapshot);
+     operation!(notify_read_session(request: &crate::SessionReadNotification) -> crate::SessionReadReply => notify_read_session_snapshot);
+     operation!(contact_sync(cursor: &[u8], message_cursor: &[u8], continuation: bool) -> crate::contact_sync::ContactSyncBatch => contact_sync_snapshot);
+-    operation!(send_share(destination: &str, client_id: &str, created_at: u32, content: &str) -> crate::media_send::MediaSendResult => send_share_snapshot);
++    operation!(send_share(destination: &str, client_id: &str, created_at: u32, content: &str, subtype: u64) -> crate::media_send::MediaSendResult => send_share_snapshot);
+     operation!(send_quote(destination: &str, client_id: &str, created_at: u32, content: &str, source: Option<&str>) -> crate::media_send::MediaSendResult => send_quote_with_source_snapshot);
+     operation!(reserve_file_upload(destination: &str, client_id: &str, name: &str, length: usize, md5: &str) -> crate::file_upload::FileUploadReservation => reserve_file_upload_snapshot);
+     operation!(send_file(destination: &str, client_id: &str, created_at: u32, upload: &crate::media::UploadedMedia, reservation: Option<&crate::file_upload::FileUploadReservation>) -> crate::media_send::MediaSendResult => send_file_with_reservation_snapshot);
+--- a/packages/native-client-rust/crates/wechat-protocol/src/client.rs
++++ b/packages/native-client-rust/crates/wechat-protocol/src/client.rs
+@@ -1281,13 +1281,15 @@
+         client_id: &str,
+         created_at: u32,
+         content: &str,
++        subtype: u64,
+     ) -> Result<crate::media_send::MediaSendResult> {
+-        let request = crate::media_send::share_send_request(
++        let request = crate::media_send::app_card_request(
+             state,
+             destination,
+             client_id,
+             created_at,
+             content,
++            subtype,
+         )?;
+         crate::media_send::decode_file_send(
+             &self.authenticated_rpc(state, 222, "/cgi-bin/micromsg-bin/sendappmsg", &request)?,
+--- a/packages/native-client-rust/crates/wechat-protocol/src/media_send.rs
++++ b/packages/native-client-rust/crates/wechat-protocol/src/media_send.rs
+@@ -64,6 +64,32 @@
+     url: &str,
+     description: Option<&str>,
+     thumbnail_url: Option<&str>,
++) -> Result<String> {
++    card_xml(sender, title, url, description, thumbnail_url, None)
++}
++
++pub fn music_xml(
++    sender: &str,
++    title: &str,
++    url: &str,
++    author: &str,
++    music_url: &str,
++) -> Result<String> {
++    ensure!(
++        music_url.starts_with("https://") && !author.trim().is_empty(),
++        "invalid_music_request"
++    );
++    crate::media::validate_shared_link_url(music_url)?;
++    card_xml(sender, title, url, Some(author), None, Some(music_url))
++}
++
++fn card_xml(
++    sender: &str,
++    title: &str,
++    url: &str,
++    description: Option<&str>,
++    thumbnail_url: Option<&str>,
++    music_url: Option<&str>,
+ ) -> Result<String> {
+     clean(sender, 256)?;
+     ensure!(
+@@ -87,14 +113,15 @@
+         crate::media::validate_link_thumbnail_url(url)?;
+     }
+     let xml = format!(
+-        "<appmsg appid=\"\" sdkver=\"0\">{}{}{}{}{}{}{}{}{}{}</appmsg>{}",
++        "<appmsg appid=\"\" sdkver=\"0\">{}{}{}{}{}{}{}{}{}{}{}</appmsg>{}",
+         tag("title", title),
+         tag("des", description),
+         tag("action", "view"),
+-        tag("type", 5),
++        tag("type", if music_url.is_some() { 3 } else { 5 }),
+         tag("showtype", 0),
+         tag("url", url),
+         tag("lowurl", ""),
++        music_url.map(|url| tag("dataurl", url)).unwrap_or_default(),
+         tag("thumburl", thumbnail_url.unwrap_or("")),
+         tag("sourceusername", ""),
+         tag("sourcedisplayname", ""),
+@@ -110,6 +137,17 @@
+     created_at: u32,
+     content: &str,
+ ) -> Result<Vec<u8>> {
++    app_card_request(state, destination, client_id, created_at, content, 5)
++}
++pub fn app_card_request(
++    state: &AccountState,
++    destination: &str,
++    client_id: &str,
++    created_at: u32,
++    content: &str,
++    subtype: u64,
++) -> Result<Vec<u8>> {
++    ensure!(matches!(subtype, 3 | 5), "invalid_share_request");
+     clean(destination, 256)?;
+     clean(client_id, 1024)?;
+     ensure!(
+@@ -121,7 +159,7 @@
+         p::bytes(2, &[]),
+         p::uint(3, 0),
+         p::bytes(4, destination.as_bytes()),
+-        p::uint(5, 5),
++        p::uint(5, subtype),
+         p::bytes(6, content.as_bytes()),
+         p::uint(7, created_at as u64),
+         p::bytes(8, client_id.as_bytes()),
+@@ -1346,6 +1384,50 @@
+             );
+             assert!(local_image_xml(&invalid).is_err());
+         }
++    }
++
++    #[test]
++    fn native_music_contains_a_playable_source_and_type_three_on_wire() {
++        let state = synthetic_state();
++        let music = music_xml(
++            "synthetic-user",
++            "Outfoxing <the Fox>",
++            "https://mdn.github.io/webaudio-examples/audio-basics/",
++            "Kevin MacLeod",
++            "https://mdn.github.io/webaudio-examples/audio-basics/outfoxing.mp3",
++        )
++        .unwrap();
++        let bytes = app_card_request(
++            &state,
++            "offline@chatroom",
++            "music-probe",
++            1234567,
++            &music,
++            3,
++        )
++        .unwrap();
++        let outer = p::decode(&bytes).unwrap();
++        let payload = p::decode(p::data(&outer, 2).unwrap()).unwrap();
++        assert_eq!(p::scalar(&payload, 5).unwrap(), 3);
++        let xml = format!(
++            "<msg>{}</msg>",
++            std::str::from_utf8(p::data(&payload, 6).unwrap()).unwrap()
++        );
++        let doc = roxmltree::Document::parse(&xml).unwrap();
++        let field = |name| {
++            doc.descendants()
++                .find(|n| n.has_tag_name(name))
++                .unwrap()
++                .text()
++                .unwrap()
++        };
++        assert_eq!(field("type"), "3");
++        assert_eq!(field("title"), "Outfoxing <the Fox>");
++        assert_eq!(
++            field("dataurl"),
++            "https://mdn.github.io/webaudio-examples/audio-basics/outfoxing.mp3"
++        );
++        assert!(music_xml("u", "t", "https://example.invalid/", "a", "file:///tmp/a").is_err());
+     }
+ 
+     #[test]
