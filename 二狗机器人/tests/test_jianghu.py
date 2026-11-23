@@ -315,6 +315,35 @@ class JianghuReplay(unittest.TestCase):
         offer = self.send(meal.splitlines()[-1])
         self.assertEqual(offer.splitlines()[-2:], ["小侠选 1", "小侠选 2"])
 
+    def test_two_players_follow_their_own_start_and_training(self):
+        self.say("闯江湖", member="sword")
+        self.assertIn("你在本群还没有角色", self.say("选 2", member="fist"))
+        self.say("闯江湖", member="fist")
+        self.assertIn("镖局学徒", self.say("选 2", member="fist"))
+        self.assertIn("平民", self.say("选 1", member="sword"))
+        for member, stats, cost, choice, route, rate in (
+            ("sword", "臂力10　身法16　根骨35　悟性19", 20, 2, "剑", 9),
+            ("fist", "臂力20 身法10 根骨10 悟性40", 15, 1, "拳", 4),
+        ):
+            self.assertEqual(self.send(stats, member=member), "")
+            draft = self.say(stats, member=member)
+            self.assertIn(f"升三级花 {cost} 潜能", draft)
+            intro = self.send(draft.splitlines()[-1], member=member)
+            self.assertIn("选 1 拆开查看", intro)
+            self.assertIn("选 2 原封退还", intro)
+            win = self.say(f"选 {choice}", member=member)
+            level = self.send(win.splitlines()[-1], member=member)
+            self.assertIn(f"还差 {cost} 潜能", level)
+            rest = self.send(level.splitlines()[-1], member=member)
+            self.assertIn(f"每小时 {rate} 点", rest)
+            self.assertIn("09:00:00", rest)
+            again = self.say("练" + route, member=member)
+            self.assertIn("12:00:00" if route == "拳" else "11:00:00", again)
+            before = self.record(member)
+            self.assertIn("属性已锁定", self.say("加点 " + stats, member=member))
+            self.assertIn(f"Lv.{before['level']}", self.say("闯江湖", member=member))
+            self.assertEqual(before, self.record(member))
+
     def test_invites_close_and_dispatch(self):
         for member in ("a", "b", "c"):
             self.start((40, 10, 10, 20), "拳", member)

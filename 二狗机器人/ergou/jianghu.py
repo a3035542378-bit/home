@@ -31,6 +31,7 @@ COMMANDS = {
     *SWITCHES,
 }
 CHOICE = re.compile(r"选\s*([12])")
+STATS_ONLY = re.compile(rf"(?:{rules.FIELD.pattern}\s*){{4}}")
 DUEL = re.compile(r"切磋(?:\s*[@＠].+)?", re.S)
 ENDINGS = {
     "解围": "引路人出手制敌，你与这段恩怨就此了结。",
@@ -41,7 +42,7 @@ ENDINGS = {
 
 
 def matches(cmd):
-    return cmd in COMMANDS or cmd.startswith("加点") or CHOICE.fullmatch(cmd) or DUEL.fullmatch(cmd)
+    return cmd in COMMANDS or cmd.startswith("加点") or CHOICE.fullmatch(cmd) or DUEL.fullmatch(cmd) or STATS_ONLY.fullmatch(cmd)
 
 
 def enabled(db, grp):
@@ -96,7 +97,7 @@ def chapter_opens_at(p):
 
 def instruction(p, prefix):
     if not p["route"]:
-        return f"掌柜递给你一封错送的镖信。拆开查看或原封退还？\n{prefix}选 1\n{prefix}选 2"
+        return f"掌柜递给你一封错送的镖信。选 1 拆开查看，学拳；选 2 原封退还，学剑。\n{prefix}选 1\n{prefix}选 2"
     if p["first_win_at"] is None:
         return f"老镖头会助你再战。\n{prefix}再战"
     if p["completed_at"] is not None:
@@ -109,7 +110,7 @@ def instruction(p, prefix):
         return f"镖头在等你的答复。\n{prefix}主线"
     if p["level"] < 3:
         if p["potential"] < price(p):
-            return f"{prefix}打坐"
+            return f"升到 Lv.{p['level'] + 1} 还差 {price(p) - p['potential']} 潜能。" + meditation_tip(p, prefix)
         return f"{prefix}练{p['route']}"
     return f"镖信续章从北京时间 {chapter_opens_at(p):%Y-%m-%d %H:%M:%S} 起开放。\n{prefix}主线"
 
@@ -118,27 +119,36 @@ def create(db, key, cmd, prefix, rng):
     draft = db.execute("SELECT * FROM jh_drafts WHERE grp=? AND member=?", key).fetchone()
     if not draft:
         if cmd != "闯江湖":
-            return f"🏮 先到悦来客栈报个名\n{prefix}闯江湖"
+            return f"🏮 你在本群还没有角色。先到悦来客栈报个名\n{prefix}闯江湖"
         db.execute("INSERT INTO jh_drafts(grp,member) VALUES(?,?)", key)
     if not draft or not draft["identity"]:
         choice = CHOICE.fullmatch(cmd)
         if not choice:
-            return f"🏮 初入江湖 · 两种身份都带 30 两盘缠\n平民出身\n{prefix}选 1\n镖局学徒\n{prefix}选 2"
+            return f"🏮 第一步 · 选你的出身\n两种身份各带 30 两，学拳或学剑稍后再选。\n平民出身\n{prefix}选 1\n镖局学徒\n{prefix}选 2"
         identity = "平民" if choice[1] == "1" else "镖局学徒"
         db.execute("UPDATE jh_drafts SET identity=? WHERE grp=? AND member=?", (identity, *key))
-    suggestion = f"80 点先天属性，每项 0～40。福缘另计。\n{prefix}加点 臂力20 身法20 根骨30 悟性10"
+    else:
+        identity = draft["identity"]
+    suggestion = (
+        f"📜 {identity} · 分配 80 点，每项 0～40。\n"
+        "臂力加伤害和气血，身法抢先手；根骨减伤、打坐更快。\n"
+        "悟性到 20，升三级省 5 潜能。可以照发，也可以改数字：\n"
+        f"{prefix}加点 臂力20 身法10 根骨30 悟性20"
+    )
     if cmd.startswith("加点"):
         try:
             stats = rules.allocation(cmd[2:].strip())
         except ValueError as exc:
-            return f"{exc}。身份与上次草稿已保留。\n{suggestion}"
+            return f"{exc}。这次没有保存。\n{suggestion}"
         db.execute(
             "UPDATE jh_drafts SET stats=? WHERE grp=? AND member=?", (json.dumps(stats), *key)
         )
         summary = "　".join(f"{k}{v}" for k, v in zip(rules.ATTRIBUTES, stats))
+        discount = (f"悟性 {stats[3]}，升三级花 15 潜能；超过 20 的部分暂无额外减耗。"
+                    if stats[3] >= 20 else f"悟性 {stats[3]}，升三级花 20 潜能；调到 20 可省 5 点。")
         return (
             f"📜 加点草稿 · {rules.title(*stats)}\n{summary}\n气血上限 {100 + stats[0] * 10}。"
-            f"悟性达 20 即享最高减耗。\n可重发加点修改，确定后发送\n{prefix}确认加点"
+            f"{discount}\n可重发加点修改，确认后锁定属性。确定就发\n{prefix}确认加点"
         )
     if cmd == "确认加点" and draft and draft["stats"]:
         stats = json.loads(draft["stats"])
@@ -162,6 +172,15 @@ def price(p):
     return 10 if p["level"] == 1 else (15 if p["insight"] >= 20 else 20)
 
 
+def meditation_tip(p, prefix):
+    if p["meditate_at"] is None:
+        return f"先开始打坐，离线也会计时。\n{prefix}打坐"
+    rate = 2 + p["constitution"] // 5
+    hours = ceil((price(p) - p["potential"]) / rate)
+    ready = datetime.fromtimestamp(ceil(p["meditate_at"] + hours * 3600), BJ)
+    return f"打坐每小时得 {rate} 点，北京时间 {ready:%m-%d %H:%M:%S} 起领够升级。\n{prefix}打坐"
+
+
 def record(db, event, kind):
     return db.execute(
         """INSERT OR IGNORE INTO jh_events VALUES(?,?,1,?,?,?)""",
@@ -177,7 +196,6 @@ def conclude(db, key, event, prefix):
     result = f"🏮 第一章·客栈风云 已完成\n{ENDINGS[p['ending']]}\n【切磋 @群友】邀一位朋友试试身手"
     if p["ending"] == "加入" and record(db, event, "join_broadcast"):
         # 同一条定向群回执承载入门恭贺，继承原事件的微信发送授权。
-        mention_sender(db, event)
         result += (
             f"\n🎉 恭喜{labels(db, key[0])(key[1])}正式成为镖局弟子！江湖人称【{p['title']}】。"
         )
@@ -216,7 +234,10 @@ def first_battle(db, key, event, prefix, rng):
 def meditate(db, key, p, now, prefix, rng):
     if p["meditate_at"] is None:
         update(db, key, meditate_at=now)
-        return f"🧘 已开始打坐，每满 1 小时可领 {2 + p['constitution'] // 5} 潜能。\n{prefix}打坐"
+        rate = 2 + p["constitution"] // 5
+        ready = datetime.fromtimestamp(ceil(now + 3600), BJ)
+        return (f"🧘 已开始打坐，离线也会攒潜能。每小时 {rate} 点。\n"
+                f"首次领取（北京时间）{ready:%m-%d %H:%M:%S}，到点再发：\n{prefix}打坐")
     hours, gain, cursor = rules.meditation(p["meditate_at"], now, p["constitution"])
     if not hours:
         ready = datetime.fromtimestamp(ceil(cursor + 3600), BJ)
@@ -278,13 +299,18 @@ def duel(db, key, event, p, cmd, prefix, rng):
 
 
 def handle(db, event, cmd, prefix):
+    mention_sender(db, event)
     key = (event["grp"], event["member"])
     now = event["arrived"]
     rng = random.Random(event["event_id"])
     p = player(db, key)
+    if STATS_ONLY.fullmatch(cmd):
+        cmd = "加点 " + cmd
     if p is None:
         return create(db, key, cmd, prefix, rng)
-    if cmd in ("面板", "江湖面板"):
+    if cmd.startswith("加点") or cmd == "确认加点":
+        return f"📜 你的{p['identity']}已建好，属性已锁定。查看当前角色：\n{prefix}面板"
+    if cmd in ("面板", "江湖面板", "闯江湖"):
         history = "老镖头曾助你脱险。\n" if p["first_defeat"] else ""
         ending = ENDINGS.get(p["ending"], "")
         if ending:
@@ -310,7 +336,7 @@ def handle(db, event, cmd, prefix):
             return instruction(p, prefix)
         fist = choice[1] == "1"
         update(db, key, route="拳" if fist else "剑", karma=-10 if fist else 10, level=1)
-        intro = "你拆开镖信，学会基础拳法。" if fist else "你送还镖信，获铁剑，学会基础剑法。"
+        intro = "你拆开镖信，假镖师伸手来夺！用刚学的基础拳法迎敌。" if fist else "你送还镖信，镖头赠你铁剑，教你基础剑法。门口一条野狗叼走了肉包！"
         return intro + "\n" + first_battle(db, key, event, prefix, rng)
     if p["first_win_at"] is None:
         return (
@@ -323,7 +349,7 @@ def handle(db, event, cmd, prefix):
             return f"当前武学 Lv.{p['level']}。\n" + instruction(p, prefix)
         cost = price(p)
         if p["potential"] < cost:
-            return f"还差 {cost - p['potential']} 潜能。\n{prefix}打坐"
+            return f"还差 {cost - p['potential']} 潜能。" + meditation_tip(p, prefix)
         update(db, key, level=p["level"] + 1, potential=p["potential"] - cost)
         return f"🥋 基础{p['route']}法 Lv.{p['level'] + 1}，已用 {cost} 潜能。\n" + conclude(
             db, key, event, prefix
@@ -354,7 +380,7 @@ def chapter(db, key, event, p, cmd, prefix, rng):
         state = "fight" if p["route"] == "拳" else "offer"
         update(db, key, next_state=state, stage_at=now)
     if cmd == "主线" and state == "offer":
-        return f"昨天收信的镖头赶来道谢。加入镖局，或婉拒邀请？\n{prefix}选 1\n{prefix}选 2"
+        return f"收下镖信的镖头赶来道谢。选 1 加入镖局，选 2 婉拒邀请。\n{prefix}选 1\n{prefix}选 2"
     if cmd == "历练" and state == "fight":
         if p["defeated"]:
             update(db, key, next_state="resolve", stage_at=now)
