@@ -418,6 +418,14 @@ class Listener:
                 self.heartbeat("STOPPED")
 
 
+def reply_mentions(task):
+    sender = task.get("mention_sender")
+    if not sender:
+        return []
+    invitee = task.get("mention_invitee")
+    return [sender, invitee] if invitee and invitee != sender else [sender]
+
+
 def inspect_text_send(client, token, task, timeout=8):
     """Read the durable send and its saved outgoing message. Never submit a message."""
     sender=Client(client.port,client.slot,token)
@@ -452,7 +460,9 @@ def inspect_text_send(client, token, task, timeout=8):
                                  and isinstance(body,str) and body.startswith("@") and body.endswith(suffix)
                                  and len(body)>len(suffix)+1 and isinstance(mentions,dict)
                                  and mentions.get("state")=="known" and mentions.get("all") is not True
-                                 and mentions.get("userIds")==[task["mention_sender"]])
+                                 and isinstance(mentions.get("userIds"),list)
+                                 and all(isinstance(uid,str) for uid in mentions["userIds"])
+                                 and sorted(mentions["userIds"])==sorted(reply_mentions(task)))
                     else:
                         matches=type(message.get("type")) is int and message["type"]==1 and message.get("body")==task["body"]
                     if (identity!=(mid,client.slot,task["grp"],"outgoing",sid)
@@ -480,7 +490,7 @@ def send_direct(client, token, task):
     try:
         payload={"threadId":task["grp"],**(task.get("share") or {"text":task["body"]})}
         if not task.get("share") and task.get("mention_sender"):
-            payload["mentions"]={"userIds":[task["mention_sender"]]}
+            payload["mentions"]={"userIds":reply_mentions(task)}
         conn.request("POST",client.base+"/sends",body=dump(payload).encode(),
                      headers={"Authorization":"Bearer "+token,"Content-Type":"application/json","Idempotency-Key":"ergou-"+task["biz"]})
         response=conn.getresponse()

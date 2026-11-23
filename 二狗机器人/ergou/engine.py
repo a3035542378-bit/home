@@ -7,6 +7,7 @@ from contextlib import nullcontext
 from datetime import datetime
 
 from . import asset_actions, community, plugins, retention
+from .display_names import mention_sender
 from .db import BJ, allowed, audit, closing_db, dump, transaction, window
 from .games import GAMES, RULE_VERSION, start_board, turn_hint, visible_board
 
@@ -334,6 +335,8 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     canonical=intents.command_alias(cmd)
     topic=feature_menu.find_topic(cmd) or feature_menu.find_topic(canonical)
     if topic:
+        if topic.gate == "jianghu":
+            mention_sender(db, e)
         return feature_menu.page(db,g,e,cfg,prefix,topic)
     menu=canonical.rstrip("。！？!?").strip()
     if menu in ("全菜单","全部功能"):
@@ -346,6 +349,7 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     from . import jianghu
     if jianghu.matches(cmd):
         if cmd in jianghu.SWITCHES:
+            mention_sender(db, e)
             return jianghu.switch(db,e,cmd=="开启江湖")
         generation = jianghu.enabled(db,g["id"])
         if generation:
@@ -355,6 +359,7 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
                        (generation[0],e["event_id"]))
             return None
         if cmd == "闯江湖":
+            mention_sender(db, e)
             return "本群江湖尚未开启，可由主人或已授权的群主开启。"
     try:
         matched=reply_rules.match(db,e,cmd)

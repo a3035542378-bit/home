@@ -475,6 +475,10 @@ CREATE TABLE IF NOT EXISTS jh_invites (
  grp TEXT NOT NULL REFERENCES groups, inviter TEXT NOT NULL, invitee TEXT NOT NULL, expires REAL NOT NULL,
  PRIMARY KEY(grp,inviter), UNIQUE(grp,invitee), CHECK(inviter<>invitee)
 );
+CREATE TABLE IF NOT EXISTS jh_invite_mentions (
+ biz TEXT PRIMARY KEY REFERENCES fishing_reply_mentions(biz) ON DELETE CASCADE,
+ invitee TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS jh_replies (
  task INTEGER PRIMARY KEY REFERENCES outbox(id) ON DELETE CASCADE, version INTEGER NOT NULL
 );

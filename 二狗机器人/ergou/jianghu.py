@@ -16,6 +16,7 @@ COMMANDS = {
     "闯江湖",
     "面板",
     "江湖面板",
+    "江湖故事",
     "主线",
     "历练",
     "再战",
@@ -97,15 +98,15 @@ def chapter_opens_at(p):
 
 def instruction(p, prefix):
     if not p["route"]:
-        return f"掌柜递给你一封错送的镖信。选 1 拆开查看，学拳；选 2 原封退还，学剑。\n{prefix}选 1\n{prefix}选 2"
+        return f"掌柜递给你一封错送的镖信。封口印着半枚燕子，柜台旁有个生客一直盯着它。\n选 1 拆开查看，学拳；选 2 原封退还，学剑。\n{prefix}选 1\n{prefix}选 2"
     if p["first_win_at"] is None:
         return f"老镖头会助你再战。\n{prefix}再战"
     if p["completed_at"] is not None:
         return f"想邀群友切磋，可以查看江湖玩法。\n{prefix}江湖录帮助"
     if p["next_state"] == "fight":
-        return f"{prefix}历练"
+        return f"准备好就迎战，二狗会一次报完这场比试。\n{prefix}历练"
     if p["next_state"] == "resolve":
-        return f"{prefix}了结追索"
+        return f"把封信交给引路人，请他替你解围。\n{prefix}了结追索"
     if p["next_state"] == "offer":
         return f"镖头在等你的答复。\n{prefix}主线"
     if p["level"] < 3:
@@ -124,7 +125,7 @@ def create(db, key, cmd, prefix, rng):
     if not draft or not draft["identity"]:
         choice = CHOICE.fullmatch(cmd)
         if not choice:
-            return f"🏮 第一步 · 选你的出身\n两种身份各带 30 两，学拳或学剑稍后再选。\n平民出身\n{prefix}选 1\n镖局学徒\n{prefix}选 2"
+            return f"🏮 第一章 · 客栈风云\n雨打着悦来客栈的灯笼。掌柜正要落闩，一名镖师把封信塞进门缝，转眼就走了。\n你为何在客栈？两种出身各带 30 两，选一句发：\n平民出身\n{prefix}选 1\n镖局学徒\n{prefix}选 2"
         identity = "平民" if choice[1] == "1" else "镖局学徒"
         db.execute("UPDATE jh_drafts SET identity=? WHERE grp=? AND member=?", (identity, *key))
     else:
@@ -148,7 +149,7 @@ def create(db, key, cmd, prefix, rng):
                     if stats[3] >= 20 else f"悟性 {stats[3]}，升三级花 20 潜能；调到 20 可省 5 点。")
         return (
             f"📜 加点草稿 · {rules.title(*stats)}\n{summary}\n气血上限 {100 + stats[0] * 10}。"
-            f"{discount}\n可重发加点修改，确认后锁定属性。确定就发\n{prefix}确认加点"
+            f"{discount}\n满意就发下面这句，确认后锁定属性；想改可重发加点。\n{prefix}确认加点"
         )
     if cmd == "确认加点" and draft and draft["stats"]:
         stats = json.loads(draft["stats"])
@@ -295,7 +296,11 @@ def duel(db, key, event, p, cmd, prefix, rng):
     if busy:
         return "已有一场切磋待回应，五分钟后邀请到期。"
     db.execute("INSERT INTO jh_invites VALUES(?,?,?,?)", (group, member, target, now + 300))
-    return f"⚔️ {labels(db, group)(target)}收到了切磋邀请，五分钟内可应战或拒绝。\n{prefix}应战"
+    db.execute("""INSERT OR IGNORE INTO jh_invite_mentions(biz,invitee)
+                  SELECT biz,? FROM fishing_reply_mentions WHERE biz=?""", (target, event["event_id"]))
+    name = labels(db, group)
+    return (f"⚔️ {name(target)}收到了{name(member)}的切磋邀请。\n"
+            f"受邀者五分钟内任选一句，切磋不扣气血或银两。\n{prefix}应战\n{prefix}拒绝")
 
 
 def handle(db, event, cmd, prefix):
@@ -310,6 +315,20 @@ def handle(db, event, cmd, prefix):
         return create(db, key, cmd, prefix, rng)
     if cmd.startswith("加点") or cmd == "确认加点":
         return f"📜 你的{p['identity']}已建好，属性已锁定。查看当前角色：\n{prefix}面板"
+    if cmd == "江湖故事":
+        lines = ["📜 你的江湖故事", f"十六岁那年，你以{p['identity']}的身份来到悦来客栈。雨夜，有人送错了一封镖信。"]
+        if p["route"] == "拳":
+            lines.append("你拆了信，看见渡口之约。假镖师来抢，老镖头教了你第一招拳。")
+        elif p["route"] == "剑":
+            lines.append("你将镖信完璧奉还。老镖头的半枚燕印对上了封口，他留下铁剑，教你用剑。")
+        if p["ending"]:
+            lines.append(ENDINGS[p["ending"]])
+        elif p["next_state"] in ("fight", "resolve"):
+            lines.append("渡口的蒙面人认出了信封，他是替假镖师来追这封信的。")
+        elif p["next_state"] == "offer":
+            lines.append("老镖头回客栈谢你，还给你留了个镖局的位置。")
+        lines.append(instruction(p, prefix))
+        return "\n".join(lines)
     if cmd in ("面板", "江湖面板", "闯江湖"):
         history = "老镖头曾助你脱险。\n" if p["first_defeat"] else ""
         ending = ENDINGS.get(p["ending"], "")
@@ -336,7 +355,7 @@ def handle(db, event, cmd, prefix):
             return instruction(p, prefix)
         fist = choice[1] == "1"
         update(db, key, route="拳" if fist else "剑", karma=-10 if fist else 10, level=1)
-        intro = "你拆开镖信，假镖师伸手来夺！用刚学的基础拳法迎敌。" if fist else "你送还镖信，镖头赠你铁剑，教你基础剑法。门口一条野狗叼走了肉包！"
+        intro = "你拆开镖信，里面只写着“明早，渡口见”。柜台边的假镖师探手夺信！老镖头喊你收肘出拳，你学会了基础拳法。" if fist else "你送还镖信。老镖头亮出另半枚燕印，正好合上。他赠你铁剑，才教完基础剑法，门口的野狗就叼走了他的肉包！"
         return intro + "\n" + first_battle(db, key, event, prefix, rng)
     if p["first_win_at"] is None:
         return (
@@ -380,7 +399,7 @@ def chapter(db, key, event, p, cmd, prefix, rng):
         state = "fight" if p["route"] == "拳" else "offer"
         update(db, key, next_state=state, stage_at=now)
     if cmd == "主线" and state == "offer":
-        return f"收下镖信的镖头赶来道谢。选 1 加入镖局，选 2 婉拒邀请。\n{prefix}选 1\n{prefix}选 2"
+        return f"收下镖信的镖头赶来道谢。他把两枚燕印拼在桌上：“送信最难的是守信。愿意跟我走一趟镖吗？”\n选 1 加入镖局，选 2 婉拒邀请。\n{prefix}选 1\n{prefix}选 2"
     if cmd == "历练" and state == "fight":
         if p["defeated"]:
             update(db, key, next_state="resolve", stage_at=now)
@@ -396,7 +415,7 @@ def chapter(db, key, event, p, cmd, prefix, rng):
         ending = "加入" if CHOICE.fullmatch(cmd)[1] == "1" else "婉拒"
     else:
         intro = {
-            "fight": "那封镖信招来了蒙面人。",
+            "fight": "那封镖信招来了蒙面人。他堵在渡口，手里攥着半枚燕印：“昨日拆信的是你？我替我兄弟取信来了。”",
             "resolve": "引路人认出了你的信物。",
             "done": ENDINGS.get(p["ending"], ""),
         }.get(state, "")
