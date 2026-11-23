@@ -49,8 +49,8 @@ class JianghuMentions(unittest.TestCase):
                 VALUES(?,?,'平民',20,20,20,20,5,'踏实练家子',?,?)""",
                               (self.api.room, who, route, time.time()))
         story = self.say("二狗江湖故事")
-        self.assertIn("你拆了信", story["body"])
-        self.assertNotIn("完璧奉还", story["body"])
+        self.assertIn("明早，渡口见", story["body"])
+        self.assertNotIn("送了你一把铁剑", story["body"])
         self.assertEqual(aw.reply_mentions(story), ["player-a"])
         self.assertEqual(aw.reply_mentions(self.say("二狗切磋 @乙")), ["player-a"])
         original = self.api.get

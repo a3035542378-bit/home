@@ -327,13 +327,13 @@ class JianghuReplay(unittest.TestCase):
         ):
             self.assertEqual(self.send(stats, member=member), "")
             draft = self.say(stats, member=member)
-            self.assertIn(f"升三级花 {cost} 潜能", draft)
+            self.assertIn(f"升三级要花 {cost} 点潜能", draft)
             intro = self.send(draft.splitlines()[-1], member=member)
             self.assertIn("选 1 拆开查看", intro)
             self.assertIn("选 2 原封退还", intro)
             win = self.say(f"选 {choice}", member=member)
             level = self.send(win.splitlines()[-1], member=member)
-            self.assertIn(f"还差 {cost} 潜能", level)
+            self.assertIn(f"还差 {cost} 点潜能", level)
             rest = self.send(level.splitlines()[-1], member=member)
             self.assertIn(f"每小时 {rate} 点", rest)
             self.assertIn("09:00:00", rest)
@@ -346,7 +346,7 @@ class JianghuReplay(unittest.TestCase):
 
     def test_personal_panel_previews_meditation_without_claiming(self):
         self.create((20, 10, 10, 40))
-        self.assertIn("当前状态：待决定镖信去向", self.say("面板"))
+        self.assertIn("当前状态：等你决定拆信还是还信", self.say("面板"))
         self.say("选 1")
         self.assertIn("当前状态：未开始打坐", self.say("面板"))
         self.say("练拳")
@@ -365,8 +365,26 @@ class JianghuReplay(unittest.TestCase):
         self.assertEqual(self.record(), before)
         self.say("主线")
         self.assertIn("主线：待迎战蒙面人", self.say("面板"))
-        self.assertIn("常规潜能 +48", self.say("打坐"))
+        self.assertIn("这次打坐获得 48 点潜能", self.say("打坐"))
         self.assertIn("打坐中 · 尚未满一小时", self.say("面板"))
+
+    def test_story_separates_the_letter_from_when_to_claim_training(self):
+        self.now = datetime(2026, 11, 23, 16, 46, 21, tzinfo=db.BJ).timestamp()
+        self.start((20, 10, 10, 40), "拳")
+        before = self.record()
+        self.now += 4 * 3600 - 1
+        story = self.say("江湖故事")
+        past, action = story.split("\n\n👇 接下来\n")
+        self.assertIn("明早，渡口见", past)
+        self.assertNotIn("潜能", past)
+        self.assertIn("拳法升到三级还差 15 点潜能", action)
+        self.assertIn("今天 20:46:21", action)
+        self.now += 1
+        ready = self.say("江湖故事")
+        self.assertIn("这次打坐已攒下 16 点潜能。现在领取", ready)
+        self.assertNotIn("到时发", ready)
+        self.assertEqual(self.record(), before)
+        self.assertIn("获得 16 点潜能", self.send(ready.splitlines()[-1]))
 
     def test_invites_close_and_dispatch(self):
         for member in ("a", "b", "c"):

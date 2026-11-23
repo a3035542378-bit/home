@@ -13,7 +13,7 @@ POTENTIAL_CAP = 60
 def allocation(text):
     fields = FIELD.findall(text)
     if FIELD.sub("", text).strip() or sorted(name for name, _ in fields) != sorted(ATTRIBUTES):
-        raise ValueError("四项各写一次，例如：臂力20 身法20 根骨30 悟性10")
+        raise ValueError("请把臂力、身法、根骨、悟性各写一次")
     values = {name: int(n) for name, n in fields}
     if max(values.values()) > 40:
         raise ValueError("每项最多 40 点，请调整后再发")
@@ -83,7 +83,7 @@ def fight(left, right, rng, assisted=False):
             if assisted and turn == 1 and actor == 0:
                 hit *= 2
             remaining[other] = max(0, remaining[other] - hit)
-            actions.append(f"{players[actor].name}出招 {hit}")
+            actions.append(f"{players[actor].name}打出 {hit} 点伤害")
             if remaining[other] == 0:
                 break
         lines.append(f"第{turn}回合　" + "，".join(actions))
