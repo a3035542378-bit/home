@@ -168,10 +168,10 @@ def check_hop(cmd, before, after, now, body):
                 and "开始打坐" in body
             )
         else:
-            hours = max(0, int((now - p["meditate_at"]) // 3600))
-            effective = min(12, hours)
+            rounds = max(0, int((now - p["meditate_at"]) // 120))
+            effective = min(12, rounds)
             gain = min(60, effective * (2 + p["constitution"] // 5))
-            assert q["meditate_at"] == p["meditate_at"] + 3600 * hours
+            assert q["meditate_at"] == p["meditate_at"] + 120 * rounds
             assert q["potential"] == p["potential"] + gain
             assert q["hunger"] == max(0, p["hunger"] - effective * (5 + p["strength"]))
     elif cmd == "客栈":
@@ -184,17 +184,8 @@ def check_hop(cmd, before, after, now, body):
     elif cmd == "面板":
         assert before == after and "气血上限" in body
     elif cmd == "主线":
-        from datetime import datetime
-
-        from ergou.db import BJ
-
-        is_later = (
-            datetime.fromtimestamp(now, BJ).date()
-            > datetime.fromtimestamp(p["first_win_at"], BJ).date()
-        )
-        expected = (
-            ("fight" if p["route"] == "拳" else "offer") if is_later else "unopened"
-        )
+        opened = now >= p["first_win_at"] + 300
+        expected = ("fight" if p["route"] == "拳" else "offer") if opened else "unopened"
         assert q["next_state"] == expected
     elif cmd == "历练" and p["next_state"] == "fight":
         if p["defeated"]:

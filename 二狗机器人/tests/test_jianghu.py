@@ -208,8 +208,8 @@ class JianghuReplay(unittest.TestCase):
         initial_silver = self.record("w2")["silver"]
         # 固定随机输入，隔离按次抽取的奇遇与买包子的支出。
         with patch("ergou.jianghu.random.Random.randrange", return_value=99):
-            for hour in range(1, 5):
-                self.now = start + hour * 3600
+            for round_no in range(1, 5):
+                self.now = start + round_no * 120
                 self.say("打坐", member="w2")
                 if self.record("w2")["hunger"] < 20:
                     self.say("吃包子", member="w2")
@@ -219,24 +219,24 @@ class JianghuReplay(unittest.TestCase):
             )
             self.assertEqual(self.record("w1")["hunger"], 0)
             self.assertEqual(self.record("w2")["silver"], initial_silver - 10)
-            for hour in (6, 12):
-                self.now = start + hour * 3600
+            for round_no in (6, 12):
+                self.now = start + round_no * 120
                 self.say("打坐", member="twice")
             self.say("打坐", member="once")
             self.assertEqual(
                 (self.record("twice")["potential"], self.record("once")["potential"]), (72, 60)
             )
-            self.now = start + 36 * 3600 + 1200
+            self.now = start + 36 * 120 + 40
             self.say("打坐", member="long")
-            expected = start + 36 * 3600
+            expected = start + 36 * 120
             p = self.record("long")
             self.assertEqual((p["potential"], p["meditate_at"]), (60, expected))
             self.say("打坐", member="long")  # 新消息 ID
             self.assertEqual(p, self.record("long"))
-            self.now -= 3600
+            self.now -= 120
             self.say("打坐", member="long")
             self.assertEqual(p, self.record("long"))
-            self.now = start + 37 * 3600
+            self.now = start + 37 * 120
             self.say("面板", member="long")
             self.assertEqual(p, self.record("long"))
             self.say("打坐", member="long")
@@ -244,7 +244,7 @@ class JianghuReplay(unittest.TestCase):
             self.assertEqual(self.record("long")["meditate_at"], self.now)
 
     def test_params_and_initiative(self):
-        for s, c, hp, dmg, rate, hours in [
+        for s, c, hp, dmg, rate, rounds in [
             (20, 20, 300, [103, 106, 109], 6, 3),
             (40, 10, 500, [203, 206, 209], 4, 4),
             (0, 0, 100, [3, 6, 9], 2, 8),
@@ -260,9 +260,9 @@ class JianghuReplay(unittest.TestCase):
                     rules.damage(rules.fighter(p, "甲"), rules.ENEMIES["蒙面人"]),
                     max(1, dmg[level - 1] // 2),
                 )
-            self.assertEqual(rules.meditation(0, 3600, c)[1], rate)
-            self.assertLess((hours - 1) * rate, 15)
-            self.assertGreaterEqual(hours * rate, 15)
+            self.assertEqual(rules.meditation(0, 120, c)[1], rate)
+            self.assertLess((rounds - 1) * rate, 15)
+            self.assertGreaterEqual(rounds * rate, 15)
         rng = random.Random()
         a = rules.Fighter("甲", 100, 15, 10, 20)
         b = rules.Fighter("乙", 100, 15, 10, 20)
@@ -286,12 +286,16 @@ class JianghuReplay(unittest.TestCase):
         self.assertEqual((p["silver"], p["potential"]), (50, 10))
         self.say("选 1", source="reward", process=True)
         self.assertEqual(self.record(), p)
-        self.assertIn("明日", self.say("主线"))
+        self.assertIn("还没有新消息", self.say("主线"))
         self.now = midnight
+        self.assertIn("还没有新消息", self.say("主线"))
+        self.now = midnight + 298
+        self.assertIn("还没有新消息", self.say("主线"))
+        self.now += 1
         self.assertIn("蒙面人", self.say("主线"))
 
     def test_receipt_guidance_across_midnight_with_group_prefix(self):
-        self.now = datetime(2026, 11, 22, 23, 30, 47, tzinfo=db.BJ).timestamp()
+        self.now = datetime(2026, 11, 22, 23, 59, 47, tzinfo=db.BJ).timestamp()
         self.start((20, 20, 30, 10), "剑", "leaf")
         self.conn.execute(
             "UPDATE groups SET config=json_set(config,'$.prefix','小侠') WHERE id='east'"
@@ -299,15 +303,16 @@ class JianghuReplay(unittest.TestCase):
         meal = self.send("小侠吃包子")
         self.assertEqual(meal.splitlines()[-1], "小侠打坐")  # 当前潜能不足以升级。
         before = self.record()
-        self.now += 3599
+        self.now += 119
         waiting = self.send(meal.splitlines()[-1])
-        self.assertIn("北京时间 2026-11-23 00:30:47", waiting)
+        self.assertIn("北京时间 2026-11-23 00:01:47", waiting)
         self.assertEqual(waiting.splitlines()[-1], "小侠打坐")
         self.assertEqual(self.record(), before)
         self.now += 1
         self.send(waiting.splitlines()[-1])
         self.assertEqual(self.record()["potential"], before["potential"] + 8)
 
+        self.now += 180
         self.send("小侠主线")
         self.assertEqual(self.record()["next_state"], "offer")
         meal = self.send("小侠吃包子")
@@ -335,10 +340,10 @@ class JianghuReplay(unittest.TestCase):
             level = self.send(win.splitlines()[-1], member=member)
             self.assertIn(f"还差 {cost} 点潜能", level)
             rest = self.send(level.splitlines()[-1], member=member)
-            self.assertIn(f"每小时 {rate} 点", rest)
-            self.assertIn("09:00:00", rest)
+            self.assertIn(f"每 2 分钟攒 {rate} 点", rest)
+            self.assertIn("08:02:00", rest)
             again = self.say("练" + route, member=member)
-            self.assertIn("12:00:00" if route == "拳" else "11:00:00", again)
+            self.assertIn("08:08:00" if route == "拳" else "08:06:00", again)
             before = self.record(member)
             self.assertIn("属性已锁定", self.say("加点 " + stats, member=member))
             self.assertIn(f"Lv.{before['level']}", self.say("闯江湖", member=member))
@@ -352,8 +357,8 @@ class JianghuReplay(unittest.TestCase):
         self.say("练拳")
         self.say("打坐")
         before = self.record()
-        self.now += 3599
-        self.assertIn("打坐中 · 尚未满一小时", self.say("面板"))
+        self.now += 119
+        self.assertIn("打坐中 · 这一轮还没满 2 分钟", self.say("面板"))
         self.now += 1
         for cmd in ("面板", "江湖面板", "闯江湖"):
             self.assertIn("打坐中 · 可领 4 潜能", self.say(cmd))
@@ -366,25 +371,39 @@ class JianghuReplay(unittest.TestCase):
         self.say("主线")
         self.assertIn("主线：待迎战蒙面人", self.say("面板"))
         self.assertIn("这次打坐获得 48 点潜能", self.say("打坐"))
-        self.assertIn("打坐中 · 尚未满一小时", self.say("面板"))
+        self.assertIn("打坐中 · 这一轮还没满 2 分钟", self.say("面板"))
 
     def test_story_separates_the_letter_from_when_to_claim_training(self):
         self.now = datetime(2026, 11, 23, 16, 46, 21, tzinfo=db.BJ).timestamp()
         self.start((20, 10, 10, 40), "拳")
         before = self.record()
-        self.now += 4 * 3600 - 1
+        self.now += 4 * 120 - 1
         story = self.say("江湖故事")
         past, action = story.split("\n\n👇 接下来\n")
-        self.assertIn("明早，渡口见", past)
+        self.assertIn("渡口相见", past)
         self.assertNotIn("潜能", past)
         self.assertIn("拳法升到三级还差 15 点潜能", action)
-        self.assertIn("今天 20:46:21", action)
+        self.assertIn("今天 16:54:21", action)
         self.now += 1
         ready = self.say("江湖故事")
         self.assertIn("这次打坐已攒下 16 点潜能。现在领取", ready)
         self.assertNotIn("到时发", ready)
         self.assertEqual(self.record(), before)
         self.assertIn("获得 16 点潜能", self.send(ready.splitlines()[-1]))
+
+    def test_fist_player_can_finish_chapter_on_one_eight_minute_break(self):
+        self.start((20, 10, 10, 40), "拳")
+        start = self.now
+        self.now = start + 299
+        self.assertIn("还没有新消息", self.say("主线"))
+        self.now += 1
+        self.assertIn("蒙面人", self.say("主线"))
+        self.say("历练")
+        self.assertEqual(self.record()["ending"], "自胜")
+        self.now = start + 480
+        self.assertIn("获得 16 点潜能", self.say("打坐"))
+        self.assertIn("第一章·客栈风云 已完成", self.say("练拳"))
+        self.assertEqual(self.record()["potential"], 1)
 
     def test_invites_close_and_dispatch(self):
         for member in ("a", "b", "c"):

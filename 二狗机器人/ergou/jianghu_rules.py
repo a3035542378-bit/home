@@ -6,7 +6,10 @@ import re
 
 ATTRIBUTES = ("臂力", "身法", "根骨", "悟性")
 FIELD = re.compile(r"(臂力|身法|根骨|悟性)\s*([0-9]{1,3})")
-MEDITATION_HOURS = 12
+MEDITATION_MINUTES = 2
+MEDITATION_SECONDS = MEDITATION_MINUTES * 60
+MEDITATION_MAX_ROUNDS = 12
+CHAPTER_WAIT_MINUTES = 5
 POTENTIAL_CAP = 60
 
 
@@ -94,7 +97,7 @@ def fight(left, right, rng, assisted=False):
 
 
 def meditation(cursor, now, constitution):
-    elapsed = max(0, int((now - cursor) // 3600))
-    hours = min(MEDITATION_HOURS, elapsed)
-    potential = min(POTENTIAL_CAP, hours * (2 + constitution // 5))
-    return hours, potential, cursor + elapsed * 3600
+    elapsed = max(0, int((now - cursor) // MEDITATION_SECONDS))
+    rounds = min(MEDITATION_MAX_ROUNDS, elapsed)
+    potential = min(POTENTIAL_CAP, rounds * (2 + constitution // 5))
+    return rounds, potential, cursor + elapsed * MEDITATION_SECONDS

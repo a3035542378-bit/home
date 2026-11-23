@@ -3,7 +3,7 @@
 import json
 import random
 import re
-from datetime import datetime, time, timedelta
+from datetime import datetime
 from math import ceil
 
 from . import jianghu_rules as rules
@@ -92,8 +92,7 @@ def update(db, key, **fields):
 
 
 def chapter_opens_at(p):
-    next_day = datetime.fromtimestamp(p["first_win_at"], BJ).date() + timedelta(days=1)
-    return datetime.combine(next_day, time.min, tzinfo=BJ)
+    return datetime.fromtimestamp(p["first_win_at"] + rules.CHAPTER_WAIT_MINUTES * 60, BJ)
 
 
 def instruction(p, prefix, now):
@@ -116,7 +115,8 @@ def instruction(p, prefix, now):
     opens = chapter_opens_at(p)
     if now >= opens.timestamp():
         return f"客栈里有了镖信的新消息，回去看看吧。\n{prefix}主线"
-    return f"镖信明日零点有新消息。北京时间 {opens:%Y-%m-%d %H:%M:%S} 后，回客栈看看：\n{prefix}主线"
+    ready = datetime.fromtimestamp(ceil(opens.timestamp()), BJ)
+    return f"镖信还在路上。北京时间 {ready:%Y-%m-%d %H:%M:%S} 起，回客栈看看：\n{prefix}主线"
 
 
 def create(db, key, cmd, prefix, rng, now):
@@ -187,10 +187,10 @@ def meditation_tip(p, prefix, now):
     _, available, _ = rules.meditation(cursor, now, p["constitution"])
     if available >= missing:
         return f"这次打坐已攒下 {available} 点潜能。现在领取，就够把{p['route']}法升到{level}级了。\n{prefix}打坐"
-    ready = datetime.fromtimestamp(ceil(cursor + ceil(missing / rate) * 3600), BJ)
+    ready = datetime.fromtimestamp(ceil(cursor + ceil(missing / rate) * rules.MEDITATION_SECONDS), BJ)
     today = datetime.fromtimestamp(now, BJ).date()
     day = {0: "今天", 1: "明天"}.get((ready.date() - today).days, f"{ready.month}月{ready.day}日")
-    return (f"{goal}你正在打坐，每小时能攒 {rate} 点。\n"
+    return (f"{goal}你正在打坐，每 {rules.MEDITATION_MINUTES} 分钟能攒 {rate} 点。\n"
             f"{day} {ready:%H:%M:%S}（北京时间）就能攒够，到时发这句领取：\n{prefix}打坐")
 
 
@@ -204,12 +204,12 @@ def panel_status(p, now):
     if cursor is None:
         activity = "🍵 当前状态：未开始打坐"
     else:
-        hours, gain, _ = rules.meditation(cursor, now, p["constitution"])
+        rounds, gain, _ = rules.meditation(cursor, now, p["constitution"])
         activity = "🧘 当前状态：打坐中"
-        if hours:
+        if rounds:
             activity += f" · 可领 {gain} 潜能"
         else:
-            activity += " · 尚未满一小时"
+            activity += f" · 这一轮还没满 {rules.MEDITATION_MINUTES} 分钟"
 
     stage = {
         "fight": "可再去渡口找引路人" if p["defeated"] else "待迎战蒙面人",
@@ -270,23 +270,23 @@ def first_battle(db, key, event, prefix, rng):
             potential=p["potential"] + 10,
         )
     outcome = "老镖头出手解围" if result <= 0 else "你赢了"
-    return report + f"\n{outcome}！首胜奖励已到账：20 两银子和 10 点潜能。\n这封信还有下文，明日零点再回客栈看看。现在可以先提升武学：\n{prefix}练{p['route']}"
+    return report + f"\n{outcome}！首胜奖励已到账：20 两银子和 10 点潜能。\n{rules.CHAPTER_WAIT_MINUTES} 分钟后可以发【主线】回客栈听下文。现在可以先提升武学：\n{prefix}练{p['route']}"
 
 
 def meditate(db, key, p, now, prefix, rng):
     if p["meditate_at"] is None:
         update(db, key, meditate_at=now)
         rate = 2 + p["constitution"] // 5
-        ready = datetime.fromtimestamp(ceil(now + 3600), BJ)
-        return (f"🧘 已开始打坐，离线也会攒潜能。每小时 {rate} 点。\n"
+        ready = datetime.fromtimestamp(ceil(now + rules.MEDITATION_SECONDS), BJ)
+        return (f"🧘 已开始打坐，离线也会攒潜能。每 {rules.MEDITATION_MINUTES} 分钟攒 {rate} 点。\n"
                 f"北京时间 {ready:%m月%d日 %H:%M:%S} 就能领第一份潜能。到时发：\n{prefix}打坐")
-    hours, gain, cursor = rules.meditation(p["meditate_at"], now, p["constitution"])
-    if not hours:
-        ready = datetime.fromtimestamp(ceil(cursor + 3600), BJ)
-        return f"🧘 尚未满一小时，进度已保留。\n北京时间 {ready:%Y-%m-%d %H:%M:%S} 起可领。\n{prefix}打坐"
-    hunger = max(0, p["hunger"] - hours * (5 + p["strength"]))
-    # 原型候选值：每有效小时福缘/100 的机会，单次至多拾得一两。
-    extra = int(any(rng.randrange(100) < p["luck"] for _ in range(hours)))
+    rounds, gain, cursor = rules.meditation(p["meditate_at"], now, p["constitution"])
+    if not rounds:
+        ready = datetime.fromtimestamp(ceil(cursor + rules.MEDITATION_SECONDS), BJ)
+        return f"🧘 这轮还没满 {rules.MEDITATION_MINUTES} 分钟，进度已保留。\n北京时间 {ready:%Y-%m-%d %H:%M:%S} 起可领。\n{prefix}打坐"
+    hunger = max(0, p["hunger"] - rounds * (5 + p["strength"]))
+    # 原型候选值：每个结算轮次福缘/100 的机会，单次至多拾得一两。
+    extra = int(any(rng.randrange(100) < p["luck"] for _ in range(rounds)))
     update(
         db,
         key,
@@ -295,7 +295,7 @@ def meditate(db, key, p, now, prefix, rng):
         potential=p["potential"] + gain,
         silver=p["silver"] + extra,
     )
-    text = f"🧘 出关 · {hours} 小时，这次打坐获得 {gain} 点潜能。\n现有潜能 {p['potential'] + gain} 点　饱腹值 {p['hunger']} → {hunger}"
+    text = f"🧘 出关 · {rounds} 轮，这次打坐获得 {gain} 点潜能。\n现有潜能 {p['potential'] + gain} 点　饱腹值 {p['hunger']} → {hunger}"
     if extra:
         text += "\n🍀 奇遇：蒲团下拾得 1 两"
     if hunger < 20:
@@ -361,7 +361,7 @@ def handle(db, event, cmd, prefix):
                    else "十六岁那年，你还是镇上的一个普通少年。")
         lines = ["📜 你的江湖故事", opening + "那晚，你正帮悦来客栈的掌柜关门，一封信从门缝里滑了进来。信封上写着“老镖头亲启”。"]
         if p["route"] == "拳":
-            lines.append("你拆开信，里面只有一句：“明早，渡口见。”柜台边的假镖师伸手来抢，老镖头在你身后喊：“收肘，出拳！”你照着他的口令，挥出了第一拳。")
+            lines.append("你拆开信，里面只有一句：“渡口相见。”柜台边的假镖师伸手来抢，老镖头在你身后喊：“收肘，出拳！”你照着他的口令，挥出了第一拳。")
         elif p["route"] == "剑":
             lines.append("你把信原封不动地还给了老镖头。他取出半枚燕印，和信封上的印记一对，果然合得上。为了谢你，他送了你一把铁剑，还教了你第一招剑法。")
         if p["ending"]:
@@ -399,7 +399,7 @@ def handle(db, event, cmd, prefix):
             return instruction(p, prefix, now)
         fist = choice[1] == "1"
         update(db, key, route="拳" if fist else "剑", karma=-10 if fist else 10, level=1)
-        intro = "你拆开镖信，里面只写着“明早，渡口见”。柜台边的假镖师劈手来夺。老镖头喝道：“收肘，出拳！”你照着他的招式打出了第一拳。" if fist else "你把信还给老镖头。他拿出半枚燕印，正好和封口的印记合上。他送你一把铁剑，刚教完第一招，门口的野狗就叼走了他的肉包！"
+        intro = "你拆开镖信，里面只写着“渡口相见”。柜台边的假镖师劈手来夺。老镖头喝道：“收肘，出拳！”你照着他的招式打出了第一拳。" if fist else "你把信还给老镖头。他拿出半枚燕印，正好和封口的印记合上。他送你一把铁剑，刚教完第一招，门口的野狗就叼走了他的肉包！"
         return intro + "\n" + first_battle(db, key, event, prefix, rng)
     if p["first_win_at"] is None:
         return (
@@ -441,7 +441,8 @@ def chapter(db, key, event, p, cmd, prefix, rng):
     state = p["next_state"]
     if cmd == "主线" and state == "unopened":
         if now < chapter_opens_at(p).timestamp():
-            return f"客栈里暂时还没有新消息。明日零点（北京时间）再来看看吧。\n{prefix}主线"
+            ready = datetime.fromtimestamp(ceil(chapter_opens_at(p).timestamp()), BJ)
+            return f"客栈里暂时还没有新消息。北京时间 {ready:%Y-%m-%d %H:%M:%S} 起，再来看看吧。\n{prefix}主线"
         state = "fight" if p["route"] == "拳" else "offer"
         update(db, key, next_state=state, stage_at=now)
     if cmd == "主线" and state == "offer":

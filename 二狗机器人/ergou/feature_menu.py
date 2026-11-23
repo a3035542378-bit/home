@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass
 
 from . import jianghu, breeding, exhibit_batch, models, pond_growth, roles, voice_policy
+from .jianghu_rules import CHAPTER_WAIT_MINUTES, MEDITATION_MINUTES
 from .group_tools import CHECKIN_POINTS
 from .db import DEFAULT
 from .fishing_waters import SPECIES
@@ -19,19 +20,19 @@ class Topic:
 
 
 TOPICS = (
-    Topic('江湖录', '🏮 闯江湖与切磋', """悦来客栈打烊前，一封镖信送错了人。
+    Topic('江湖录', '🏮 闯江湖与切磋', f"""悦来客栈打烊前，一封镖信送错了人。
 第一章目标：把武学练到三级，办完镖信这桩事。
 
 🏮 今天怎么玩
 【闯江湖】选出身、分点，再处理镖信
 【练拳】拆信学拳，用潜能提升拳法
 【练剑】还信学剑，用潜能提升剑法
-【打坐】开始攒潜能，到点再发同一句领取
+【打坐】每 {MEDITATION_MINUTES} 分钟一轮，再发这句领取
 
 📜 下次回来
 【江湖故事】回看自己走过的剧情
 【面板】看自己的进度和下一步
-【主线】首胜后，次日零点回客栈听下文
+【主线】首胜 {CHAPTER_WAIT_MINUTES} 分钟后，回客栈听下文
 【客栈】饿了先看包子价格
 【切磋 @群友】约群友过几招，点到为止""", gate='jianghu', aliases=('江湖帮助', '江湖菜单', '江湖录菜单')),
     Topic('钓鱼', '🎣 钓第一条鱼', gate='fish', aliases=('钓鱼菜单', '钓鱼玩法', '怎么钓鱼', '如何钓鱼', '钓鱼怎么玩')),

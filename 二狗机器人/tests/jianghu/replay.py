@@ -3,7 +3,7 @@
 import re
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, time, timedelta
+from datetime import datetime
 from html import escape
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -21,14 +21,14 @@ class Scenario:
     name: str
     open_letter: bool
     join: bool = False
-    rest: int = 86400
+    rest: int = 120
 
 
 SCENARIOS = (
     Scenario("拆信", True),
     Scenario("还信入门", False, True),
-    Scenario("还信婉拒", False),
-    Scenario("拆信·打坐未满一小时", True, rest=3599),
+    Scenario("还信婉拒·隔夜回来", False, rest=86400),
+    Scenario("拆信·打坐未满两分钟", True, rest=119),
 )
 
 
@@ -121,16 +121,13 @@ def run(path, scenario):
             )
             if finished or not selected:
                 break
-            # 只有当前复制的动作需要等待时才拨钟；首胜的次日预告不会延迟当场练功。
+            # 只有当前复制的动作需要等待时才拨钟；首胜的续章预告不会延迟当场练功。
             ready = re.search(r"北京时间 (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})", receipt)
             if ready and selected in ("二狗打坐", "二狗主线"):
                 at = datetime.strptime(ready[1], "%Y-%m-%d %H:%M:%S").replace(tzinfo=BJ)
                 now = max(now, at.timestamp())
             elif selected == "二狗打坐" and ("已开始打坐" in receipt or "出关 ·" in receipt):
                 now += scenario.rest
-            elif selected == "二狗主线" and "明日零点" in receipt:
-                tomorrow = datetime.fromtimestamp(now, BJ).date() + timedelta(days=1)
-                now = datetime.combine(tomorrow, time.min, tzinfo=BJ).timestamp()
             command = selected
         else:
             trace.check(False, hop, "Lint-A 回执循环，超过 25 跳")
