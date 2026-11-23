@@ -1,6 +1,7 @@
 """同一消息事务内选择展品、分配换展位置，再按计划移动鱼获。"""
 import re
 
+from .fish_grades import GRADES, exhibit_rank
 from .fishing_waters import HABITAT
 from .fish_receipts import grid, mass
 
@@ -41,12 +42,18 @@ def parse_numbers(value):
 
 
 
+def candidates(db, key):
+    rows = db.execute("""SELECT p.id,p.fish,p.grams,p.storage,p.grade,e.grams AS old,
+                                e.grade AS old_grade,e.item_id AS old_id
+                         FROM fishing_pond p LEFT JOIN fishing_exhibits e USING(grp,member,fish)
+                         WHERE p.grp=? AND p.member=?""",key)
+    return sorted(rows, key=lambda r: (exhibit_rank(r["fish"],r["grade"],r["grams"]),
+                                       r["storage"]=="bag",-r["id"]), reverse=True)
+
+
 def plan(db, key, ids=None):
     from .fish_storage import occupancy
-    rows = db.execute("""SELECT p.id,p.fish,p.grams,p.storage,e.grams AS old,e.item_id AS old_id
-                         FROM fishing_pond p LEFT JOIN fishing_exhibits e USING(grp,member,fish)
-                         WHERE p.grp=? AND p.member=?
-                         ORDER BY p.grams DESC,p.storage='bag' DESC,p.id""",key).fetchall()
+    rows = candidates(db,key)
     pair = db.execute("SELECT p1,p2 FROM breed_pairs WHERE grp=? AND member=? AND state='active'",key).fetchone()
     parents = set(pair or ())
     skipped = {}
@@ -57,15 +64,17 @@ def plan(db, key, ids=None):
     species = {}
     alternates = {}
     for row in rows:
-        item,fish,grams,storage,old,_ = row
+        item,fish,storage=row["id"],row["fish"],row["storage"]
+        rank=exhibit_rank(fish,row["grade"],row["grams"])
+        old=exhibit_rank(fish,row["old_grade"],row["old"]) if row["old"] is not None else None
         if item in parents:
             skipped[item]="亲鱼正在配对"
         elif fish not in HABITAT:
             skipped[item]="图鉴未收录"
-        elif old is not None and grams<=old:
-            skipped[item]="未超过现有展品重量"
+        elif old is not None and rank<=old:
+            skipped[item]="品质低于现有展品" if rank[0]<old[0] else "同品质，未超过现有展品重量"
         elif fish in species:
-            skipped[item]="同种只展一尾，已优先选可展出的最重鱼"
+            skipped[item]="同种只展一尾，优先高品质，同品质选重"
             if storage=="bag":
                 alternates.setdefault(fish,row)
         else:
@@ -113,7 +122,8 @@ def render(db,key,prefix,now,ids=None):
         report.append(row)
     report.sort(key=lambda r:r["id"],reverse=True)
     for row in report:
-        cells=(f"编号: {row['id']}",row["fish"],mass(row["grams"]))
+        quality=GRADES[exhibit_rank(row["fish"],row["grade"],row["grams"])[0]]
+        cells=(f"编号: {row['id']}",row["fish"],f"{quality} · {mass(row['grams'])}")
         if row["old"] is None:
             first.append(cells)
         else:

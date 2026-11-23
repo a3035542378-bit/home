@@ -37,6 +37,30 @@ class PondDirectoryTests(unittest.TestCase):
         self.db.execute("UPDATE pond_growth SET rounds=10 WHERE item=77")
         self.db.execute("UPDATE pond_growth SET next_at=? WHERE item=82",(time.time()+180,))
 
+    def test_exhibit_prefers_individual_grade_before_weight(self):
+        self.stock(163,"吞噬鳗",3605,grade=2,storage="bag")
+        self.assertIn("已点亮",self.send("二狗收入图鉴#163"))
+        self.stock(225,"吞噬鳗",3516,grade=4,storage="pond")
+        self.stock(226,"吞噬鳗",4000,grade=3,storage="bag")
+        self.db.execute("UPDATE fishing_pond SET grade_upgraded=1 WHERE id=225")
+        self.send("二狗切换钓场 深渊海沟")
+        self.assertIn("收入图鉴#225",self.send("二狗图鉴"))
+        self.assertIn("放入图鉴#225",self.send("二狗查看鱼#225"))
+        self.assertIn("编号225",self.send("二狗放入图鉴").splitlines()[-1])
+        reply=self.send("二狗收入图鉴#225")
+        self.assertIn("已换入 #225 吞噬鳗 · 传说",reply)
+        self.assertIn("原展品 #163 · 稀有",reply)
+        self.assertEqual(tuple(self.db.execute("SELECT grade,grams,storage FROM fishing_pond WHERE id=163").fetchone()),(2,3605,"bag"))
+        self.assertIn("品质低于展品",self.send("二狗收入图鉴#226"))
+        self.stock(227,"吞噬鳗",3516,grade=4,storage="bag")
+        self.assertIn("同品质只接受更重",self.send("二狗收入图鉴#227"))
+        self.stock(228,"吞噬鳗",3517,grade=4,storage="bag")
+        batch=self.send("二狗点亮图鉴 编号226、227、228")
+        self.assertIn("换展 1 种",batch)
+        self.assertIn("回包: 225",batch)
+        self.assertEqual(tuple(self.db.execute("SELECT item_id,grade,grams FROM fishing_exhibits").fetchone()),(228,4,3517))
+        self.assertEqual(self.db.execute("SELECT grade_upgraded FROM fishing_pond WHERE id=225").fetchone()[0],1)
+
     def test_old_full_bag_is_one_list_and_can_make_room(self):
         self.db.execute("INSERT INTO fishing_storage_levels VALUES(?,?,'bag',2)",self.key)
         for item in range(1,9):

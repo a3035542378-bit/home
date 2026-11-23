@@ -165,8 +165,14 @@ def exhibit(db, key, item, prefix, now, batch_rewards=None):
     slot = (*key, fish)
     old = db.execute("SELECT item_id,grams,price,grade,grade_upgraded FROM fishing_exhibits WHERE grp=? AND member=? AND fish=?",
                      slot).fetchone()
-    if old and catch["grams"] <= old["grams"]:
-        return False, f"📖 图鉴已有{fish}　{weight(old['grams'])}\n只接受更重的同种鱼。\n#{item} 仍在{NAMES[catch['storage']]}。"
+    rank = fish_grades.exhibit_rank(fish,catch["grade"],catch["grams"])
+    quality = fish_grades.GRADES[rank[0]]
+    if old:
+        old_rank = fish_grades.exhibit_rank(fish,old["grade"],old["grams"])
+        old_quality = fish_grades.GRADES[old_rank[0]]
+    if old and rank <= old_rank:
+        reason = f"这条是{quality}，品质低于展品。" if rank[0]<old_rank[0] else "同品质只接受更重的鱼。"
+        return False, f"📖 图鉴已有{fish} · {old_quality} · {weight(old['grams'])}\n{reason}\n#{item} 仍在{NAMES[catch['storage']]}。"
     if old and catch["storage"] == "pond":
         used, capacity, _ = occupancy(db, key, "bag")
         if used >= capacity:
@@ -189,12 +195,12 @@ def exhibit(db, key, item, prefix, now, batch_rewards=None):
         rewards = exhibit_rewards.regions(db,key,(HABITAT[fish],),now)
         if batch_rewards is not None:
             batch_rewards.extend(rewards)
-        receipt = f"✨ 已点亮　{fish}\n展品 #{item}　{weight(catch['grams'])}\n\n展出期间受保护。\n可用更重的同种鱼替换。"
+        receipt = f"✨ 已点亮　{fish}\n展品 #{item} · {quality} · {weight(catch['grams'])}\n\n展出期间受保护。\n品质优先，同品质选更重的鱼。"
         return True, "\n".join([receipt,*rewards])
     db.execute("""INSERT INTO fishing_pond(grp,member,fish,id,grams,price,grade,grade_upgraded,storage)
                   VALUES(?,?,?,?,?,?,?,?,'bag')""", (*slot, old["item_id"], old["grams"], old["price"], old["grade"], old["grade_upgraded"]))
-    return True, (f"✨ 已换入 #{item} {fish} · {weight(catch['grams'])}。\n"
-            f"原展品 #{old['item_id']} · {weight(old['grams'])} 已放回鱼包。")
+    return True, (f"✨ 已换入 #{item} {fish} · {quality} · {weight(catch['grams'])}。\n"
+            f"原展品 #{old['item_id']} · {old_quality} · {weight(old['grams'])} 已放回鱼包。")
 
 
 def handle(db, key, cmd, prefix, now=None):

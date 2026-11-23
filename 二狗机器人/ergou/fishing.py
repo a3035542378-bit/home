@@ -85,11 +85,14 @@ def book(db,key,match,current_area,prefix):
         lines.append(f"🏅 集齐奖励：{2*count} 积分和 {count} 鱼币"+("（已到账）" if paid else "（每场一次）"))
     bag_used,bag_limit,_=fish_storage.occupancy(db,key,"bag")
     picks={}
-    for row in db.execute("""SELECT fish,id,grams,storage FROM fishing_pond
-                             WHERE grp=? AND member=? ORDER BY grams DESC,id""",key):
+    for row in exhibit_batch.candidates(db,key):
         fish=row["fish"]
-        if fish not in thresholds or row["grams"]<thresholds[fish] or row["grams"]<=exhibits.get(fish,0):
+        if fish not in thresholds or row["grams"]<thresholds[fish]:
             continue
+        if fish in exhibits:
+            old_rank = fish_grades.exhibit_rank(fish,row["old_grade"],row["old"])
+            if fish_grades.exhibit_rank(fish,row["grade"],row["grams"]) <= old_rank:
+                continue
         if fish in exhibits and row["storage"]=="pond" and bag_used>=bag_limit:
             continue
         picks.setdefault(fish,row["id"])
@@ -133,7 +136,8 @@ def book(db,key,match,current_area,prefix):
         if shown:
             grams=exhibits[fish]
             display = displays[fish]
-            quality = fish_grades.label(display["grade"], display["grade_upgraded"])
+            grade,_ = fish_grades.exhibit_rank(fish,display["grade"],grams)
+            quality = fish_grades.label(grade, display["grade_upgraded"])
             source = "亲钓" if display["catcher"] == key[1] else "群友钓获" if display["catcher"] else "历史来源未记录"
             if display["breeder"] is not None:
                 source = breeding.source(display,key[1])

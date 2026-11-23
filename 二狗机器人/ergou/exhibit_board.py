@@ -1,4 +1,5 @@
 """图鉴榜按展出的物种计数，与单尾品级和亲钓纪录独立。"""
+from .exhibit_batch import candidates
 from .fish_receipts import grid
 from .display_names import labels
 from .exhibit_rewards import PRIZES
@@ -28,11 +29,11 @@ def board(db,key,prefix):
         if row["member"] == key[1]:
             personal_slot = index if index < len(PRIZES) else None
             mine = f"你排第 {row['place']}，已点亮 {row['lit']} 种。"
-    candidates = db.execute("""SELECT p.fish,min(p.id) id FROM fishing_pond p
-        WHERE p.grp=? AND p.member=? AND p.storage='bag' AND NOT EXISTS
-        (SELECT 1 FROM fishing_exhibits e WHERE e.grp=p.grp AND e.member=p.member AND e.fish=p.fish)
-        GROUP BY p.fish ORDER BY id""",key)
-    ids = [r["id"] for r in candidates if r["fish"] in SPECIES]
+    unlit = {}
+    for fish in candidates(db,key):
+        if fish["storage"]=="bag" and fish["old"] is None and fish["fish"] in SPECIES:
+            unlit.setdefault(fish["fish"],fish["id"])
+    ids = sorted(unlit.values())
     lines.extend([*grid(entries),"",mine,"北京时间零点结算，前十席积分依次为",
                   "、".join(map(str,PRIZES))+"。并列按榜上展示顺序分配。"])
     if personal_slot is not None:

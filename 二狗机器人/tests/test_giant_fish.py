@@ -129,5 +129,5 @@ class GiantFishing(unittest.TestCase):
         self.assertIn("12～25 公斤",say("how","巨物鲤鱼怎么钓？",event.start+26))
         conn.execute("""INSERT INTO fishing_pond(grp,member,fish,grams,price,storage)
                         VALUES('one','owner',?,?,85,'bag')""",(fish,grams+1))
-        self.assertIn(f"{fish}可换展",say("upgrade","图鉴",event.start+27))
+        self.assertNotIn(f"{fish}可换展",say("upgrade","图鉴",event.start+27))
         self.assertIsNone(conn.execute("SELECT 1 FROM chat_requests").fetchone())

@@ -9,7 +9,7 @@ DETAIL = re.compile(r"查看鱼\s*[#＃]([1-9][0-9]{0,17})")
 STOCK = """SELECT p.*,coalesce(g.original_grams,p.grams) original_grams,
     coalesce(g.original_price,p.price) original_price,coalesce(g.rounds,0) rounds,
     coalesce(g.appearance,0) appearance,g.next_at,coalesce(g.food,0) food,
-    coalesce(g.flagship,0) flagship,f.adult,f.breeder,f.firstborn,w.coins,e.grams shown,e.item_id old_id
+    coalesce(g.flagship,0) flagship,f.adult,f.breeder,f.firstborn,w.coins,e.grams shown,e.grade shown_grade,e.item_id old_id
     FROM fishing_pond p LEFT JOIN pond_growth g ON g.item=p.id
     LEFT JOIN breed_fry f ON f.item=p.id JOIN fishing_wallets w USING(grp,member)
     LEFT JOIN fishing_exhibits e USING(grp,member,fish) WHERE p.grp=? AND p.member=?"""
@@ -109,7 +109,8 @@ def detail(db,key,item,prefix):
     note=breeding_sale_note(db,key,item) if pond else ""
     used,cap,_=occupancy(db,key,"bag")
     if not note and row["fish"] in SPECIES and (row["shown"] is None or
-            (row["grams"]>row["shown"] and (not pond or used<cap))):
+            (fish_grades.exhibit_rank(row["fish"],row["grade"],row["grams"]) >
+             fish_grades.exhibit_rank(row["fish"],row["shown_grade"],row["shown"]) and (not pond or used<cap))):
         effect=f"换展，编号 {row['old_id']} 回包" if row["shown"] is not None else "首次点亮"
         lines.append(f"【放入图鉴#{item}】{effect}")
     lines.append(f"【卖鱼#{item}】立即出售，到账 {row['price']} 鱼币。{note}")

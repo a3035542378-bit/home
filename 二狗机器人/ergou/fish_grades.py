@@ -35,6 +35,13 @@ def base_grade(fish, grams):
     return BASE[SPECIES[fish][-1]][TIERS.index(size_grade(fish, grams))]
 
 
+def exhibit_rank(fish, grade, grams):
+    # 历史鱼缺少单尾品级时，沿用迁移时的基础品级口径。
+    if grade is None:
+        grade = base_grade(fish, grams)
+    return (grade if grade is not None else -1, grams)
+
+
 def roll_upgrade(tier, rng):
     ticket = rng.randrange(10000)
     for levels, count in enumerate(TICKETS[tier]):
