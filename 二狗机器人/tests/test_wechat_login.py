@@ -18,6 +18,9 @@ class FakePlugin(BaseHTTPRequestHandler):
 
     def call(self):
         s = self.server
+        # 关闭短连接前读完请求体，否则分开发送的 POST 正文可能使响应被 TCP 重置。
+        if self.command == "POST":
+            self.rfile.read(int(self.headers.get("Content-Length", "0")))
         if self.headers.get("Authorization") != "Bearer fixture-login":
             self.send_error(403)
             return
