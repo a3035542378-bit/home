@@ -8,7 +8,7 @@ import re
 from .db import BJ
 from . import jianghu_rules as rules
 
-MAX_SKILL = 5
+BASE_SKILL_LIMIT = 4
 ESCORT_SECONDS = 180
 PATROL_SECONDS = 120
 FACTIONS = {"投身正道": "正道", "加入魔教": "魔教", "独行江湖": "散人"}
@@ -226,6 +226,7 @@ PERSONAL = {
 def handle(db, key, p, w, event, cmd, prefix, rng):
     now = event["arrived"]
     weather, luck = season(*key, now)
+    skill_limit = BASE_SKILL_LIMIT + p["insight"] // 10
     if cmd in ("主线", "第二章", "第三章"):
         if w["stage"] == 0:
             return f"📜 第二章 · 渡口失镖\n昨夜那枚燕印又出现了。船夫递来一本浸湿的账册，三路人马都在等你表态。\n正道护镖，魔教追查内鬼，散人替船夫讨个公道。选一条路：\n{prefix}投身正道\n{prefix}加入魔教\n{prefix}独行江湖"
@@ -354,7 +355,7 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
             return (
                 f"🧧 镖队庆功，撒下五份江湖红封。每位群友可领5两。\n{prefix}领江湖红包"
             )
-        if rng.randrange(100) < luck + 10:
+        if rng.randrange(100) < luck + 10 + (5 if w["training"] == "说书人" else 0):
             change(db, key, patrol=now)
             funds(db, key, event, "历练奇遇", silver=6)
             return f"🍀 你在渡口认出遗落的镖旗，失主答谢了6两。\n{prefix}江湖天下"
@@ -371,7 +372,7 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
         return (
             f"👤 {w['faction'] or '尚未选阵营'} · {age(w, now)}岁 · 转生{w['cycles']}次\n"
             f"攻击 {f.attack}　防御 {f.defense}　气血 {f.hp}\n"
-            f"内力上限 {30 + p['constitution'] * 2}　名声 {'大侠' if p['karma'] > 200 else '穷凶极恶' if p['karma'] < -100 else '初入江湖'}\n"
+            f"武学上限 {skill_limit} 级　内力上限 {30 + p['constitution'] * 2}　名声 {'大侠' if p['karma'] > 200 else '穷凶极恶' if p['karma'] < -100 else '初入江湖'}\n"
             f"外功 {w['outer_art'] or '未习'} {w['outer_level']}级　内功 {w['inner_art'] or '未习'} {w['inner_level']}级\n"
             f"仪容 {appearance(p, w)} · 今日福缘 {luck} · {w['training'] or '江湖客'}\n{prefix}武馆"
         )
@@ -380,8 +381,8 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
         name = match[1]
         slot = "outer" if name in OUTER else "inner"
         level = w[slot + "_level"] if w[slot + "_art"] == name else 0
-        if level >= MAX_SKILL:
-            return "这门武学已臻圆满。"
+        if level >= skill_limit:
+            return f"这门武学已达上限 {skill_limit} 级。悟性每满10点，进阶武学上限提高一级。"
         if w[slot + "_art"] not in ("", name):
             return "这一栏已有武学。转生后可重新择艺。"
         cost = max(1, 8 + 4 * level - int(weather == "瑞雪") - p["insight"] // 20)
@@ -399,10 +400,10 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
             f"🥋 你把{name}练到 {level + 1} 级，消耗 {cost} 点潜能。\n{prefix}江湖身世"
         )
     if cmd in ("转生", "确认转生"):
-        if w["stage"] < 4 or min(w["inner_level"], w["outer_level"]) < MAX_SKILL:
-            return f"黑木崖结案、内外功均达五级后可转生。\n{prefix}武馆"
+        if w["stage"] < 4 or min(w["inner_level"], w["outer_level"]) < skill_limit:
+            return f"黑木崖结案、内外功均达你的上限 {skill_limit} 级后可转生。\n{prefix}武馆"
         if cmd == "转生":
-            return f"🌙 转生将重开第二章、清空进阶内外功和未交的镖，保留财物及第一章经历；每次可重修武学。转生后可将80点先天属性重配为100点。\n{prefix}确认转生"
+            return f"🌙 转生将重开第二章，基础武学回到一级，清空进阶内外功和未交的镖，保留财物及第一章经历；每次可重修武学。转生后可将80点先天属性重配为100点。\n{prefix}确认转生"
         change(
             db,
             key,
@@ -417,6 +418,7 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
             escort=None,
             born=now,
         )
+        db.execute("UPDATE jh_players SET level=1 WHERE grp=? AND member=?", key)
         change(db, key, respec=w["respec"] + 1)
         return f"🌙 你洗髓归来，有100点属性可重新分配。\n{prefix}江湖洗点"
     if cmd == "夜市":
@@ -431,9 +433,11 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
         return "🌸 已修整仪容，花去 8 两。"
     if cmd in ("江湖天赋", "兑换江湖天赋"):
         if w["training"]:
-            return "📜 你已获说书人身份。"
+            return (
+                "📜 你已获说书人身份。闻风识途天赋使历练寻物奇遇的触发率提高5个百分点。"
+            )
         if cmd == "江湖天赋":
-            return f"📜 用本群 5 积分换说书人身份，永久解锁个人称号。\n{prefix}兑换江湖天赋"
+            return f"📜 用本群 5 积分换说书人身份，附带闻风识途天赋，历练寻物奇遇触发率提高5个百分点。\n{prefix}兑换江湖天赋"
         total = db.execute(
             "SELECT COALESCE(sum(points),0) FROM ledger WHERE grp=? AND member=?", key
         ).fetchone()[0]
@@ -444,4 +448,4 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
             (*key, event["event_id"], now),
         )
         change(db, key, training="说书人")
-        return "📜 已扣本群 5 积分，获得说书人身份。"
+        return "📜 已扣本群 5 积分，获得说书人身份和闻风识途天赋。"

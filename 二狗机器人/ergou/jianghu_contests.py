@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 
 from .db import BJ
 from .display_names import labels
-from .jianghu_adventure import battle, fighter, funds
+from .jianghu_adventure import battle, duelist, fighter, funds
+from .jianghu_martial import resolve
 from .jianghu_rules import Fighter
 
 BOSS_HP = 800
@@ -130,7 +131,22 @@ def handle(db, key, p, w, event, cmd, prefix, rng):
         if cooling:
             return "本轮已出招，两分钟后再来。"
         npc = Fighter("擂主" if act == "论剑" else "敌营先锋", 160, 45, 12, 22)
-        won, report = battle(db, p, "你", npc, rng, now)
+        # 只匹配已主动参加同期大会的本群玩家；战果不会改变被匹配者的资产。
+        opponent = db.execute(
+            """SELECT p.* FROM jh_encounters e JOIN jh_players p ON p.grp=e.grp AND p.member=e.member
+                             WHERE e.grp=? AND e.activity=? AND e.period=? AND e.member<>? AND (?='论剑' OR e.side<>?)
+                             ORDER BY e.score DESC,e.member LIMIT 1""",
+            (*args, member, act, w["faction"]),
+        ).fetchone()
+        if opponent:
+            show = labels(db, grp)
+            won, report = resolve(
+                duelist(db, p, show(member), now),
+                duelist(db, opponent, show(opponent["member"]), now),
+                rng,
+            )
+        else:
+            won, report = battle(db, p, "你", npc, rng, now)
         points = 10 if won > 0 else 3 if won == 0 else 1
     db.execute(
         """INSERT INTO jh_encounters(grp,activity,period,member,score,last_action,side) VALUES(?,?,?,?,?,?,?)

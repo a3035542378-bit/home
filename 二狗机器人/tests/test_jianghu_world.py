@@ -368,3 +368,18 @@ def test_native_social_target_and_forged_name():
         ] == ("player-a", "player-b")
     finally:
         case.doCleanups()
+
+
+def test_tournament_opponents_and_insight_limit(room):
+    s = room
+    for member in ("leaf", "b"):
+        ready(s, member)
+    s.conn.execute("UPDATE jh_players SET insight=40 WHERE member='b'")
+    assert "上限 8 级" in s.say("江湖身世", member="b")
+    for level in range(1, 9):
+        assert f" {level} 级" in s.say("研习太极剑", member="b")
+    assert "上限 8 级" in s.say("研习太极剑", member="b")
+    assert "擂主" in s.say("华山论剑")
+    receipt = s.say("华山论剑", member="b")
+    assert "本次论剑贡献" in receipt and "擂主" not in receipt
+    assert s.record()["silver"] == 100
