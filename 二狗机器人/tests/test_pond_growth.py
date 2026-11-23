@@ -197,7 +197,8 @@ class PondGrowthTests(unittest.TestCase):
         self.assertEqual(self.state(70),before)
         self.assertEqual((before["original_grams"],before["original_grade"],before["original_price"],before["catcher"]),(205,2,78,None))
         self.assertIn("历史来源未记录",self.say("图鉴 新手池塘 1",200))
-        self.say(f"收入图鉴#{self.put(250,name='鲫鱼')}",201)
+        heavier=self.put(250,name="鲫鱼",grade=2)
+        self.assertIn("已换入",self.say(f"收入图鉴#{heavier}",201))
         self.assertEqual(self.state(70),before)
         self.assertIn("到账 78 枚",self.say("卖鱼#70",202))
 
