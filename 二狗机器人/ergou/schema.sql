@@ -534,3 +534,21 @@ CREATE TABLE IF NOT EXISTS jh_strikes (
  grp TEXT NOT NULL, attacker TEXT NOT NULL, victim TEXT NOT NULL, at REAL NOT NULL, won INTEGER NOT NULL,
  PRIMARY KEY(grp,attacker,victim)
 );
+
+CREATE TABLE IF NOT EXISTS quiz_notices (
+ task INTEGER PRIMARY KEY REFERENCES outbox ON DELETE CASCADE, game INTEGER NOT NULL REFERENCES games,
+ number INTEGER NOT NULL, reveal INTEGER NOT NULL, body TEXT NOT NULL
+);
+CREATE VIEW IF NOT EXISTS valid_quiz_notices AS
+ SELECT o.id, CASE WHEN n.reveal THEN game.owner END AS recipient
+ FROM quiz_notices n JOIN outbox o ON o.id=n.task AND o.body=n.body
+ JOIN games game ON game.id=n.game AND game.grp=o.grp
+ JOIN groups g ON g.id=o.grp AND g.account=o.account AND g.binding=o.binding
+ JOIN directed_groups p ON p.grp=g.id AND p.account=g.account AND p.binding=g.binding
+ JOIN directed_events d ON d.biz=json_extract(game.rules,'$.quiz_origin') AND d.source_time>=p.since
+ JOIN inbox i ON i.event_id=d.biz AND i.grp=g.id AND i.account=g.account AND i.binding=g.binding AND i.member=game.owner
+ WHERE NOT g.paused AND json_extract(g.config,'$.enabled') AND json_extract(g.config,'$.games')
+ AND NOT EXISTS (SELECT 1 FROM json_each(g.config,'$.disabled_games') WHERE value=game.game)
+ AND json_extract(game.board,'$.number')=n.number AND
+ ((n.reveal AND game.state='RUNNING' AND json_extract(game.board,'$.phase')='waiting')
+ OR (NOT n.reveal AND game.state='FINISHED'));

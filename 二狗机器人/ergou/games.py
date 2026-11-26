@@ -120,12 +120,15 @@ from .scenarios import SCENARIOS
 
 QUIZZES={
     "song_quiz":("猜歌名","根据题面猜歌名",(
+        ("北京奥运会开幕前，百位歌手合唱欢迎远客，五个字。","北京欢迎你"),("送别朋友，题名就是告别时的两个字，李叔同填词。","送别"),("两只动物跑得快，一只少耳朵，一只少尾巴。","两只老虎"),
         ("一闪一闪挂在夜空，童谣，三个字。","小星星"),("一朵芳香的白花，江苏民歌，三个字。","茉莉花"),
         ("儿时拿着报纸沿街跑的小朋友，老儿歌，三个字。","卖报歌"))),
     "idiom_quiz":("猜成语","根据描述猜一个四字成语",(
+        ("把禾苗往上拉，以为能帮它长高。","拔苗助长"),("守在树桩旁，盼着第二只兔子撞来。","守株待兔"),("捂住自己的耳朵，以为偷铃时别人也听不见。","掩耳盗铃"),
         ("给蛇添上它本来没有的肢体。","画蛇添足"),("井底的一只青蛙抬头看天。","井底之蛙"),
         ("客人把杯里映出的弓影看成了蛇。","杯弓蛇影"))),
     "emoji_quiz":("猜图片","根据表情图猜一个四字成语",(
+        ("🐍 ✏️ 🦶","画蛇添足"),("👂 🚫 🔔","掩耳盗铃"),("🐴 🐴 🐯 🐯","马马虎虎"),
         ("🐔 ✈️ 🥚 💥","鸡飞蛋打"),("🐟 👁️ 🔀 💎","鱼目混珠"),("🐉 ✈️ 🐦 💃","龙飞凤舞"))),
 }
 
@@ -193,6 +196,8 @@ def turn_hint(name, rules, board, code, prefix):
         action=next(iter(candidates),None)
     else:
         game=GAMES[name]
+        if rules.get("quiz_origin"):
+            return f"题面：{board['clue']}\n发「{prefix}＋答案」参与。发起人可发「{prefix}停止游戏」。" if board["phase"]=="question" else f"本题已揭晓。发起人可发「{prefix}继续」。"
         if game.id in QUIZZES:
             return f"题面：{board['clue']}\n猜到后，在「{prefix}{code} 」后写答案。"
         scenario=next((s for s in SCENARIOS if s.id==game.id),None)

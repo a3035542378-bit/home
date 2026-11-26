@@ -19,8 +19,8 @@ def claim(db, account, now=None, *, directed_group=None):
         db.execute("UPDATE outbox SET state='UNKNOWN',detail='发送租约到期' WHERE state='SENDING' AND lease<=?",(now,))
         db.execute("UPDATE outbox SET state='EXPIRED',body='' WHERE state IN ('PENDING','RETRY_WAIT') AND expires<=?",(now,))
         row=db.execute("""SELECT o.*,g.account active,g.binding current,g.paused,g.config,vi.seq voice_seq,
-          (SELECT i.member FROM fishing_reply_mentions m JOIN inbox i ON i.event_id=m.biz
-           WHERE m.biz=o.biz AND i.grp=o.grp AND i.account=o.account AND i.binding=o.binding) AS mention_sender,
+          COALESCE((SELECT recipient FROM valid_quiz_notices WHERE id=o.id),(SELECT i.member FROM fishing_reply_mentions m JOIN inbox i ON i.event_id=m.biz
+           WHERE m.biz=o.biz AND i.grp=o.grp AND i.account=o.account AND i.binding=o.binding)) AS mention_sender,
           (SELECT invitee FROM jh_invite_mentions WHERE biz=o.biz) AS mention_invitee
           FROM outbox o
           JOIN groups g ON g.id=o.grp JOIN account a ON a.id=o.account
@@ -40,6 +40,7 @@ def claim(db, account, now=None, *, directed_group=None):
                  SELECT 1 FROM valid_live_notices v WHERE v.biz=o.biz AND v.grp=o.grp AND v.account=o.account
                  AND v.binding=o.binding AND v.body=o.body AND v.due<=?)
                  OR EXISTS(SELECT 1 FROM valid_member_deliveries m WHERE m.id=o.id)
+                 OR EXISTS(SELECT 1 FROM valid_quiz_notices q WHERE q.id=o.id)
                  OR EXISTS(SELECT 1 FROM valid_exhibit_board_notices b WHERE b.id=o.id))))))
           AND g.paused=0 ORDER BY o.ready,o.id LIMIT 1""",
           (voice_version,account,now,directed_group,directed_group,now-30,now-120,now-120,now)).fetchone()
@@ -99,6 +100,10 @@ def finish(db,account,task,attempt,state,detail,now=None):
                    (state,detail,now+2**min(attempt,4)+random.random(),finished if state=="ACKNOWLEDGED" else None,task,account,attempt)).rowcount
         if changed:
             db.execute("UPDATE attempts SET ended=?,result=? WHERE task=? AND n=? AND ended IS NULL",(finished,state,task,attempt))
+        if changed and state=="ACKNOWLEDGED":
+            db.execute("""UPDATE games SET deadline=? WHERE state='RUNNING' AND json_extract(board,'$.phase')='waiting'
+                AND EXISTS(SELECT 1 FROM quiz_notices n WHERE n.task=? AND n.game=games.id
+                    AND n.number=json_extract(games.board,'$.number') AND n.reveal)""",(finished+180,task))
         return bool(changed)
 
 
@@ -155,8 +160,10 @@ def tick(db,now=None):
             db.execute("DELETE FROM welcomes WHERE grp=? AND due=? AND account=? AND binding=?",args)
         db.execute("UPDATE account SET state='RECONNECTING' WHERE state IN ('ONLINE','LISTENING') AND id IN (SELECT account FROM nodes WHERE last_seen<?)",(now-30,))
         db.execute("UPDATE account SET state='NEED_USER_ACTION' WHERE state='RECONNECTING' AND id IN (SELECT account FROM nodes WHERE last_seen<?)",(now-300,))
+        from . import quiz_rounds
+        quiz_rounds.due(db,now)
         db.execute("""UPDATE games SET state='EXPIRED',ended=deadline,reason='到时结束' WHERE state='RUNNING'
-            AND deadline<=? AND NOT EXISTS (SELECT 1 FROM inbox i WHERE i.grp=games.grp AND i.state='PENDING' AND i.arrived<games.deadline)""",(now,))
+            AND json_extract(rules,'$.quiz_origin') IS NULL AND deadline<=? AND NOT EXISTS (SELECT 1 FROM inbox i WHERE i.grp=games.grp AND i.state='PENDING' AND i.arrived<games.deadline)""",(now,))
         for s in db.execute("SELECT * FROM schedules WHERE enabled=1 AND due<=? ORDER BY due LIMIT 100",(now,)).fetchall():
             group=db.execute("SELECT * FROM groups WHERE id=?",(s["grp"],)).fetchone()
             cfg=json.loads(group["config"])

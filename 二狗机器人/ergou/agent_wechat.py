@@ -565,6 +565,8 @@ def replies(db,client,node_secret,token,name=None,*,group=None,once=False):
                     elif task["biz"].startswith("member/"):
                         from .member_notices import matches as member_matches
                         unconfirmed=not member_matches(db,task)
+                    elif task["biz"].startswith("quiz/"):
+                        unconfirmed=not db.execute("SELECT 1 FROM valid_quiz_notices WHERE id=?",(task["id"],)).fetchone()
                     elif task["biz"].startswith("exhibit-board/"):
                         from .exhibit_announcements import matches as board_matches
                         unconfirmed=not board_matches(db,task)

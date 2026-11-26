@@ -6,10 +6,10 @@ import uuid
 from contextlib import nullcontext
 from datetime import datetime
 
-from . import asset_actions, community, plugins, retention
+from . import quiz_rounds, asset_actions, community, plugins, retention
 from .display_names import mention_sender
 from .db import BJ, allowed, audit, closing_db, dump, transaction, window
-from .games import GAMES, RULE_VERSION, start_board, turn_hint, visible_board
+from .games import GAMES, QUIZZES, RULE_VERSION, start_board, turn_hint, visible_board
 
 ACTIVE = "('RUNNING','PAUSED','WAITING_PLAYERS')"
 KINDS = {"message","join","baseline","leave","revoke","bot_leave"}
@@ -138,8 +138,9 @@ def queue(db, group, key, body, now, ttl=120):
 
 
 def expire(db, group, now):
+    quiz_rounds.due(db, now, group)
     db.execute(f"""UPDATE games SET state='EXPIRED',ended=deadline,reason='到时结束'
-                WHERE grp=? AND state IN {ACTIVE} AND deadline<=?""",(group,now))
+                WHERE grp=? AND state IN {ACTIVE} AND json_extract(rules,'$.quiz_origin') IS NULL AND deadline<=?""",(group,now))
 
 
 def sessions(db, group):
@@ -165,7 +166,14 @@ def game_list(db,g,e,cfg,prefix,args,manager,governed):
         lines.extend(["",f"🎲 {row['game']} · {code}",f"【状态 {code}】查看盘面"])
         if row["state"]!="RUNNING":
             continue
-        lines.append(f"【加入 {code}】参加本局")
+        if json.loads(row["rules"]).get("quiz_origin"):
+            board=json.loads(row["board"])
+            if board["phase"]=="question":
+                lines.append(f"题面：{board['clue']}。全群可发「{prefix}＋答案」。")
+            if row["owner"]==e["member"]:
+                lines.append("【停止游戏】结束这场猜题")
+        else:
+            lines.append(f"【加入 {code}】参加本局")
         owns=row["owner"]==e["member"]
         if manager or (owns and not governed):
             lines.append(f"【结束 {code}】立即结束整局")
@@ -174,9 +182,12 @@ def game_list(db,g,e,cfg,prefix,args,manager,governed):
     if names:
         lines.extend(["","🎮 本页游戏"])
         open_names={row["game"] for row in rows}
+        quiz_open=any(json.loads(row["rules"]).get("quiz_origin") for row in rows)
         for name in names:
             if name in open_names:
                 lines.append(name+" · 已有群友开局")
+            elif quiz_open and name in GAMES and GAMES[name].id in QUIZZES:
+                lines.append(name+" · 等当前猜题结束后可开")
             elif len(rows)>=cfg["max_games"]:
                 lines.append(name+" · 本群会话已满")
             else:
@@ -207,10 +218,19 @@ def start(db,g,e,name,cfg,prefix):
     if game and game.id in ("song_quiz","idiom_quiz","emoji_quiz"):
         prompt+=" 题面："+board["clue"]
     snapshot=dict(version=RULE_VERSION,game_id=game.id if game else plugin["id"],reward=cfg["reward"],config_version=g["version"],initial=board,prompt=prompt,daily_rewards=cfg.get("daily_rewards",0))
+    continuous = game and game.id in QUIZZES
+    if continuous:
+        existing=quiz_rounds.active(db,g["id"])
+        if existing:
+            raise ValueError(f"本群正在玩{existing['game']}，直接发「{prefix}＋答案」即可参加。")
+        snapshot.update(quiz_origin=e["event_id"],quiz_binding=[g["account"],g["binding"]])
+        board.update(phase="question",number=1,used=[board["answer"]],solved=0)
     if plugin:snapshot["plugin"]=plugin
     cur=db.execute("""INSERT INTO games(grp,code,game,owner,state,rules,board,started,deadline)
-                   VALUES(?,?,?,?,'RUNNING',?,?,?,?)""",(g["id"],code,name,e["member"],dump(snapshot),dump(board),e["arrived"],e["arrived"]+600))
+                   VALUES(?,?,?,?,'RUNNING',?,?,?,?)""",(g["id"],code,name,e["member"],dump(snapshot),dump(board),e["arrived"],e["arrived"]+(quiz_rounds.QUESTION_SECONDS if continuous else 600)))
     db.execute("INSERT INTO players VALUES(?,?,?)",(cur.lastrowid,e["member"],e["arrived"]))
+    if continuous:
+        return quiz_rounds.prompt({"code":code,"game":name},board,prefix)
     hint=turn_hint(name,snapshot,board,code,prefix)
     goal=prompt.split(" 起始：")[0].split("词库：")[0].split(" 可行动作：")[0].split(" 题面：")[0]
     return (f"🎮 {code} {name} · 限时 10 分钟，完成者 +{cfg['reward']} 分\n"
@@ -253,6 +273,10 @@ def play(db,e,action,code,arg,manager,prefix="二狗"):
     if action=="动作" and not arg:
         hint=turn_hint(row["game"],json.loads(row["rules"]),json.loads(row["board"]),code,prefix)
         return f"{code} {row['game']}\n{hint}" if db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone() else f"先加入这局 {row['game']}\n{prefix}加入 {code}"
+    if json.loads(row["rules"]).get("quiz_origin") and action=="动作":
+        if arg=="重置":
+            raise ValueError(f"连续猜题可由发起人发「{prefix}停止游戏」后重新开局。")
+        return quiz_rounds.handle(db,row,e,arg,prefix,explicit=True)
     if not (governed and manager and arg=="重置") and not db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone():
         raise ValueError(f"请先加入 {code} {row['game']}\n{prefix}加入 {code}")
     rules=json.loads(row["rules"])
@@ -271,14 +295,18 @@ def play(db,e,action,code,arg,manager,prefix="二狗"):
     db.execute("UPDATE games SET board=? WHERE id=?",(dump(board),row["id"]))
     if won:
         db.execute("UPDATE games SET state='FINISHED',ended=?,reason='完成目标' WHERE id=?",(e["arrived"],row["id"]))
-        cap=rules.get("daily_rewards",0)
-        midnight=datetime.fromtimestamp(e["arrived"],BJ).replace(hour=0,minute=0,second=0,microsecond=0).timestamp()
-        if cap and db.execute("SELECT COUNT(*) FROM ledger l JOIN games g ON g.id=l.game WHERE l.member=? AND l.grp=? AND g.game=? AND l.kind='胜利' AND l.at>=?",(e["member"],e["grp"],row["game"],midnight)).fetchone()[0]>=cap:
-            return f"{code} {msg} · 已完成，今日奖励次数已满"
-        db.execute("""INSERT INTO ledger(grp,member,game,round,kind,points,rule_version,event,at,reason)
-                   VALUES(?,?,?,1,'胜利',?,?,?,?,?)""",(e["grp"],e["member"],row["id"],rules["reward"],rules["version"],e["event_id"],e["arrived"],"完成目标"))
-        msg+=f" · 完成！+{rules['reward']} 分"
+        msg+=" · 完成！"+victory_reward(db,e,row,rules)
     return f"{code} {msg}"
+
+
+def victory_reward(db,e,row,rules):
+    cap=rules.get("daily_rewards",0)
+    midnight=datetime.fromtimestamp(e["arrived"],BJ).replace(hour=0,minute=0,second=0,microsecond=0).timestamp()
+    if cap and db.execute("SELECT COUNT(*) FROM ledger l JOIN games g ON g.id=l.game WHERE l.member=? AND l.grp=? AND g.game=? AND l.kind='胜利' AND l.at>=?",(e["member"],e["grp"],row["game"],midnight)).fetchone()[0]>=cap:
+        return "今日奖励次数已满"
+    db.execute("""INSERT INTO ledger(grp,member,game,round,kind,points,rule_version,event,at,reason)
+               VALUES(?,?,?,1,'胜利',?,?,?,?,?)""",(e["grp"],e["member"],row["id"],rules["reward"],rules["version"],e["event_id"],e["arrived"],"完成目标"))
+    return f"+{rules['reward']} 分"
 
 
 def ranking_rows(db,group,period,now):
@@ -361,6 +389,12 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
         if cmd == "闯江湖":
             mention_sender(db, e)
             return "本群江湖尚未开启，可由主人或已授权的群主开启。"
+    if cfg["games"]:
+        quiz=quiz_rounds.active(db,g["id"])
+        if quiz and quiz["game"] not in cfg.get("disabled_games",[]):
+            answer=quiz_rounds.handle(db,quiz,e,cmd,prefix)
+            if answer is not None:
+                return answer
     try:
         matched=reply_rules.match(db,e,cmd)
     except (ValueError,TypeError,KeyError,IndexError,AttributeError):

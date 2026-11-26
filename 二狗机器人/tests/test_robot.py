@@ -13,7 +13,7 @@ from unittest.mock import patch
 from ergou import admin,community,jobs,queries
 from ergou.db import BJ,DEFAULT,backup,connect,demo,dump,initialize,restore,transaction,window
 from ergou.engine import receive,step
-from ergou.games import GAMES,example
+from ergou.games import GAMES,QUIZZES,example
 
 
 class Robot(unittest.TestCase):
@@ -53,6 +53,9 @@ class Robot(unittest.TestCase):
                 self.assertTrue(moves)
                 for j,move in enumerate(moves):
                     self.assertEqual("DONE",self.say(f"二狗 {code} {move}","player",f"{i}-{j}")["state"])
+                if game.id in QUIZZES:
+                    self.assertIn("第 2 题",self.scalar("SELECT body FROM outbox ORDER BY id DESC LIMIT 1"))
+                    self.assertIn("已结束",self.say("二狗停止游戏")["body"])
                 self.assertEqual("FINISHED",self.scalar("SELECT state FROM games WHERE code=?",(code,)))
                 self.assertEqual(1,self.scalar("SELECT COUNT(*) FROM ledger WHERE game=?",(row["id"],)))
                 self.say(f"二狗 {code} {moves[-1]}","player",f"{i}-{len(moves)-1}")
