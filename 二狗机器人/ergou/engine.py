@@ -215,8 +215,6 @@ def start(db,g,e,name,cfg,prefix):
     code=f"G{no:02}"
     board=start_board(game,e["event_id"]) if game else {"node":plugin["start"]}
     prompt=game.prompt if game else plugin["prompt"]+" 可行动作："+"、".join(plugin["states"][plugin["start"]])
-    if game and game.id in ("song_quiz","idiom_quiz","emoji_quiz"):
-        prompt+=" 题面："+board["clue"]
     snapshot=dict(version=RULE_VERSION,game_id=game.id if game else plugin["id"],reward=cfg["reward"],config_version=g["version"],initial=board,prompt=prompt,daily_rewards=cfg.get("daily_rewards",0))
     continuous = game and game.id in QUIZZES
     if continuous:
@@ -224,6 +222,8 @@ def start(db,g,e,name,cfg,prefix):
         if existing:
             raise ValueError(f"本群正在玩{existing['game']}，直接发「{prefix}＋答案」即可参加。")
         snapshot.update(quiz_origin=e["event_id"],quiz_binding=[g["account"],g["binding"]])
+        board["clue"],board["answer"]=quiz_rounds.choose(db,game.id,e,[])
+        snapshot["prompt"]+=" 题面："+board["clue"]
         board.update(phase="question",number=1,used=[board["answer"]],solved=0)
     if plugin:snapshot["plugin"]=plugin
     cur=db.execute("""INSERT INTO games(grp,code,game,owner,state,rules,board,started,deadline)
@@ -486,6 +486,10 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     fallback = UNKNOWN_COMMAND.format(prefix=prefix)
     if "天气" in cmd:
         fallback = f"🌤 想查天气？把北京换成你的城市。\n{prefix}天气 北京"
+    if cfg["games"] and quiz and quiz["game"]=="猜歌词" and "猜歌词" not in cfg.get("disabled_games",()):
+        board=json.loads(quiz["board"])
+        if board["phase"]=="question" and re.fullmatch(r"[㐀-鿿]{1,8}",cmd.strip("！。!?？.，, ")):
+            fallback=f"🎵 还没填对。这一空要填 {len(board['answer'])} 个字。\n{board['clue']}"
     return respond(db,e,cmd.strip(),fallback=fallback,prefix=prefix)
 
 

@@ -44,3 +44,23 @@ class Quiz(unittest.TestCase):
         jobs.tick(self.db,due+180)
         self.assertIsNone(active(self.db,"a"))
         self.assertEqual(1,self.db.execute("SELECT count(*) FROM quiz_notices WHERE NOT reveal").fetchone()[0])
+
+    def test_lyrics_reopens_with_fresh_clues_and_accepts_missing_words(self):
+        from ergou.games import QUIZZES
+        seen=set()
+        for _ in QUIZZES["lyrics_quiz"][2]:
+            self.clock+=15
+            body=self.say("二狗开始 猜歌词")["body"]
+            self.assertIn("只填方框缺的字",body)
+            board=json.loads(active(self.db,"a")["board"])
+            self.assertEqual(len(board["answer"]), board["clue"].count("□"))
+            self.assertNotIn(board["answer"],seen)
+            seen.add(board["answer"])
+            self.say("二狗停止游戏")
+        self.clock+=15
+        self.say("二狗开始 猜歌词",group="b")
+        self.assertIn("还没填对",self.say("二狗错误填词","guest",group="b")["body"])
+        self.assertNotIn("还没填对",self.say("二狗积分","guest",group="b")["body"])
+        answer=json.loads(active(self.db,"b")["board"])["answer"]
+        self.assertIn("第 2 题",self.say("二狗"+answer+"！","guest",group="b")["body"])
+        self.assertEqual(2,self.db.execute("SELECT count(*) FROM quiz_history WHERE grp='b'").fetchone()[0])

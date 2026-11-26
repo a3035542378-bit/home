@@ -17,18 +17,30 @@ def active(db, group):
 
 def prompt(row, board, prefix):
     reward = "本局仅首个正确答案可领积分。\n" if board["number"] == 1 else ""
+    instruction="只填方框缺的字" if row["game"]=="猜歌词" else "全群可答"
     return (f"🎮 {row['code']} {row['game']} · 第 {board['number']} 题\n题面：{board['clue']}\n"
-            f"全群可答，直接发「{prefix}＋答案」。限时 2 分钟。\n"
+            f"{instruction}，直接发「{prefix}＋答案」。限时 2 分钟。\n"
             f"{reward}发起人可发：{prefix}停止游戏")
 
 
-def advance(db, row, board, event, prefix):
-    quiz = QUIZZES[json.loads(row["rules"])["game_id"]][2]
-    choices = [pair for pair in quiz if pair[1] not in board["used"]]
+def choose(db, quiz_id, event, used, previous=None):
+    pool=QUIZZES[quiz_id][2]
+    choices=[pair for pair in pool if pair[1] not in used]
     if not choices:
-        board["used"] = []
-        choices = [pair for pair in quiz if pair[1] != board["answer"]]
-    clue, answer = random.Random(event["event_id"]).choice(choices)
+        used.clear()
+        choices=[pair for pair in pool if pair[1]!=previous]
+    history=dict(db.execute("SELECT answer,last_seq FROM quiz_history WHERE grp=?", (event["grp"],)))
+    oldest=min(history.get(answer,0) for _,answer in choices)
+    candidates=[pair for pair in choices if history.get(pair[1],0)==oldest]
+    clue,answer=random.Random(event["event_id"]).choice(candidates)
+    db.execute("""INSERT INTO quiz_history VALUES(?,?,?) ON CONFLICT(grp,answer)
+                  DO UPDATE SET last_seq=excluded.last_seq""",(event["grp"],answer,event["seq"]))
+    return clue,answer
+
+
+def advance(db, row, board, event, prefix):
+    quiz_id=json.loads(row["rules"])["game_id"]
+    clue,answer=choose(db,quiz_id,event,board["used"],board["answer"])
     board.update(clue=clue, answer=answer, number=board["number"]+1, phase="question")
     board["used"].append(answer)
     db.execute("UPDATE games SET board=?,deadline=? WHERE id=?",
@@ -54,7 +66,9 @@ def handle(db,row,event,text,prefix,*,explicit=False):
         return advance(db,row,board,event,prefix)
     if board["phase"]!="question" or event["arrived"]>=row["deadline"]:
         return "本题已截止，等发起人决定是否继续。" if explicit else None
-    guess=text.strip(" 《》！。")
+    guess=text.strip(" 《》！。!?？.，,")
+    if guess=="揠苗助长" and board["answer"]=="拔苗助长":
+        guess=board["answer"]
     if guess!=board["answer"]:
         questions=QUIZZES[json.loads(row["rules"])["game_id"]][2]
         if explicit or any(guess==answer for _,answer in questions):

@@ -552,3 +552,8 @@ CREATE VIEW IF NOT EXISTS valid_quiz_notices AS
  AND json_extract(game.board,'$.number')=n.number AND
  ((n.reveal AND game.state='RUNNING' AND json_extract(game.board,'$.phase')='waiting')
  OR (NOT n.reveal AND game.state='FINISHED'));
+
+CREATE TABLE IF NOT EXISTS quiz_history (
+ grp TEXT NOT NULL REFERENCES groups, answer TEXT NOT NULL, last_seq INTEGER NOT NULL,
+ PRIMARY KEY(grp,answer)
+);
