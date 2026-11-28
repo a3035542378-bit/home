@@ -36,7 +36,13 @@ def menu(db, key, prefix):
         else:
             lines.extend([f"还差 {bait.points-points} 分。",""])
     lines.extend(["只用一竿，下次默认免费。", "抛出后消耗鱼饵，跑鱼也会扣分。"])
-    return "\n".join(lines)
+    from .fishing_cards import JournalReply
+    return JournalReply("\n".join(lines),heading="饵料商店",title="选一份鱼饵",subtitle=f"本群余额  {points} 积分",
+                        entries=[(name,f"{bait.points} 积分 / 竿  ·  "+
+                                  (f"稀有和珍品权重 ×{bait.rarity_factor:g}，史诗和传说咬钩率 ×{bait.trophy_factor:g}" if bait.points else "常规咬钩率"))
+                                 for name,bait in BAITS.items()],
+                        notes=["发送即下竿并扣除相应积分。跑鱼也会消耗，本次之后恢复免费饵。"],
+                        commands=[prefix+("抛竿 "+name if bait.points else "抛竿") for name,bait in BAITS.items() if points>=bait.points])
 
 
 def rarity_weights(rod_weights, bait):

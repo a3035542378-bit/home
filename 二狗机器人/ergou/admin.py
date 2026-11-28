@@ -71,8 +71,10 @@ def validate(patch):
             raise ValueError("配置类型错误："+k)
         if isinstance(v,str) and len(v)>500:
             raise ValueError("配置内容过长")
-        if isinstance(v,list) and (len(v)>(len(GAMES) if k=="disabled_games" else 100) or any(not isinstance(w,str) or not 0<len(w)<=80 for w in v)):
+        if isinstance(v,list) and (len(v)>(len(GAMES)+1 if k=="disabled_games" else 100) or any(not isinstance(w,str) or not 0<len(w)<=80 for w in v)):
             raise ValueError("列表内容无效")
+    if patch.get("game_card_mode","text") not in ("text","image","mixed"):
+        raise ValueError("游戏展示模式无效")
     if not 1<=patch.get("fishing_cooldown_seconds",DEFAULT["fishing_cooldown_seconds"])<=86400:
         raise ValueError("钓鱼间隔须为 1–86400 秒")
     if "prefix" in patch and (not 1<=len(patch["prefix"])<=12 or any(c.isspace() for c in patch["prefix"])):
@@ -94,7 +96,7 @@ def validate(patch):
         raise ValueError("合并窗口或每日奖励次数超限")
     if not 1<=patch.get("send_rate",5)<=30 or not 1<=patch.get("command_rate",30)<=100:
         raise ValueError("发送或指令限额超出范围")
-    if set(patch.get("disabled_games",[]))-set(GAMES):raise ValueError("停用游戏名称不存在")
+    if set(patch.get("disabled_games",[]))-set(GAMES)-{"钓鱼"}:raise ValueError("停用游戏名称不存在")
     reserved=set("帮助 积分 周榜 月榜 总榜 群规 天气 快递 运势 游戏列表 开始 加入 退出 状态 结束 投票 抽签".split())
     for name,dest in patch.get("aliases",{}).items():
         if not 1<=len(name)<=12 or any(c.isspace() for c in name) or name in reserved or name in GAMES or name.upper().startswith("G") or dest not in reserved:
@@ -120,29 +122,38 @@ def configure(db,u,group,version,patch):
 
 
 VIEWS={
- "群消息接收记录":"""SELECT seq 序号,arrived 接收时间,source 来源消息ID,member 发送成员ID,
+ "群消息接收记录":"""SELECT seq 序号,arrived 接收时间,source 来源消息ID,member 发送成员ID,COALESCE((SELECT d.name FROM asset_display_names d WHERE d.grp=inbox.grp
+                    AND d.binding=inbox.binding AND d.member=inbox.member),'未记录昵称') 成员昵称,message_type 消息类型,
                     adapter_version 接入组件,state 处理状态 FROM inbox
-                    WHERE grp=? AND kind='message' ORDER BY seq DESC LIMIT 200""",
+                    WHERE grp=? AND kind='message' ORDER BY seq DESC""",
  "运行告警":"""SELECT kind 告警,CASE WHEN recovered IS NULL THEN '待处理' ELSE '已恢复' END 状态,
               opened 首次发现,recovered 恢复时间 FROM group_alert WHERE grp=?
-              ORDER BY recovered IS NOT NULL,opened DESC,id DESC LIMIT 200""",
- "会话":"SELECT code 编号,game 玩法,state 状态,owner 发起人,reason 结局 FROM games WHERE grp=? ORDER BY id DESC LIMIT 200",
- "积分":"SELECT member 成员,SUM(points) 积分 FROM ledger WHERE grp=? GROUP BY member ORDER BY 积分 DESC,member LIMIT 200",
- "积分流水":"SELECT member 成员,points 变动,kind 类型,reason 原因,at 时间 FROM ledger WHERE grp=? ORDER BY id DESC LIMIT 200",
- "发送任务":"SELECT id 编号,state 状态,attempts 尝试,detail 结果 FROM outbox WHERE grp=? ORDER BY id DESC LIMIT 200",
- "入站异常":"SELECT seq 序号,trace 跟踪号,state 状态,result 原因 FROM inbox WHERE grp=? AND state IN ('REJECTED','FAILED','RATE_LIMITED') ORDER BY seq DESC LIMIT 200",
+              ORDER BY recovered IS NOT NULL,opened DESC,id DESC""",
+ "玩家渔获":"""SELECT p.member 成员,p.id 鱼号,p.fish 鱼种,p.grams 重量克,p.price 入库标价,
+             CASE p.storage WHEN 'bag' THEN '鱼包' WHEN 'pond' THEN '鱼塘' ELSE p.storage END 位置,
+             CASE WHEN EXISTS(SELECT 1 FROM fishing_exhibits e WHERE e.grp=p.grp AND e.member=p.member
+                  AND e.fish=p.fish) THEN '已点亮' ELSE '未点亮' END 同种图鉴
+             FROM fishing_pond p WHERE p.grp=? ORDER BY p.id DESC""",
+ "会话":"SELECT code 编号,game 玩法,state 状态,owner 发起人,reason 结局 FROM games WHERE grp=? ORDER BY id DESC",
+ "积分":"""WITH balances AS (SELECT member,SUM(points) points,0 coins FROM ledger WHERE grp=?1 GROUP BY member
+              UNION ALL SELECT member,0,coins FROM fishing_wallets WHERE grp=?1)
+          SELECT member 成员,SUM(points) 积分,SUM(coins) 已建钱包鱼币 FROM balances
+          GROUP BY member ORDER BY 积分 DESC,member""",
+ "积分流水":"SELECT id 流水编号,member 成员,points 变动,kind 类型,reason 原因,at 时间 FROM ledger WHERE grp=? ORDER BY id DESC",
+ "发送任务":"SELECT id 编号,state 状态,attempts 尝试,detail 结果 FROM outbox WHERE grp=? ORDER BY id DESC",
+ "入站异常":"SELECT seq 序号,trace 跟踪号,state 状态,result 原因 FROM inbox WHERE grp=? AND state IN ('REJECTED','FAILED','RATE_LIMITED') ORDER BY seq DESC",
  "定时通知":"""SELECT s.id 编号,version 版本,CASE t.kind WHEN 'weather' THEN '天气' WHEN 'news' THEN '香港要闻'
              WHEN 'weather_news' THEN '天气与香港要闻' ELSE '文字通知' END 类型,body 内容,period 周期,due 下次执行,
-             until 结束时间,enabled 启用,CASE
+             catchup 补发,until 结束时间,enabled 启用,CASE
              WHEN NOT EXISTS(SELECT 1 FROM groups g JOIN listener_nodes l ON l.account=g.account WHERE g.id=s.grp) THEN '按群设置执行'
              WHEN EXISTS(SELECT 1 FROM valid_live_notices v WHERE v.schedule=s.id) THEN '已确认一次'
              WHEN s.period='一次' AND t.kind IS NULL THEN '需本机逐条确认' ELSE '当前微信绑定不主动发送此类型' END 微信授权,
              (SELECT result FROM runs WHERE schedule=s.id ORDER BY due DESC LIMIT 1) 最近执行
-             FROM schedules s LEFT JOIN bulletin_types t ON t.schedule=s.id WHERE grp=? ORDER BY s.id DESC LIMIT 200""",
- "规则命中":"SELECT h.seq 事件,h.version 规则版本,h.result 处置,COALESCE(a.outcome,'已记录') 执行结果 FROM hits h LEFT JOIN moderation_actions a ON a.seq=h.seq WHERE h.grp=? ORDER BY h.id DESC LIMIT 200",
- "审计":"SELECT actor 操作人,action 操作,detail 说明,at 时间 FROM audit WHERE grp=? ORDER BY id DESC LIMIT 200",
+             FROM schedules s LEFT JOIN bulletin_types t ON t.schedule=s.id WHERE grp=? ORDER BY s.id DESC""",
+ "规则命中":"SELECT h.seq 事件,h.version 规则版本,h.result 处置,COALESCE(a.outcome,'已记录') 执行结果 FROM hits h LEFT JOIN moderation_actions a ON a.seq=h.seq WHERE h.grp=? ORDER BY h.id DESC",
+ "审计":"SELECT actor 操作人,action 操作,detail 说明,at 时间 FROM audit WHERE grp=? ORDER BY id DESC",
  "后台权限":"SELECT name 用户,role 角色 FROM users WHERE EXISTS (SELECT 1 FROM json_each(scopes) WHERE value=?) ORDER BY name",
- "撤回记录":"SELECT seq 编号,at 时间 FROM recalls WHERE grp=? ORDER BY seq DESC LIMIT 200",
+ "撤回记录":"SELECT seq 编号,at 时间 FROM recalls WHERE grp=? ORDER BY seq DESC",
 }
 
 
@@ -151,7 +162,7 @@ def view(db,u,group,name):
     if name in ("后台权限","撤回记录") and u["role"]!="系统管理员":
         raise PermissionError("FORBIDDEN 仅系统管理员")
     if name=="游戏目录":
-        return [dict(编号=g.id,游戏=g.name,品类=g.category,规则=g.prompt) for g in GAMES.values()]
+        return [dict(编号=g.id,游戏=g.name,品类=g.category,规则=g.prompt) for g in GAMES.values()] + [dict(编号="钓鱼",游戏="钓鱼",品类="群聊养成",规则="抛竿后可出售、养鱼或收藏。")]
     if name=="外部服务":
         return [dict(服务="天气",供应商="Open-Meteo",凭据="非商业免费接口"),
                 dict(服务="国内快递",供应商="快递鸟 1002",凭据="已配置" if os.getenv("ERGOU_KDN_ID") and os.getenv("ERGOU_KDN_KEY") else "待配置"),
@@ -168,7 +179,7 @@ def view(db,u,group,name):
         return [dict(起始时间=bj_time(a),结束时间=bj_time(b),未覆盖分钟=b-a) for a,b in gaps]
     if name not in VIEWS:
         raise ValueError("视图不存在")
-    return [dict(r) for r in db.execute(VIEWS[name],(group,))]
+    return [dict(r) for r in db.execute(VIEWS[name]+" LIMIT 200",(group,))]
 
 
 def schedule(db,u,group,data):

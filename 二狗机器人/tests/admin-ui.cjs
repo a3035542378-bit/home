@@ -25,10 +25,25 @@ web.Handler.route=mounted_route
 with tempfile.TemporaryDirectory(prefix="ergou-ui-") as folder:
     path=Path(folder)/"ui.sqlite"
     os.environ["ERGOU_CREDENTIAL_DIR"]=str(Path(folder)/"credentials")
+    if sys.platform=="darwin":
+        # 仅测试子进程使用随机的不透明句柄，测试结束后释放。
+        import secrets
+        vault={}
+        def fixture_protect(value,decrypt=False):
+            if decrypt:
+                return vault[value]
+            handle=secrets.token_bytes(32)
+            vault[handle]=value
+            return handle
+        models.protect=fixture_protect
     db.initialize(path)
     rooms=("ui-room","ui-room-z")
-    db.demo(path,rooms)
+    db.demo(path,rooms+tuple("zz-page-"+str(i) for i in range(10)))
     with db.closing_db(path) as connection:
+        from ergou import bridge
+        bridge.enroll(connection,"fixture-account","zz-offline","x"*40,listen_only=True)
+        connection.execute("INSERT INTO schedules(grp,body,period,due,catchup) VALUES('zz-offline','本地夹具','一次',2100000000,0)")
+        connection.executemany("INSERT INTO ledger(grp,member,round,kind,points,rule_version,event,at,reason) VALUES('ui-room','fixture',0,'验收',1,'fixture',?,1700000000,'筛选样本')",((str(i),) for i in range(201)))
         password=json.loads(sys.stdin.readline())
         admin.user(connection,"ui-ops",password,"运营管理员",rooms)
         admin.user(connection,"ui-reader",password,"只读人员",rooms)
@@ -150,10 +165,17 @@ async function run(mount) {
     ].find(existsSync);
     browser = await chromium.launch({ executablePath, headless: true });
     const page = await browser.newPage();
+    page.on("dialog",dialog=>dialog.accept());
     const jsErrors = [];
     page.on("pageerror", e => jsErrors.push(e.message));
     page.setDefaultTimeout(7000);
-    const nav = name => page.locator("#nav").getByRole("button", { name, exact: true }).click();
+    const nav = async name => {
+      const menu=page.locator("#menuToggle");
+      if(await menu.isVisible() && await menu.getAttribute("aria-expanded")==="false")await menu.click();
+      const section=page.locator("#nav details").filter({has:page.getByText(name,{exact:true}).locator("xpath=self::button")});
+      if(!await section.evaluate(el=>el.open))await section.locator("summary").click();
+      await section.getByRole("button",{name,exact:true}).click();
+    };
     const waitText = (selector, text) => page.locator(selector).filter({ hasText: text }).waitFor();
     async function say(text, mention, expected) {
       await page.locator("#simulate input[name=text]").fill(text);
@@ -164,7 +186,7 @@ async function run(mount) {
     await page.goto("http://127.0.0.1:" + port + mount);
     await page.getByLabel("管理员账号").fill("ui-ops");
     await page.getByLabel("密码", {exact:true}).fill(password);
-    await page.locator("#login button").click();
+    await page.locator("#login button").click();await page.locator("#desk").waitFor();
     await say("二狗积分", false, "本群积分");
     await verifyReplyDiagnostics(page,mount);
     await nav("群配置");
@@ -191,8 +213,10 @@ async function run(mount) {
     const provider=modelForm.getByLabel("官方供应商"),modelKey=modelForm.getByLabel("官方 API Key");
     const keyLink=modelForm.getByRole("link",{name:"管理 OpenAI API Key"});
     assert.equal(await keyLink.count(),0);
-    const modelList=modelForm.getByLabel("可用模型"),verifyModel=modelForm.getByRole("button",{name:"测试并启用"});
+    const modelList=modelForm.getByLabel("可用模型"),verifyModel=modelForm.getByRole("button",{name:"验证并保存"});
     await page.waitForFunction(()=>document.querySelector('#modelForm [name="model"]').value==="deepseek-flash");
+    await page.locator("#toggleModel").click();await waitText("#dialogState","密钥已保留");
+    await page.locator("#toggleModel").click();await waitText("#dialogState","当前模式：智能对话");
     const catalogFor=vendor=>req=>req.url().endsWith("/api/chat-model/models")&&req.postDataJSON().provider===vendor;
     const glmRequests=[];
     const trackGlm=req=>{if(catalogFor("glm")(req))glmRequests.push(req.postDataJSON().key);};
@@ -202,6 +226,8 @@ async function run(mount) {
     await modelForm.getByText("智谱官方公布的文字模型，当前密钥的访问权限以测试结果为准。",{exact:true}).waitFor();
     assert.equal(await verifyModel.isDisabled(),true);
     await modelKey.fill("ui-glm-key");await modelKey.press("Tab");
+    await page.locator("#testModel").click();await waitText("#modelResult","连接成功，配置未变更");
+    await waitText("#activeModel","deepseek-flash");
     assert.equal(await verifyModel.isEnabled(),true);
     await modelKey.fill("");await modelKey.press("Tab");
     assert.equal(await verifyModel.isDisabled(),true);
@@ -376,22 +402,79 @@ async function run(mount) {
     await testVoice.click();await waitText("#voicePanel dd","今天吃什么");
     assert.equal(await activateVoice.count(),0);
     assert.equal((await voiceState()).version,version);
-    await page.locator("#logout").click();
+    await page.locator("#logout").click();await page.locator("#gate").waitFor();
+    assert.equal((await page.request.get(new URL("api/me",page.url()).href)).status(),401);
     await page.getByLabel("管理员账号").fill("ui-reader");
     await page.getByLabel("密码",{exact:true}).fill(password);
-    await page.locator("#login button").click();
+    await page.locator("#login button").click();await page.locator("#desk").waitFor();
     await nav("语音唤醒");await voice.getByText(/上次验证通过/).waitFor();
     assert.equal(await testVoice.count(),0);
     assert.equal(await page.locator("#nav").getByRole("button",{name:"后台账号"}).count(),0);
-    await page.locator("#logout").click();
+    await page.locator("#logout").click();await page.locator("#gate").waitFor();
     await page.getByLabel("管理员账号").fill("ui-owner");
     await page.getByLabel("密码",{exact:true}).fill(password);
-    await page.locator("#login button").click();
+    await page.locator("#login button").click();await page.locator("#desk").waitFor();
+    await waitText("#who","ui-owner");
+    assert.equal(await page.locator("#nav details").count(),7);
+    const navButtons=page.locator("#nav details button");
+    assert.equal(await navButtons.filter({hasText:/^玩家渔获$/}).count(),1);
+    assert.equal((await navButtons.allTextContents()).filter(name=>name!=="玩家渔获").length,27);
+    await nav("玩家渔获");await waitText("#heading","玩家渔获");
+    await nav("游戏目录");await nav("积分流水");
+    await page.goBack();await waitText("#heading","游戏目录");
+    await page.goForward();await waitText("#heading","积分流水");
+    await page.reload();await waitText("#heading","积分流水");
+    await page.setViewportSize({width:390,height:844});
+    await nav("我的群组");await waitText("#heading","我的群组");
+    await page.locator("#myGroups tbody button").first().click();
+    await waitText("#heading","群组概览");
+    await page.locator("#groupTabs").getByRole("button",{name:"成员管理",exact:true}).click();
+    await waitText("#groupDetail","operator");
+    await page.locator("#group").selectOption("ui-room");
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),390);
+    await page.setViewportSize({width:1440,height:900});
     await nav("积分流水");
     await page.waitForFunction(()=>document.querySelector("#export").download==="积分流水.csv");
+    const form=page.locator("#controlForm");
+    const submit=form.getByRole("button",{name:"执行操作"});
+    await page.waitForFunction(()=>document.querySelector("#grantMembers option")?.value==="operator");
+    await form.locator("[name=target]").fill("missing");
+    await form.locator("[name=amount]").fill("3");
+    await form.locator("[name=reason]").fill("UI回归");
+    await submit.click();await waitText("#message","不在当前群");
+    await form.locator("[name=target]").fill("operator");
+    await page.route("**/api/operation",async route=>{
+      const committed=await route.fetch();assert.equal(committed.status(),200);await route.abort();
+    },{times:1});
+    await submit.click();await waitText("#message","fetch");
+    await submit.click();await waitText("#opResult","已向 operator 发放 3");
+    const records=await (await page.request.get(new URL("api/view?"+new URLSearchParams({group:"ui-room",name:"积分流水"}),page.url()).href)).json();
+    assert.equal(records.filter(r=>r.原因==="UI回归").length,1);
+    await page.locator("#historyCorrection").click();
+    await form.locator("[name=action]").selectOption("冲正");
+    await form.locator("[name=target]").fill(String(records.find(r=>r.原因==="UI回归").流水编号));
+    await form.locator("[name=reason]").fill("历史纠错验收");
+    await submit.click();await waitText("#opResult","流水 #");
+    await page.locator("#rangeStart").fill("2023-01-01T00:00");
+    await page.locator("#rangeEnd").fill("2024-01-01T00:00");
+    await page.waitForFunction(()=>document.querySelector("#export").href.includes("end="));
     const exportURL=await page.locator("#export").evaluate(link=>link.href);
     assert.equal(new URL(exportURL).pathname,mount+"api/export");
-    assert.equal((await page.request.get(exportURL)).status(),200);
+    const file=await page.request.get(exportURL);assert.equal(file.status(),200);
+    assert.equal(((await file.text()).match(/筛选样本/g)||[]).length,201);
+    await nav("我的群组");
+    const directory=page.locator("#myGroups");
+    await directory.getByRole("button",{name:"下一页"}).click();
+    await directory.getByRole("searchbox").fill("zz-offline");
+    await directory.getByRole("button",{name:"管理本群"}).click();
+    await nav("积分流水");
+    await waitText("#opResult","当前名册无效");assert.equal(await submit.isDisabled(),true);
+    await nav("定时通知");await waitText("#tableWrap","需本机逐条确认");
+    await page.getByRole("button",{name:"编辑通知",exact:true}).click();
+    assert.equal(await page.locator("#scheduleForm [name=body]").inputValue(),"本地夹具");
+    await page.locator("#newSchedule").click();
+    assert.equal(await page.locator("#scheduleForm [name=id]").inputValue(),"");
+    await page.locator("#group").selectOption("ui-room");
     await page.route("**/api/wechat-login",route=>route.fulfill({
       json:{state:"awaiting_scan",attempt:"demo",generation:1}
     }));
@@ -411,10 +494,10 @@ async function run(mount) {
     await accounts.getByRole("button",{name:"创建账号"}).click();
     await accounts.getByRole("cell",{name:"ui-new",exact:true}).waitFor();
     assert.equal(await accounts.getByLabel(/登录密码/).inputValue(),"");
-    await page.locator("#logout").click();
+    await page.locator("#logout").click();await page.locator("#gate").waitFor();
     await page.getByLabel("管理员账号").fill("ui-new");
     await page.getByLabel("密码",{exact:true}).fill(password);
-    await page.locator("#login button").click();
+    await page.locator("#login button").click();await page.locator("#desk").waitFor();
     await page.locator("#desk").waitFor();
     assert.deepEqual(await page.locator("#group option").allTextContents(),["ui-room-z"]);
     assert.deepEqual(jsErrors,[]);

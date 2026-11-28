@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS exhibit_reward_clock (
 -- 只索引签到流水；先取整秒，避免午夜前的小数秒被日期函数进位。
 CREATE UNIQUE INDEX IF NOT EXISTS ledger_checkin_day
  ON ledger(grp,member,date(CAST(at AS INTEGER),'unixepoch','+8 hours')) WHERE kind='签到';
+CREATE UNIQUE INDEX IF NOT EXISTS ledger_work_day
+ ON ledger(grp,member,date(CAST(at AS INTEGER),'unixepoch','+8 hours')) WHERE kind='打工';
 CREATE TRIGGER IF NOT EXISTS ledger_no_update BEFORE UPDATE ON ledger BEGIN SELECT RAISE(ABORT,'immutable'); END;
 CREATE TRIGGER IF NOT EXISTS ledger_no_delete BEFORE DELETE ON ledger BEGIN SELECT RAISE(ABORT,'immutable'); END;
 CREATE TABLE IF NOT EXISTS outbox (
@@ -556,4 +558,31 @@ CREATE VIEW IF NOT EXISTS valid_quiz_notices AS
 CREATE TABLE IF NOT EXISTS quiz_history (
  grp TEXT NOT NULL REFERENCES groups, answer TEXT NOT NULL, last_seq INTEGER NOT NULL,
  PRIMARY KEY(grp,answer)
+);
+CREATE TABLE IF NOT EXISTS fishing_reply_cards (
+ task INTEGER PRIMARY KEY REFERENCES outbox(id) ON DELETE CASCADE, snapshot TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS social_gifts (
+ ledger_id INTEGER PRIMARY KEY REFERENCES ledger(id), event TEXT NOT NULL UNIQUE,
+ grp TEXT NOT NULL REFERENCES groups(id), sender TEXT NOT NULL, recipient TEXT NOT NULL,
+ gift TEXT NOT NULL, CHECK(sender<>recipient)
+);
+CREATE INDEX IF NOT EXISTS social_gift_collection ON social_gifts(grp,recipient,gift);
+CREATE TRIGGER IF NOT EXISTS clear_fishing_card AFTER UPDATE OF body ON outbox WHEN NEW.body=''
+BEGIN DELETE FROM fishing_reply_cards WHERE task=NEW.id; END;
+
+CREATE TABLE IF NOT EXISTS simulation_members (
+ grp TEXT NOT NULL REFERENCES groups, member TEXT NOT NULL, PRIMARY KEY(grp,member)
+);
+
+CREATE TABLE IF NOT EXISTS game_card_snapshots (
+ task INTEGER PRIMARY KEY REFERENCES outbox(id) ON DELETE CASCADE,
+ snapshot TEXT NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS clear_game_card AFTER UPDATE OF body ON outbox WHEN NEW.body=''
+BEGIN DELETE FROM game_card_snapshots WHERE task=NEW.id; END;
+
+CREATE TABLE IF NOT EXISTS game_card_trials (
+ grp TEXT PRIMARY KEY REFERENCES groups(id), account TEXT NOT NULL, binding INTEGER NOT NULL,
+ until REAL NOT NULL, task INTEGER UNIQUE, kind TEXT NOT NULL DEFAULT 'catch' CHECK(kind IN ('catch','bag'))
 );

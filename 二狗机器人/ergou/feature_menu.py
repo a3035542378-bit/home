@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass
 
 from . import jianghu, breeding, exhibit_batch, models, pond_growth, roles, voice_policy
+from .giant_fish import DURATION as GIANT_DURATION
 from .jianghu_rules import CHAPTER_WAIT_MINUTES, MEDITATION_MINUTES
 from .group_tools import CHECKIN_POINTS
 from .db import DEFAULT
@@ -48,6 +49,12 @@ TOPICS = (
 
 🏅 攒积分
 【签到】领取今天的积分
+【打工】每日一次，领 1 积分
+【个人档案】看本群资产、成就和今日进度
+【成就手册】看已点亮的成就
+【赞美】收一句夸夸，也可选一位群友
+【礼物商店】查看积分价格和赠送方式
+【我的礼物】查看本群收到的礼物
 【积分】看本群余额
 【兑换列表】看奖励和价格，按回执兑换
 
@@ -137,7 +144,7 @@ TOPICS = (
 【切换钓场 新手池塘】免费回到新手塘
 【白条怎么钓】查鱼的钓场和重量""", section='fish', gate='fish', aliases=('水域帮助', '鱼种帮助')),
     Topic('巨物', '🐋 看巨物出没时间',
-        """巨物最多停留 3 分钟，被钓走就消失。
+        f"""巨物最多停留 {GIANT_DURATION//60} 分钟，被钓走就消失。
 
 🐋 追巨物
 【巨物鱼讯】看本场出没时间
@@ -238,6 +245,7 @@ def directory(db, group, event, cfg, prefix, full):
     heading = "📚 本群全部帮助" if full else "🐕 二狗菜单"
     intro = f"{heading}\n发送时加「{prefix}」，例如：{prefix}积分"
     main = blocks(intro, section("⭐ 常用", [entry("签到", f"每天领 {CHECKIN_POINTS} 积分"),
+                  entry("个人档案","看本群成就和今日进度"),
                   *topic_rows(available[n] for n in ("钓鱼","积分","天气") if n in available)]),
                   topics("🎮 群里一起玩", ("游戏","互动","点歌","聊天","江湖录")),
                   topics("🔎 群服务", ("生活","群服务","快递","绑定","管理")))
@@ -245,7 +253,7 @@ def directory(db, group, event, cfg, prefix, full):
         return blocks(main, topics("🎣 钓鱼和养鱼", [t.name for t in TOPICS if t.section=="fish" or t.name=="强化"]),
                       topics("🗳 投票和报名", ("投票","抽签")),
                       "💬 智能已开启，微信里选中 @二狗 提问。" if models.api_first(db,group["id"]) else "💬 本群当前使用本地指令。")
-    return blocks(main, section("📚 更多", [entry("全菜单","查看本群全部帮助")]), example(prefix,"全菜单"))
+    return blocks(main, section("📚 更多", [entry("全菜单","查看本群全部帮助"),prefix+"全菜单"]))
 
 
 def render(db,group,event,cfg,prefix):
@@ -262,7 +270,7 @@ def fishing_directory(prefix,cooldown,pilot):
             entry("图鉴帮助",f"学点亮和换展，共 {len(SPECIES)} 种")]
     if pilot:
         care.append(entry("繁育帮助","学配对和领幼鱼"))
-    return blocks(f"🎣 钓鱼帮助\n发送时加「{prefix}」，例如：{prefix}抛竿",
+    body=blocks(f"🎣 钓鱼帮助\n发送时加「{prefix}」，例如：{prefix}抛竿",
                   section("🎯 开始钓鱼",[entry("抛竿",f"免费下竿，每 {cooldown} 秒一次"),
                         entry("切换钓场","看能去哪里钓"),entry("钓鱼信息","看鱼竿和个人进度")]),
                   section("🎒 处理鱼获",care),
@@ -270,6 +278,12 @@ def fishing_directory(prefix,cooldown,pilot):
                         entry("装备帮助","选鱼饵、升鱼线和鱼竿")]),
                   section("🏆 看看本群",[entry("图鉴榜","比点亮的鱼种数"),entry("鱼榜帮助","看重量榜和资产榜"),
                         entry("护塘帮助","学偷鱼和保护鱼塘")]),example(prefix,"抛竿"))
+    from .fishing_cards import JournalReply
+    return JournalReply(body,heading="钓鱼指南",title="从第一竿开始",subtitle=f"免费鱼饵  /  每 {cooldown} 秒可抛一竿",
+                        entries=[("抛一竿",prefix+"抛竿"),("看看钓到了什么",prefix+"查看鱼包"),
+                                 ("把鱼留下来养",prefix+"鱼塘帮助"),("收藏发现的鱼种",prefix+"图鉴帮助"),
+                                 ("选饵、换线和升竿",prefix+"装备帮助"),("找到本群榜单",prefix+"鱼榜帮助")],
+                        commands=[prefix+"钓场帮助",prefix+"护塘帮助",*([prefix+"繁育帮助"] if pilot else [])])
 
 
 def management(cfg,flags):
@@ -310,8 +324,14 @@ def page(db,group,event,cfg,prefix,t):
         return fishing_directory(prefix,cfg.get("fishing_cooldown_seconds",DEFAULT["fishing_cooldown_seconds"]),flags["breed"])
     title=t.title.split(" ",1)[0]+" "+name+"帮助"
     body=t.body
-    if name=="游戏" and "成语接龙" not in cfg.get("disabled_games",()):
-        body+="\n"+entry("开始 成语接龙","立即开局，按回执加入或接词")
+    if name=="游戏":
+        from .games import QUIZZES
+        disabled=cfg.get("disabled_games",())
+        if "成语接龙" not in disabled:
+            body+="\n"+entry("开始 成语接龙","立即开局，按回执加入或接词")
+        rows=[entry("开始 "+game,description) for game,description,_ in QUIZZES.values() if game not in disabled]
+        if rows:
+            body=blocks(body,section("💬 连续抢答",rows),f"全群可发「{prefix}＋答案」。\n每局仅首个答对的人可领积分。")
     if name in ("互动","投票","抽签"):
         rows=[]
         if cfg["polls"] and name!="抽签":

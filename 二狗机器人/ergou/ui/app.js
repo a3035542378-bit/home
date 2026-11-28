@@ -1,9 +1,39 @@
 "use strict";
 const $=id=>document.getElementById(id);
-const pages=["运行概览","群消息接收记录","群配置","运行告警","游戏目录","会话","积分","积分流水","定时通知","规则命中","周报","上周采集缺口","周报归档","发送任务","入站异常","外部服务","撤回记录","后台权限","审计"];
-pages.splice(3,0,"大模型配置","语音唤醒","自定义回复","成员通知","群组运营");
-pages.splice(1,0,"我的群组");
-pages.splice(2,0,"微信扫码登录","后台账号");
+const modules=[
+  ["工作台","◉",["运行概览"]],
+  ["机器人与群组","◎",["我的群组","微信扫码登录","群配置"]],
+  ["智能交互","✦",["大模型配置","语音唤醒","自定义回复"]],
+  ["游戏与积分","◇",["游戏目录","玩家渔获","会话","积分","积分流水"]],
+  ["群运营","▤",["群组运营","成员通知","定时通知","周报","周报归档"]],
+  ["运维监控","⌁",["群消息接收记录","发送任务","规则命中","运行告警","入站异常","上周采集缺口","外部服务","撤回记录"]],
+  ["系统管理","⚙",["后台账号","后台权限","审计"]]
+];
+const pages=modules.flatMap(module=>module[2]);
+function available(name){
+  if(name==="成员名册")return user.role!=="只读人员";
+  if(["后台权限","撤回记录","后台账号","微信扫码登录"].includes(name))return user.role==="系统管理员";
+  return !["大模型配置","自定义回复"].includes(name)||["运营管理员","系统管理员"].includes(user.role);
+}
+function routeTo(name,group=$("group").value,replace=false){
+  if((!pages.includes(name)&&!virtualPages.includes(name))||!available(name))name=pages[0];
+  if(!user.groups.includes(group))group=user.groups[0]||"";
+  if(configDirty && (page!==name||group!==lastGroup) && !confirm("当前表单尚未保存，放弃修改并离开？")){
+    $("group").value=lastGroup;history.replaceState(null,"","#"+new URLSearchParams({page,group:lastGroup}));return;
+  }
+  configDirty=false;lastGroup=group;page=name;$("group").value=group;
+  const hash="#"+new URLSearchParams({page:name,group});
+  if(location.hash!==hash)history[replace?"replaceState":"pushState"](null,"",hash);
+  $("desk").classList.remove("menuOpen");$("menuToggle").setAttribute("aria-expanded","false");
+  return render();
+}
+function restoreRoute(){
+  const params=new URLSearchParams(location.hash.slice(1));
+  return routeTo(params.get("page"),params.get("group"),true);
+}
+window.addEventListener("popstate",()=>{if(!$("desk").hidden)restoreRoute().catch(error);});
+$("menuToggle").onclick=()=>$("menuToggle").setAttribute("aria-expanded",String($("desk").classList.toggle("menuOpen")));
+let configDirty=false,lastGroup="",visibleRows=[];
 let user,status,page=pages[0],revision=0,modelSettings,dialogSettings;
 let speechSequence=null, objectUrl=null, speechTicket=0;
 function el(tag,text){const n=document.createElement(tag);n.textContent=text;return n;}
@@ -15,18 +45,43 @@ async function api(path,data){
   if(!response.ok){if(response.status===401&&requestRevision===revision)loginView();throw Error(result.error);}
   return result;
 }
-function loginView(){++revision;clearVoiceTest();$("modelForm").reset();$("voicePanel").replaceChildren();$("adminAccounts").replaceChildren();$("wechatLogin").replaceChildren();$("diagnosticBody").replaceChildren();page=pages[0];modelSettings=null;$("desk").hidden=true;$("gate").hidden=false;}
+function loginView(){configDirty=false;history.replaceState(null,"",location.pathname+location.search);++revision;clearVoiceTest();$("modelForm").reset();$("voicePanel").replaceChildren();$("adminAccounts").replaceChildren();$("wechatLogin").replaceChildren();$("diagnosticBody").replaceChildren();page=pages[0];modelSettings=null;$("desk").hidden=true;$("gate").hidden=false;}
 function error(e){$("message").textContent=e.message;}
 function table(rows){
   const wrap=$("tableWrap");wrap.replaceChildren();
   if(!rows.length){wrap.append(el("p","本群暂无记录"));return;}
   const t=el("table",""),head=t.createTHead().insertRow(),body=t.createTBody();
-  Object.keys(rows[0]).forEach(k=>head.append(el("th",k)));
-  rows.forEach(row=>{const tr=body.insertRow();Object.entries(row).forEach(([k,v])=>{
-    const date=["时间","下次执行","结束时间","首次发现","恢复时间"].includes(k)&&typeof v==="number";
-    tr.insertCell().textContent=date?new Date(v*1000).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai"}):v??"—";
-  });});wrap.append(t);
+  const keys=Object.keys(rows[0]), technical=new Set(["来源消息ID","发送成员ID","接入组件","跟踪号","版本"]);
+  const columns=keys.filter(k=>!technical.has(k));for(const k of columns)head.append(el("th",k));
+  const details=keys.some(k=>technical.has(k)||["状态","处理状态"].includes(k));if(details)head.append(el("th","详情"));
+  const editable=page==="定时通知"&&user.role!=="只读人员";if(editable)head.append(el("th","操作"));
+  for(const row of rows){
+    const tr=body.insertRow();
+    for(const k of columns){const v=row[k],date=["时间","接收时间","下次执行","结束时间","首次发现","恢复时间"].includes(k);
+      tr.insertCell().textContent=date&&typeof v==="number"?diagnosticTime.format(v*1000):(["状态","处理状态"].includes(k)?stateLabels[v]||v:v)??"—";}
+    if(details){const d=el("details","");d.append(el("summary","查看原始字段"));for(const k of keys.filter(k=>technical.has(k)||["状态","处理状态"].includes(k)))d.append(el("p",k+" · "+(row[k]??"—")));tr.insertCell().append(d);}
+    if(editable){const btn=el("button","编辑通知");btn.onclick=()=>editSchedule(row);tr.insertCell().append(btn);}
+  }
+  wrap.append(t);
 }
+$("export").onclick=async event=>{
+  event.preventDefault();const link=event.currentTarget;
+  if(!link.hasAttribute("href")||link.dataset.busy)return;
+  const url=link.href,name=link.download,ticket=revision;link.dataset.busy="1";
+  try{
+    const response=await fetch(url);
+    if(!response.ok)throw Error(response.status===429?"已有导出正在进行，请稍后再试。":(await response.json()).error);
+    const file=URL.createObjectURL(await response.blob()),download=el("a","");
+    download.href=file;download.download=name;document.body.append(download);download.click();download.remove();
+    setTimeout(()=>URL.revokeObjectURL(file),60000);
+  }catch(err){if(ticket===revision)error(err);}finally{delete link.dataset.busy;}
+};
+function filterRecords(){
+  const term=$("recordSearch").value.trim().toLowerCase();
+  table(visibleRows.filter(row=>Object.values(row).some(v=>(String(v)+" "+(stateLabels[v]||"")).toLowerCase().includes(term))));
+}
+$("recordSearch").oninput=filterRecords;
+$("newSchedule").onclick=resetSchedule;
 const diagnosticTime=new Intl.DateTimeFormat("zh-CN",{timeZone:"Asia/Shanghai",dateStyle:"short",timeStyle:"medium",hour12:false});
 async function loadReplyDiagnostics(group,ticket){
   const body=$("diagnosticBody"), refresh=$("refreshDiagnostics");
@@ -61,16 +116,33 @@ async function loadReplyDiagnostics(group,ticket){
   }
 }
 $("refreshDiagnostics").onclick=()=>loadReplyDiagnostics($("group").value,revision);
+let grantReady=false;
+let listContext="",listOffset=0;
+const timedLists=["周报归档","群消息接收记录","运行告警","会话","积分流水","发送任务","入站异常","定时通知","审计","撤回记录"];
+const pagedLists=[...timedLists,"玩家渔获","积分","后台权限","规则命中"];
+$("listPrev").onclick=()=>{listOffset=Math.max(0,listOffset-200);render().catch(error);};
+$("listNext").onclick=()=>{listOffset+=200;render().catch(error);};
+for(const id of ["rangeStart","rangeEnd","catchMember"])$(id).onchange=()=>{listOffset=0;render().catch(error);};
 async function render(){
   const ticket=++revision,group=$("group").value,query=new URLSearchParams({group,name:page});
   $("message").textContent="";$("heading").textContent=page;
+  grantReady=false;$("controls").hidden=true;$("grantMembers").replaceChildren();
+  $("export").removeAttribute("href");$("export").removeAttribute("download");
+  $("tableWrap").replaceChildren();$("metrics").replaceChildren();$("account").replaceChildren();
   clearSpeech();clearVoiceTest();
-  for(const b of $("nav").children)b.classList.toggle("active",b.textContent===page);
+  for(const b of $("nav").querySelectorAll("button")){
+    const current=b.textContent===page;b.classList.toggle("active",current);
+    if(current){b.setAttribute("aria-current","page");b.closest("details").open=true;}
+    else b.removeAttribute("aria-current");
+  }
+  $("crumb").textContent=(modules.find(module=>module[2].includes(page))||["机器人与群组"])[0]+"  /  "+page;
+  sectionBar();$("groupDetail").hidden=!virtualPages.includes(page);
+  visibleRows=[];
   $("overview").hidden=page!=="运行概览";$("settings").hidden=page!=="群配置";$("modelPanel").hidden=page!=="大模型配置";
   for(const field of $("config").elements)field.disabled=true;
   $("diagnosticBody").textContent=page==="运行概览"&&group?"正在读取回复诊断…":"";
   $("replyDiagnostics").hidden=!group;$("refreshDiagnostics").disabled=true;
-  $("records").hidden=["运行概览","群配置","大模型配置","语音唤醒","自定义回复","成员通知","群组运营","我的群组","后台账号","微信扫码登录"].includes(page);
+  $("records").hidden=virtualPages.includes(page)||["运行概览","群配置","大模型配置","语音唤醒","自定义回复","成员通知","群组运营","我的群组","后台账号","微信扫码登录"].includes(page);
   $("adminAccounts").hidden=page!=="后台账号";$("adminAccounts").replaceChildren();
   $("wechatLogin").hidden=page!=="微信扫码登录";$("wechatLogin").replaceChildren();
   $("voicePanel").hidden=page!=="语音唤醒";$("voicePanel").replaceChildren();
@@ -82,16 +154,44 @@ async function render(){
   $("modelForm").elements.model.replaceChildren();$("modelListStatus").textContent="";$("modelResult").textContent="";
   for(const field of $("modelForm").elements)field.disabled=true;
   $("myGroups").hidden=page!=="我的群组";$("myGroups").replaceChildren();
+  if(virtualPages.includes(page)){await detailPage(group,ticket);return;}
   if(page==="后台账号"){await renderAdminAccounts(ticket);return;}
   if(page==="微信扫码登录"){await renderWechatLogin(ticket);return;}
   if(page==="我的群组"){
     const groups=await api("api/my-groups");if(ticket!==revision)return;
-    for(const g of groups){
-      const card=el("article",""),open=el("button","管理本群");
-      open.onclick=()=>{$("group").value=g.id;page="群组运营";render().catch(error);};
-      card.append(el("h2",g.name),el("p","绑定账号："+g.account),el("p",g.detached?"已解绑":g.paused?"已暂停":g.joined?"已确认成员关系 · "+g.state:"等待核对成员关系"),open);$("myGroups").append(card);
+    const panel=$("myGroups"),search=el("input",""),wrap=el("div",""),table=el("table","");
+    search.type="search";search.placeholder="搜索群名、群 ID、微信昵称或账号";search.setAttribute("aria-label",search.placeholder);
+    wrap.className="room-scroll";table.className="room-table managed-rooms";wrap.append(table);
+    const head=table.createTHead().insertRow();
+    for(const label of ["群 ID","群名","微信昵称","绑定微信账号","账号状态","群状态","操作"]){
+      const th=el("th",label);th.scope="col";head.append(th);
     }
-    if(!groups.length)$("myGroups").append(el("p","当前账号尚未获授群权限"));
+    const body=table.createTBody(),pager=el("div",""),prev=el("button","上一页"),next=el("button","下一页"),summary=el("span","");
+    pager.className="room-pager";pager.append(summary,prev,next);panel.append(search,wrap,pager);
+    const states={STOPPED:"已停止",STARTING:"启动中",WAITING_LOGIN:"等待登录",ONLINE:"已在线",LISTENING:"监听中",
+      RECONNECTING:"重新连接中",NEED_USER_ACTION:"等待人工处理",SUSPENDED:"已暂停",ERROR:"异常"};
+    let current=1;
+    function show(){
+      const term=search.value.trim().toLowerCase();
+      const matches=groups.filter(g=>[g.id,g.name,g.nickname,g.account].some(v=>v&&v.toLowerCase().includes(term)));
+      const pages=Math.max(1,Math.ceil(matches.length/10));
+      prev.disabled=current===1;next.disabled=current===pages;
+      summary.textContent="共 "+matches.length+" 个群 · "+current+" / "+pages+" 页";
+      body.replaceChildren();
+      if(!matches.length){const cell=body.insertRow().insertCell();cell.colSpan=7;cell.textContent=term?"没有匹配的群":"当前账号尚未获授群权限";}
+      for(const g of matches.slice((current-1)*10,current*10)){
+        const row=body.insertRow();
+        for(const value of [g.id.replace(/@chatroom$/,""),g.name===g.id?"—":g.name,g.nickname||"暂未获取",g.account,
+          states[g.state]||"未知",g.detached?"已解绑":g.paused?"已暂停":g.joined?"已确认成员关系":"等待核对成员关系"]){
+          const cell=row.insertCell();cell.textContent=value;cell.title=value;
+        }
+        row.cells[0].title=g.id;
+        const open=el("button","管理本群");
+        open.onclick=()=>routeTo("群组概览",g.id).catch(error);
+        row.insertCell().append(open);
+      }
+    }
+    search.oninput=()=>{current=1;show();};prev.onclick=()=>{current--;show();};next.onclick=()=>{current++;show();};show();
     return;
   }
   if(!group){$("message").textContent="当前账号尚未获授群权限";return;}
@@ -113,12 +213,13 @@ async function render(){
   if(ticket!==revision)return;status=data;
   if(page===pages[0]){
     const reach=await api("api/overview");if(ticket!==revision)return;
+    $("inboxTasks").replaceChildren(jump("待处理告警 · "+data.alerts,"运行告警"),jump("发送结果未知 · "+(data.outbox.UNKNOWN||0),"发送任务"));
     $("metrics").replaceChildren();
     for(const [k,v] of Object.entries({"授权群数":reach.configured,"可服务群数":reach.serviceable,"本群入站事件":data.received,"本群发送确认":data.outbox.ACKNOWLEDGED||0,"本群结果未知":data.outbox.UNKNOWN||0,"本群等待发送":(data.outbox.PENDING||0)+(data.outbox.RETRY_WAIT||0)})){
       const card=el("div","");card.append(el("small",k),el("strong",v));$("metrics").append(card);
     }
     $("account").replaceChildren();
-    Object.entries({"接入方式":data.mode==="simulation"?"本地模拟":"微信适配器","账号":data.account,"当前状态":data.state,"群绑定":"v"+data.binding+(data.paused?" · 已暂停":"")}).forEach(([k,v])=>$("account").append(el("dt",k),el("dd",v)));
+    Object.entries({"接入方式":data.mode==="simulation"?"本地模拟":"微信适配器","账号":data.account,"当前状态":({ONLINE:"在线",LISTENING:"监听中",STOPPED:"已停止",RECONNECTING:"重新连接中"})[data.state]||data.state,"群绑定":"v"+data.binding+(data.paused?" · 已暂停":"")}).forEach(([k,v])=>$("account").append(el("dt",k),el("dd",v)));
     $("simCard").hidden=data.mode!=="simulation"||user.role==="只读人员";$("answer").textContent="";
     await loadReplyDiagnostics(group,ticket);
   }else if(page==="群配置"){
@@ -131,27 +232,81 @@ async function render(){
       if(elem.multiple){for(const opt of elem.options)opt.selected=(v||[]).includes(opt.value);}
       else if(elem.type==="checkbox")elem.checked=v;else elem.value=Array.isArray(v)?v.join("\n"):(v??"");
     }
+    const options=[...$("config").elements.disabled_games.options];
+    $("gameCategory").replaceChildren(new Option("全部品类",""), ...[...new Set(games.map(g=>g.品类))].map(c=>new Option(c,c)));
+    $("gameSearch").value="";
+    function filteredGames(){
+      return options.filter((opt,i)=>opt.text.includes($("gameSearch").value.trim()) &&
+        (!$("gameCategory").value || games[i].品类===$("gameCategory").value));
+    }
+    function drawGames(){
+      const visible=filteredGames();
+      $("gameCount").textContent=visible.length+" 个游戏";
+      $("gameChoices").replaceChildren(...visible.map(option=>{
+        const label=el("label",""),box=el("input","");
+        box.type="checkbox";box.checked=!option.selected;box.disabled=user.role==="只读人员";
+        box.onchange=()=>{option.selected=!box.checked;};
+        label.className="check";label.append(box,option.text);return label;
+      }));
+    }
+    $("gameSearch").oninput=drawGames;$("gameCategory").onchange=drawGames;
+    for(const [id,disabled] of [["enableVisible",false],["disableVisible",true]]){
+      $(id).onclick=()=>{for(const opt of filteredGames())opt.selected=disabled;drawGames();};
+    }
+    drawGames();
     preview();for(const item of $("config").elements)item.disabled=user.role==="只读人员";
   }else{
+    $("grantMembers").replaceChildren();
+    grantReady=false;
+    if(page==="积分流水" && user.role!=="只读人员"){
+      const roster=await api("api/grant-members?"+query);if(ticket!==revision)return;
+      grantReady=roster.ready;
+      $("grantMembers").replaceChildren(...roster.members.map(id=>new Option(roster.labels[id]+" · "+roster.group+" · 在群",id)));
+    }
     showControls();
+    const context=JSON.stringify([user.name,group,page]);
+    if(context!==listContext){resetSchedule();$("recordSearch").value="";listContext=context;listOffset=0;$("rangeStart").value=$("rangeEnd").value=$("catchMember").value="";}
+    $("catchFilter").hidden=page!=="玩家渔获";
+    if(page==="玩家渔获" && $("catchMember").value.trim()) query.set("member",$("catchMember").value.trim());
+    $("listRange").hidden=!timedLists.includes(page);
+    if(timedLists.includes(page)){
+      for(const [field,id] of [["start","rangeStart"],["end","rangeEnd"]]){
+        if($(id).value)query.set(field,String(new Date($(id).value+"+08:00").getTime()/1000));
+      }
+    }
+    $("listPrev").hidden=$("listNext").hidden=!pagedLists.includes(page);
+    $("listPrev").disabled=listOffset===0;$("listNext").disabled=true;
     $("export").href="api/export?"+query;$("export").download=page+".csv";
     $("scheduleForm").hidden=page!=="定时通知"||user.role==="只读人员";
-    const rows=await api("api/view?"+query);if(ticket===revision)table(rows);
+    query.set("offset",listOffset);
+    const rows=await api("api/view?"+query);
+    if(ticket===revision){visibleRows=rows;filterRecords();$("listNext").disabled=rows.length<200;}
   }
 }
 async function boot(){
   user=await api("api/me");$("gate").hidden=true;$("desk").hidden=false;
   $("who").textContent=user.name+" · "+user.role;$("group").replaceChildren(...user.groups.map(g=>new Option(user.group_aliases[g]||g,g)));
   $("nav").replaceChildren();
-  for(const name of pages.filter(n=>!["后台权限","撤回记录","后台账号","微信扫码登录"].includes(n)||user.role==="系统管理员")){
-    if(["大模型配置","自定义回复"].includes(name)&&!["运营管理员","系统管理员"].includes(user.role))continue;
-    const b=el("button",name);b.onclick=()=>{page=name;render().catch(error);};$("nav").append(b);
+  for(const [title,icon,names] of modules){
+    const visible=names.filter(available);if(!visible.length)continue;
+    const section=el("details",""),summary=el("summary","");
+    const glyph=el("span",icon);glyph.setAttribute("aria-hidden","true");
+    summary.append(glyph,el("strong",title));section.append(summary);
+    for(const name of visible){
+      const button=el("button",name);button.onclick=()=>routeTo(name).catch(error);section.append(button);
+    }
+    $("nav").append(section);
   }
-  await render();
+  $("shortcuts").replaceChildren();
+  for(const [name,label] of [["我的群组","群组管理"],["大模型配置","模型配置"],["定时通知","定时通知"],["群消息接收记录","消息记录"]]){
+    if(!available(name))continue;
+    const button=el("button",label);button.onclick=()=>routeTo(name).catch(error);$("shortcuts").append(button);
+  }
+  await restoreRoute();
 }
-function preview(){const f=$("config").elements;$("preview").textContent="预览 · "+f.welcome.value.replace(/\{(群|成员|nickname|时间|群规)\}/g,(_,k)=>({"群":$("group").value,"成员":"新成员","nickname":"新成员","时间":"09:00","群规":f.rules.value})[k])+" "+f.rules_url.value;}
+function preview(){const f=$("config").elements;$("preview").textContent="预览 · "+f.welcome.value.replace(/\{(群|成员|nickname|时间|群规)\}/g,(_,k)=>({"群":$("group").selectedOptions[0]?.text||$("group").value,"成员":"新成员","nickname":"新成员","时间":"09:00","群规":f.rules.value})[k])+" "+f.rules_url.value;}
 function showDialog(data){
-  dialogSettings=data;
+  dialogSettings=data;$("toggleModel").disabled=!data.verified;$("toggleModel").textContent=data.enabled?"暂停智能对话（保留密钥）":"启用已保存的模型";
   $("dialogState").textContent="当前模式："+(data.enabled&&data.verified?"智能对话":data.verified?"本地回复（密钥已保留）":"本地回复（待验证模型）");
   $("dialogForm").elements.admins.value=data.admins.join("\n");
   $("memberChoices").replaceChildren(new Option("选择成员",""),...data.members.map(m=>new Option(m,m)));
@@ -165,7 +320,7 @@ $("dialogForm").onsubmit=async event=>{
   const ticket=revision,admins=event.target.elements.admins.value.split("\n").map(s=>s.trim()).filter(Boolean);
   try{
     const result=await api("api/dialog-controls",{group:$("group").value,admins,version:dialogSettings.version});
-    if(ticket===revision){showDialog(result);$("dialogResult").textContent="本群管理员名单已保存。";}
+    if(ticket===revision){configDirty=false;showDialog(result);$("dialogResult").textContent="本群管理员名单已保存。";}
   }catch(e){if(ticket===revision)$("dialogResult").textContent=e.message;}
 };
 let modelListRequest=0, modelListTimer=null;
@@ -229,7 +384,7 @@ function showModel(data){
   f.provider.replaceChildren(...data.providers.map(p=>new Option(p.name,p.id)));
   if(data.providers.some(p=>p.id===active.provider))f.provider.value=active.provider;
   modelChoices();$("disableModel").disabled=!active.verified;
-  $("activeModel").textContent=active.verified?"已验证 "+f.provider.selectedOptions[0].text+" · "+active.model+"，验证时间 "+new Date(active.verified*1000).toLocaleString("zh-CN"):"本群尚未验证大模型";
+  $("activeModel").textContent=active.verified?"已验证 "+f.provider.selectedOptions[0].text+" · "+active.model+"，验证时间 "+new Date(active.verified*1000).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai"}):"本群尚未验证大模型";
 }
 $("modelForm").elements.provider.onchange=modelChoices;
 $("modelForm").elements.key.oninput=()=>{
@@ -246,20 +401,23 @@ async function saveModel(action){
   if(!modelSettings)return;
   const ticket=revision,f=$("modelForm").elements;
   const data={group:$("group").value,version:modelSettings.active.version,action};
-  if(action==="verify"){
+  if(action==="save"||action==="test"){
     if($("verifyModel").disabled)return;
     Object.assign(data,{provider:f.provider.value,model:f.model.value,key:f.key.value.trim()});
   }
   ++modelListRequest;
+  if(action==="test"){
+    $("testModel").disabled=true;try{await api("api/chat-model",data);if(ticket===revision)$("modelResult").textContent="连接成功，配置未变更。";}catch(err){if(ticket===revision)$("modelResult").textContent=err.message;}finally{if(ticket===revision)$("testModel").disabled=false;}return;
+  }
   f.key.value="";for(const field of f)field.disabled=true;
-  $("modelResult").textContent=action==="verify"?"正在测试官方接口…":"正在停用…";
+  $("modelResult").textContent=action==="save"?"正在测试官方接口…":"正在停用…";
   try{
     const state=await api("api/chat-model",data);
     if(ticket!==revision)return;
     showModel(state);
     const controls=await api("api/dialog-controls?"+new URLSearchParams({group:data.group}));
     if(ticket!==revision)return;
-    showDialog(controls);$("modelResult").textContent=action==="verify"?"测试通过，模型配置已保存。":"已停用，本群密钥已移除。";
+    configDirty=false;showDialog(controls);$("modelResult").textContent=action==="save"?"测试通过，模型配置已保存。":"已停用，本群密钥已移除。";
   }catch(err){
     if(ticket!==revision||!modelSettings)return;
     for(const field of f)field.disabled=false;
@@ -270,22 +428,25 @@ async function saveModel(action){
     $("modelResult").textContent=err.message;
   }
 }
-$("modelForm").onsubmit=e=>{e.preventDefault();saveModel("verify");};
+$("testModel").onclick=()=>saveModel("test");
+$("toggleModel").onclick=async()=>{const ticket=revision;try{const r=await api("api/dialog-controls",{group:$("group").value,version:dialogSettings.version,enabled:!dialogSettings.enabled});if(ticket===revision)showDialog({...r,members:dialogSettings.members});}catch(e){if(ticket===revision)error(e);}};
+$("modelForm").onsubmit=e=>{e.preventDefault();saveModel("save");};
 $("disableModel").onclick=()=>{if(confirm("停用本群模型并移除已保存的密钥？"))saveModel("disable");};
-for(const [k,v] of Object.entries({enabled:"启用本群",games:"游戏",polls:"投票",draws:"抽签",exhibit_board_push:"结算后发送图鉴榜（前十名及到账积分）"})){
+for(const [k,v] of Object.entries({enabled:"启用本群",games:"游戏",polls:"投票",draws:"抽签",fishing_cards:"手绘回复卡片（钓鱼、个人档案、成就、礼物）",exhibit_board_push:"结算后发送图鉴榜（前十名及到账积分）"})){
   const label=el("label",""),box=el("input","");label.className="check";box.type="checkbox";box.name=k;label.append(box,v);$("checks").append(label);
 }
 $("login").onsubmit=async e=>{e.preventDefault();try{await api("api/login",Object.fromEntries(new FormData(e.target)));e.target.reset();$("loginError").textContent="";await boot();}catch(err){$("loginError").textContent=err.message;}};
 $("logout").onclick=async()=>{try{await api("api/logout",{});loginView();}catch(e){error(e);}};
-$("group").onchange=()=>render().catch(error);$("refresh").onclick=()=>render().catch(error);
-$("config").oninput=preview;
+$("group").onchange=()=>routeTo(page).catch(error);$("refresh").onclick=()=>render().catch(error);
+$("config").oninput=()=>{configDirty=true;preview();};
 $("config").onsubmit=async e=>{e.preventDefault();if(e.target.elements.exhibit_board_push.disabled)return;const patch={};for(const input of e.target.elements){
   if(input.name)patch[input.name]=input.multiple?Array.from(input.selectedOptions,o=>o.value):input.type==="checkbox"?input.checked:input.type==="number"?input.valueAsNumber:input.name==="words"?input.value.split("\n").filter(Boolean):input.value;
-}try{const r=await api("api/config",{group:$("group").value,version:status.version,patch});await render();$("message").textContent="本群配置 v"+r.version+" 已保存，新局使用新规则。";}catch(err){error(err);}};
+}try{const r=await api("api/config",{group:$("group").value,version:status.version,patch});configDirty=false;await render();$("message").textContent="本群配置 v"+r.version+" 已保存，新局使用新规则。";}catch(err){error(err);}};
+for(const id of ["modelForm","dialogForm","scheduleForm"])$(id).addEventListener("input",()=>{configDirty=true;});
 $("scheduleForm").onsubmit=async e=>{e.preventDefault();try{
   const fields=Object.fromEntries(new FormData(e.target));
   if(fields.id){fields.id=Number(fields.id);fields.version=Number(fields.version);}else{delete fields.id;delete fields.version;}
-  await api("api/schedule",{...fields,body:fields.body||"",catchup:e.target.elements.catchup.checked,group:$("group").value});e.target.reset();scheduleFields();await render();
+  await api("api/schedule",{...fields,body:fields.body||"",catchup:e.target.elements.catchup.checked,group:$("group").value});configDirty=false;resetSchedule();await render();$("message").textContent="本群通知已保存，请核对列表中的微信授权状态。";
 }catch(err){error(err);}};
 function scheduleFields(){
   const f=$("scheduleForm").elements,kind=f.kind.value;
@@ -336,9 +497,15 @@ $("simulate").onsubmit=async e=>{e.preventDefault();const group=$("group").value
       if(group!==$("group").value)break;
       if(result.body||["CHAT","IGNORED","RATE_LIMITED","FAILED"].includes(result.state)){
         $("answer").textContent=result.body||result.state;
-        if(result.media?.type==="image"){
-          const preview=el("button","加载规则图片");preview.type="button";preview.className="quiet";
-          preview.onclick=()=>{const img=document.createElement("img");img.alt="规则回复图片";img.referrerPolicy="no-referrer";img.src=result.media.url;preview.replaceWith(img);};
+        if(result.game_card && !result.media?.card){
+          const image=document.createElement("img");image.alt=result.body;
+          image.style.maxWidth="100%";image.src=result.game_card;
+          const details=document.createElement("details");
+          details.append(el("summary","完整文字回执"),el("p",result.body));
+          $("answer").replaceChildren(image,details);
+        }else if(result.media?.type==="image"){
+          const preview=el("button",result.media.card?"查看钓鱼卡片":"加载规则图片");preview.type="button";preview.className="quiet";
+          preview.onclick=()=>{const img=document.createElement("img");img.alt=result.media.card?"钓鱼手记":"规则回复图片";img.style.maxWidth="100%";img.referrerPolicy="no-referrer";img.onerror=()=>img.replaceWith(document.createTextNode("图片暂不可用，请查看文字回执。"));img.src=result.media.url;preview.replaceWith(img);};
           $("answer").append(document.createElement("br"),preview);
         }
         break;}}
@@ -346,14 +513,27 @@ $("simulate").onsubmit=async e=>{e.preventDefault();const group=$("group").value
 boot().catch(e=>{if(e.message!=="请登录")$("loginError").textContent=e.message;});
 
 function showControls(){
-  const actions={"发送任务":["确认送达","结束跟进"],"积分流水":["调分","冲正","发放货币"],"定时通知":["停用通知"],"入站异常":["重试入站"],"撤回记录":["反查内容","启用留存","关闭留存"]};
-  const list=actions[page]||[];
+  const actions={"发送任务":["确认送达","结束跟进"],"积分流水":user.role==="系统管理员"?["发放货币","调分","冲正","撤销误冲正"]:["发放货币"],"定时通知":["停用通知"],"入站异常":["重试入站"],"撤回记录":["反查内容","启用留存","关闭留存"]};
+  const history=page==="积分流水" && user.role==="系统管理员";
+  $("assetKinds").hidden=!history;
+  $("dailyGrant").onclick=()=>choose(["发放货币"]);
+  $("historyCorrection").onclick=()=>choose(["冲正","撤销误冲正","调分"]);
+  function choose(names){$("controlForm").reset();$("controlForm").elements.action.replaceChildren(...names.map(k=>new Option(k,k)));selectAction();}
+  const list=history?["发放货币"]:actions[page]||[];
   $("controls").hidden=!list.length||user.role==="只读人员";
   const form=$("controlForm");form.reset();form.elements.action.replaceChildren(...list.map(k=>new Option(k,k)));
   $("opResult").textContent="";selectAction();
 }
 function selectAction(){
   const action=$("controlForm").elements.action.value;
+  const target=$("controlForm").elements.target;
+  $("targetLabel").firstChild.textContent=["冲正","撤销误冲正"].includes(action)?"原积分流水编号":action==="发放货币"?"选择当前群成员":"对象编号或成员 ID";
+  $("controlTitle").textContent=action==="发放货币"?"日常资产发放":["冲正","撤销误冲正","调分"].includes(action)?"积分调整与历史纠错":"管理操作";
+  target.removeAttribute("list");
+  if(action==="发放货币")target.setAttribute("list","grantMembers");
+  const unavailable=action==="发放货币" && !grantReady;
+  $("controlForm").querySelector("button").disabled=unavailable;
+  $("opResult").textContent=unavailable?"当前名册无效，已请求刷新。请稍后点击刷新后再发放。":"";
   $("targetLabel").hidden=["启用留存","关闭留存"].includes(action);
   $("currencyLabel").hidden=$("amountLabel").hidden=action!=="发放货币";
   $("controlForm").elements.amount.disabled=action!=="发放货币";
@@ -384,6 +564,10 @@ $("controlForm").onsubmit=async e=>{
         const signature=JSON.stringify([user.name,payload]);
         if(pendingGrant?.signature===signature)key=pendingGrant.key;
         pendingGrant={signature,key};
+      }
+      if(["发放货币","冲正","撤销误冲正","调分"].includes(action)){
+        const detail=action==="发放货币"?payload.points+" "+payload.currency:action==="调分"?payload.points+" 积分":"依据原流水";
+        if(!confirm([action,"群组 "+group,"目标 "+payload.target,detail,"原因 "+payload.reason].join("\n")))return;
       }
       result=(await api("api/operation",{...payload,key})).result;
       if(action==="发放货币")pendingGrant=null;

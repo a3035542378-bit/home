@@ -175,3 +175,63 @@ class RosterUpdates(unittest.TestCase):
             finally:
                 proceed.set()
                 monitor.close()
+
+    def test_asset_refresh_without_notice_policy(self):
+        from ergou import asset_roster,operations
+        group=self.listener.group
+        monitor=nr.Monitor(self.listener)
+        grant=dict(action="发放货币",target="silent",points=2,currency="积分",reason="fixture",key="one")
+        for _ in range(3):
+            self.assertIsNone(asset_roster.candidates(self.db,group,False))
+        with patch.object(nr,"fetch_snapshot",return_value=("complete",{self.listener.account:"自己","silent":"静默成员"})) as reader:
+            monitor.thread.start()
+            try:
+                monitor.online()
+                deadline=time.monotonic()+5
+                while time.monotonic()<deadline and not self.db.execute("SELECT 1 FROM asset_rosters").fetchone():
+                    time.sleep(.02)
+                reader.assert_called_once()
+                result=operations.act(self.db,self.user,group,grant)
+                for col,value in (("session","old"),("binding",2),("account","old"),("observed",time.time()-nr.MIN_REFRESH)):
+                    self.db.execute("SAVEPOINT probe")
+                    self.db.execute(f"UPDATE asset_rosters SET {col}=?",(value,))
+                    with self.assertRaisesRegex(ValueError,"名册无效"):
+                        asset_roster.require_member(self.db,group,"silent")
+                    self.db.execute("ROLLBACK TO probe")
+                    self.db.execute("RELEASE probe")
+                monitor.offline()
+                self.assertEqual(operations.act(self.db,self.user,group,grant),result)
+                with self.assertRaisesRegex(ValueError,"名册无效"):
+                    operations.act(self.db,self.user,group,grant|dict(key="two"))
+                monitor.online()
+                self.assertIsNone(asset_roster.verified(self.db,group))
+                self.assertEqual(self.count(),0)
+            finally:
+                monitor.close()
+
+    def test_membership_change_then_failed_refresh_never_reuses_snapshot(self):
+        from ergou import asset_roster
+        group=self.listener.group
+        monitor=nr.Monitor(self.listener)
+        failed=threading.Event()
+        def second_read(*args):
+            failed.set()
+            raise nr.RosterError("隔离刷新失败")
+        with patch.object(nr,"MIN_REFRESH",0),patch.object(nr,"fetch_snapshot",
+                return_value=("v1",{self.listener.account:"自己","p":"甲"})) as reader:
+            asset_roster.candidates(self.db,group,False)
+            monitor.thread.start()
+            try:
+                monitor.online()
+                end=time.monotonic()+5
+                while not self.db.execute("SELECT 1 FROM asset_rosters").fetchone() and time.monotonic()<end:
+                    time.sleep(.02)
+                self.assertIn("p",asset_roster.verified(self.db,group))
+                reader.side_effect=second_read
+                monitor.signal_event(dict(kind="group.updated",data=dict(groupId=group,source="remote_sync_refresh",
+                                          membersRefreshed=True,origin="live")))
+                self.assertIsNone(asset_roster.candidates(self.db,group,False))
+                self.assertTrue(failed.wait(5))
+                self.assertIsNone(asset_roster.verified(self.db,group))
+            finally:
+                monitor.close()

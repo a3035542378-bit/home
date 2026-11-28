@@ -35,6 +35,21 @@ class ModelTests(unittest.TestCase):
     def save(self,**fields):
         return models.configure(self.db,self.user,"room",self.fields|fields)
 
+    def test_test_only_save_pause_and_resume(self):
+        self.assertEqual(self.save(action="test"),{"tested":True})
+        self.assertIsNone(self.db.execute("SELECT 1 FROM chat_models").fetchone())
+        self.save(action="save")
+        self.assertFalse(models.api_first(self.db,"room"))
+        key=self.db.execute("SELECT credential FROM chat_models").fetchone()[0]
+        for enabled in (True,False):
+            state=models.control_settings(self.db,self.user,"room")
+            payload=dict(version=state["version"],enabled=enabled)
+            models.configure_controls(self.db,self.user,"room",payload)
+            self.assertEqual(models.api_first(self.db,"room"),enabled)
+            with self.assertRaisesRegex(ValueError,"CONFLICT"):
+                models.configure_controls(self.db,self.user,"room",payload)
+        self.assertEqual(key,self.db.execute("SELECT credential FROM chat_models").fetchone()[0])
+
     def test_verify_rotate_scope_backup(self):
         for user,group in ((self.user,"other"),(self.user|{"role":"群管理员"},"room"),(self.user|{"role":"只读人员"},"room")):
             with self.assertRaises(PermissionError):

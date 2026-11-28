@@ -258,6 +258,7 @@ class FishingTests(unittest.TestCase):
 
     def test_points_and_draw_show_the_same_public_name(self):
         from ergou import operations
+        self.db.execute("INSERT OR IGNORE INTO simulation_members VALUES('one','player')")
         group=self.db.execute("SELECT binding FROM groups WHERE id='one'").fetchone()
         self.db.execute("INSERT INTO asset_display_names VALUES('one',?,'player','小雨',100)",(group[0],))
         operations.act(self.db,dict(name="admin",role="系统管理员",scopes="[]"),"one",

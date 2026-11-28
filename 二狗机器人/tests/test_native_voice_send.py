@@ -38,12 +38,15 @@ class VoiceReceiver(BaseHTTPRequestHandler):
             boundary=self.headers["Content-Type"].split("boundary=")[1].encode()
             header,audio=data.split(b"\r\n\r\n",1)
             expected=b'--'+boundary+b'\r\nContent-Disposition: form-data; name="file"; filename="reply.wav"\r\nContent-Type: audio/wav'
+            mime="image/jpeg" if getattr(ctx,"image",False) else "audio/wav"
+            if mime=="image/jpeg":
+                expected=expected.replace(b"reply.wav",b"card.jpg").replace(b"audio/wav",b"image/jpeg")
             footer=b"\r\n--"+boundary+b"--\r\n"
             if header!=expected or not audio.endswith(footer) or audio[:-len(footer)]!=ctx.wav:
                 return self.reply(400,{})
             digest=hashlib.sha256(ctx.wav).hexdigest() if ctx.intact else "0"*64
             return self.reply(201,dict(id="upload-incorrect" if ctx.bad_id else "upload_A",
-                                       mediaType="audio/wav",sha256=digest,byteLength=len(ctx.wav)))
+                                       mediaType=mime,sha256=digest,byteLength=len(ctx.wav)))
         if self.path.endswith("/sends"):
             ctx.payload=json.loads(data)
             ctx.key=self.headers["Idempotency-Key"]
@@ -104,6 +107,32 @@ class VoiceDispatchTests(unittest.TestCase):
         host,path,params,key,_=self.post.call_args.args
         self.assertEqual((host,path,params["format"],params["sample_rate"],key),
                          ("aip.baidubce.com",speech.TTS_PATH,"wav",16000,"tts-test"))
+
+    def test_prepared_jpeg_single_submit_without_game_event(self):
+        from tools.check_sample_card import SAMPLE
+        self.wav=SAMPLE.read_bytes()
+        self.image=True
+        self.message["type"]=3
+        self.task["biz"]="sample-"+hashlib.sha256(self.wav).hexdigest()
+        self.lost=True
+        state,_=voice.send_media(self.client,"send-test",self.task,lambda:True,self.wav,"image",timeout=.2)
+        self.assertEqual(state,"ACKNOWLEDGED")
+        self.assertEqual(sum(method=="POST" and path.endswith("/sends") for method,path,_ in self.calls),1)
+
+    def test_image_lost_submit_and_wrong_projection(self):
+        self.image=self.lost=True
+        self.wav=b"fixture-image"
+        self.message["type"]=3
+        def send():
+            return voice.send_media(self.client,"send-test",self.task,lambda:True,self.wav,"image",timeout=.1)[0]
+        self.assertEqual("ACKNOWLEDGED",send())
+        self.assertEqual(self.payload["kind"],"image")
+        self.assertEqual(sum(m=="POST" and p.endswith("/sends") for m,p,_ in self.calls),1)
+        self.calls.clear()
+        self.task["biz"]="another-image"
+        self.message["type"]=1
+        self.assertEqual("UNKNOWN",send())
+        self.assertEqual(sum(m=="POST" and p.endswith("/sends") for m,p,_ in self.calls),1)
 
     def test_lost_ack_uses_only_idempotency_readback(self):
         self.lost=True

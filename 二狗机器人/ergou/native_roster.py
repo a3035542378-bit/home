@@ -158,6 +158,7 @@ class Monitor:
         self.client,self.group,self.account,self.server=listener.client,listener.group,listener.account,listener.server
         self.changed=threading.Condition()
         self.session=None
+        self.asset_lock=None
         self.signal=0
         self.stopped=False
         self.thread=threading.Thread(target=self.run,name="wechat-member-roster",daemon=True)
@@ -165,21 +166,42 @@ class Monitor:
     def online(self):
         with self.changed:
             if self.session is None:
-                self.session=uuid.uuid4().hex
+                from .agent_wechat import listener_lock
+                from .asset_roster import lease_name
+                with closing_db(self.path) as db, transaction(db):
+                    db.execute("DELETE FROM asset_rosters WHERE grp=?",(self.group,))
+                    lock=listener_lock(db,lease_name(self.client.slot,self.group))
+                    handle=lock.__enter__()
+                    try:
+                        session=uuid.uuid4().hex
+                        handle.truncate(0)
+                        handle.write(b" "+session.encode("ascii"))
+                        handle.flush()
+                    except BaseException:
+                        lock.__exit__(None,None,None)
+                        raise
+                    self.asset_lock=lock
+                self.session=session
                 self.changed.notify_all()
 
     def offline(self):
         with self.changed:
             self.session=None
+            if self.asset_lock:
+                self.asset_lock.__exit__(None,None,None)
+                self.asset_lock=None
             self.changed.notify_all()
 
     def signal_event(self,event):
         if is_member_event(event,self.group):
             with self.changed:
+                with closing_db(self.path) as db:
+                    db.execute("DELETE FROM asset_rosters WHERE grp=?",(self.group,))
                 self.signal+=1
                 self.changed.notify_all()
 
     def close(self):
+        self.offline()
         with self.changed:
             self.session=None
             self.stopped=True
@@ -210,13 +232,15 @@ class Monitor:
                     state=(session,signal,binding,policy)
                     now=time.monotonic()
                     gap=MIN_REFRESH if previous!=state else interval
-                    if policy and now-last_refresh>=gap:
+                    demand=db.execute("SELECT requested FROM asset_roster_requests WHERE grp=? AND requested>?",
+                                      (self.group,time.time()-POLL_INTERVAL)).fetchone()
+                    if binding and (policy or demand) and now-last_refresh>=(MIN_REFRESH if demand else gap):
                         last_refresh=now
                         previous=state
                         interval=POLL_INTERVAL
                         def check():
                             with self.changed:
-                                if self.session!=session or self.stopped:
+                                if self.session!=session or self.signal!=signal or self.stopped:
                                     raise Changed()
                             if self.policy(db)!=(binding,policy):
                                 raise Changed()
@@ -229,15 +253,20 @@ class Monitor:
                         operation,members=fetch_snapshot(self.client,self.group,self.account,check)
                         verify()
                         with self.changed:
-                            if self.session==session:
+                            if self.session==session and self.signal==signal:
                                 apply_snapshot(db,self.group,self.account,binding,self.server,session,policy,
                                                operation,members,time.time())
+                                if demand and self.policy(db)[0]==binding:
+                                    db.execute("INSERT OR REPLACE INTO asset_rosters VALUES(?,?,?,?,?,?,?,?,?)",
+                                               (self.group,self.account,binding,self.client.slot,self.server,session,operation,time.time(),dump(members)))
+                                    db.execute("DELETE FROM asset_roster_requests WHERE grp=?",(self.group,))
                     elif not policy and previous is not None:
                         db.execute("DELETE FROM native_rosters WHERE grp=?",(self.group,))
                         previous=None
                 except Changed:
                     pass
                 except (ValueError,OSError,http.client.HTTPException,sqlite3.Error) as exc:
+                    db.execute("DELETE FROM asset_rosters WHERE grp=?",(self.group,))
                     interval=45
                     public_reason=isinstance(exc,RosterError) or re.fullmatch(r"Agent WeChat HTTP [1-5][0-9]{2}",str(exc))
                     LOG.warning("群成员名册暂时无法核实，将重试（%s）",str(exc) if public_reason else type(exc).__name__)

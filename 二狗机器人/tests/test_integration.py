@@ -24,6 +24,7 @@ class Integration(unittest.TestCase):
             grant(operator,"two",data)
         with self.assertRaises(PermissionError):
             grant(dict(operator,role="只读人员"),"one",data)
+        self.db.execute("INSERT INTO simulation_members VALUES(?,?)", ("one","new-member"))
         result=grant(operator,"one",data)
         self.assertEqual(result,grant(operator,"one",data))
         self.assertEqual(self.db.execute("SELECT coins FROM fishing_wallets WHERE grp='one' AND member='new-member'").fetchone()[0],2030)
@@ -131,6 +132,7 @@ class Integration(unittest.TestCase):
         self.assertFalse(retention.read(self.db,self.admin,"one",seq)["available"])
 
     def test_adjustment_idempotence(self):
+        self.db.execute("INSERT OR IGNORE INTO simulation_members VALUES('one','u')")
         op=dict(action="调分",target="u",points=7,key="k",reason="人工校对")
         for _ in range(2):operations.act(self.db,self.admin,"one",op)
         reverse=dict(action="冲正",target=1,key="r",reason="误记")

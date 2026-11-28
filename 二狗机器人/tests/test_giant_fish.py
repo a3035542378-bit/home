@@ -12,17 +12,17 @@ class GiantFishing(unittest.TestCase):
         now=3600*100
         event=giant_fish.window("room","新手池塘",now)
         self.assertIn(event.fish, [row[0] for row in WATERS["新手池塘"]])
-        for stamp in (event.start-600,event.start-1,event.start,event.start+179):
+        for stamp in (event.start-600,event.start-1,event.start,event.start+1199):
             self.assertEqual(event,giant_fish.window("room","新手池塘",stamp))
         self.assertIn("还有 10 分钟",event.notice(event.start-600, "新手池塘"))
         self.assertIn("正在出没",event.notice(event.start, "新手池塘"))
-        self.assertFalse(event.active(event.start+180))
-        self.assertGreater(giant_fish.window("room","新手池塘",event.start+180).start,event.start+180)
+        self.assertFalse(event.active(event.start+1200))
+        self.assertGreater(giant_fish.window("room","新手池塘",event.start+1200).start,event.start+1200)
         self.assertEqual(size_grade("鲤鱼",4000),"大型")
         self.assertEqual(size_grade("鲤鱼",11999),"大型")
         self.assertEqual(size_grade("鲤鱼",12000),"巨物")
         event = giant_fish.Sighting("泥鳅", event.start)
-        for stamp,cutoff in ((event.start-1,1),(event.start,20),(event.start+180,1)):
+        for stamp,cutoff in ((event.start-1,1),(event.start,20),(event.start+1200,1)):
             with patch("ergou.giant_fish.Random") as factory:
                 rng=factory.return_value
                 species = SPECIES["泥鳅" if stamp == event.start else "鲤鱼"]
@@ -39,6 +39,15 @@ class GiantFishing(unittest.TestCase):
             self.assertEqual(angler.slip_percent(0,starter),0)
             self.assertGreater(angler.slip_percent(0,starter,True),floor)
             self.assertGreater(angler.slip_percent(3,starter),floor)
+
+    def test_window_crosses_hour_boundary(self):
+        area = "外海"
+        event = next(s for hour in range(100) if
+                     (s := giant_fish.scheduled("group", area, hour)).start % 3600 > 40*60)
+        self.assertIn("只停留 20 分钟", event.notice(event.start-1, area))
+        for stamp in (event.start, (event.start//3600+1)*3600, event.start+1199):
+            self.assertEqual(giant_fish.window("group", area, stamp), event)
+        self.assertNotEqual(giant_fish.window("group", area, event.start+1200), event)
 
     def test_every_local_species_can_be_scheduled_and_encountered(self):
         for area, school in WATERS.items():
@@ -120,7 +129,7 @@ class GiantFishing(unittest.TestCase):
         with db.closing_db(path) as reopened:
             claimed=giant_fish.current(reopened,"one","新手池塘",event.start+22)
             self.assertIsNone(giant_fish.encounter(claimed,"新手池塘",event.start+22,"another"))
-            self.assertFalse(giant_fish.current(reopened,"one","新手池塘",event.start+180).taken)
+            self.assertFalse(giant_fish.current(reopened,"one","新手池塘",event.start+1200).taken)
         self.assertIn("收入图鉴#1",say("home","图鉴",event.start+21))
         self.assertNotIn("收入图鉴#1",say("other","图鉴",event.start+22,"other"))
         self.assertIn("已点亮",say("light","收入图鉴#1",event.start+23))

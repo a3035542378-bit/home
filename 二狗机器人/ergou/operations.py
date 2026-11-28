@@ -2,6 +2,7 @@
 import time
 from .db import audit,dump,transaction
 from .admin import permitted
+from .asset_roster import require_member
 
 
 def grant_currency(db,group,data,key,reason):
@@ -15,6 +16,7 @@ def grant_currency(db,group,data,key,reason):
         raise ValueError("请填写有效成员 ID")
     if type(amount) is not int or not 1<=amount<=limit:
         raise ValueError("发放数量必须为有效正整数")
+    require_member(db,group,member)
     if currency=="鱼币":
         db.execute("INSERT OR IGNORE INTO fishing_wallets(grp,member) VALUES(?,?)",(group,member))
         balance=db.execute("SELECT coins FROM fishing_wallets WHERE grp=? AND member=?",(group,member)).fetchone()[0]
@@ -48,15 +50,31 @@ def act(db,u,g,d):
             return old["result"]
         if op=="发放货币":
             result=grant_currency(db,g,d,key,reason)
-        elif op in ("调分","冲正"):
+        elif op in ("调分","冲正","撤销误冲正"):
             target=d["target"]
+            if op!="调分":
+                if not str(target).isascii() or not str(target).isdigit():
+                    raise ValueError("需要本群原流水编号")
+                target=int(target)
             delta=d.get("points")
-            if op=="冲正":
+            if u["role"]!="系统管理员":
+                raise PermissionError("历史纠错需要系统管理员权限")
+            if op=="撤销误冲正":
+                row=db.execute("""SELECT r.member,r.points FROM ledger r JOIN ledger original
+                    ON original.grp=r.grp AND original.member=r.member AND r.event='reverse/'||original.id
+                    WHERE r.grp=? AND r.id=? AND r.kind='冲正' AND r.points=-original.points
+                    AND original.points>0""",(g,target)).fetchone()
+                event="restore/"+str(target)
+                if not row or db.execute("SELECT 1 FROM ledger WHERE grp=? AND kind=? AND event=?",(g,op,event)).fetchone():
+                    raise ValueError("原冲正不存在或已经补回")
+                member,delta=row["member"],-row["points"]
+            elif op=="冲正":
                 row=db.execute("SELECT * FROM ledger WHERE id=? AND grp=?",(target,g)).fetchone()
-                if not row or row["kind"]=="冲正" or db.execute("SELECT 1 FROM ledger WHERE grp=? AND kind='冲正' AND event=?",(g,"reverse/"+str(target))).fetchone():
+                if not row or row["kind"] in ("冲正","撤销误冲正") or db.execute("SELECT 1 FROM ledger WHERE grp=? AND kind='冲正' AND event=?",(g,"reverse/"+str(target))).fetchone():
                     raise ValueError("原流水不存在或已冲正")
                 member,delta,event=row["member"],-row["points"],"reverse/"+str(target)
             else:
+                require_member(db,g,target)
                 member,event=target,key
             if not isinstance(member,str) or not 1<=len(member)<=160 or type(delta) is not int or not 0<abs(delta)<=1000:
                 raise ValueError("成员或调整分值无效")
@@ -83,6 +101,11 @@ def act(db,u,g,d):
         else:
             raise ValueError("未知管理操作")
         db.execute("INSERT INTO operations VALUES(?,?,?,?)",(key,g,signature,result))
-        audit(db,u["name"],g,op,result+"；"+reason if op=="发放货币" else reason)
+        detail=reason
+        if op=="发放货币":
+            detail=result+"；"+reason
+        elif op in ("冲正","撤销误冲正"):
+            detail=f"依据流水 #{target}；新增{result}；{reason}"
+        audit(db,u["name"],g,op,detail)
         return result
 

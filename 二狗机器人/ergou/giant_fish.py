@@ -9,7 +9,7 @@ from .db import BJ
 from .fishing_waters import SPECIES, WATERS, giant_max, giant_min
 
 LEAD = 600
-DURATION = 180
+DURATION = 20 * 60
 CARP_PER_THOUSAND = 1
 ACTIVE_PER_THOUSAND = 20
 WARNING = "⚠️ 新手塘也可能断线、折竿，请谨慎抛竿。"
@@ -39,21 +39,31 @@ class Sighting(NamedTuple):
         else:
             clock = datetime.fromtimestamp(self.start, BJ).strftime("%H:%M")
             minutes = math.ceil((self.start - now) / 60)
-            timing = f"🌊 巨物{self.fish}还有 {minutes} 分钟出没\n北京时间 {clock} 开始，只停留 3 分钟。"
+            timing = f"🌊 巨物{self.fish}还有 {minutes} 分钟出没\n北京时间 {clock} 开始，只停留 {DURATION//60} 分钟。"
         return timing + f"\n活动咬钩率 {ACTIVE_PER_THOUSAND/10:g}%，先钓走先得。" + starter_hint(area, prefix)
 
 
+def scheduled(group, area, hour):
+    rng = Random(f"giants/v1:{group}:{area}:{hour}")
+    start = hour * 3600 + rng.randint(10, 50) * 60
+    school = WATERS[area]
+    # 群共享目标按基础竿、免费饵的稀有度分布选种，同档鱼种机会相同。
+    tier = fishing_bait.choose_rarity(rng, school, rod.weights(1, ()), fishing_bait.BAITS["免费鱼饵"],rod.trophy_bonus(1, ()))
+    fish = rng.choice([row[0] for row in school if row[-1] == tier])
+    return Sighting(fish, start)
+
+
 def window(group, area, now):
+    # 前一小时最晚在第 50 分钟开始，过整点后可能仍在场。
     hour = int(now) // 3600
-    for slot in (hour, hour + 1):
-        rng = Random(f"giants/v1:{group}:{area}:{slot}")
-        start = slot * 3600 + rng.randint(10, 50) * 60
-        if now < start + DURATION:
-            school = WATERS[area]
-            # 群共享目标按基础竿、免费饵的稀有度分布选种，同档鱼种机会相同。
-            tier = fishing_bait.choose_rarity(rng, school, rod.weights(1, ()), fishing_bait.BAITS["免费鱼饵"],rod.trophy_bonus(1, ()))
-            fish = rng.choice([row[0] for row in school if row[-1] == tier])
-            return Sighting(fish, start)
+    if now < (hour-1)*3600 + 50*60 + DURATION:
+        previous = scheduled(group, area, hour-1)
+        if previous.active(now):
+            return previous
+    event = scheduled(group, area, hour)
+    if now < event.start + DURATION:
+        return event
+    return scheduled(group, area, hour+1)
 
 
 def current(db, group, area, now):

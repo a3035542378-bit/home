@@ -11,7 +11,7 @@ DEFAULT = dict(enabled=True, prefix="二狗", rules="友善交流，尊重隐私
                reward=10, max_games=3, words=[], allowlist=[], moderation="记录", city="",
                bots=[], games=True, polls=True, draws=True, quiet_start=0, quiet_end=0,
                welcome_window=0,daily_rewards=0,aliases={},disabled_games=[],exact_words=[],
-               fishing_cooldown_seconds=20,weekly_push=False,exhibit_board_push=False,send_rate=5,command_rate=30,rules_url="")
+               fishing_cooldown_seconds=20,game_card_mode="text",fishing_cards=False,weekly_push=False,exhibit_board_push=False,send_rate=5,command_rate=30,rules_url="")
 SCHEMA = Path(__file__).with_name("schema.sql")
 
 
@@ -32,6 +32,7 @@ def initialize(path):
     from .moderation import SCHEMA as moderation_schema
     from .bulletins import SCHEMA as bulletin_schema
     from .member_policy import SCHEMA as policy_schema
+    from .asset_roster import SCHEMA as asset_roster_schema
     from .native_roster import SCHEMA as roster_schema
     from .member_notices import SCHEMA as deliveries_schema
     from .voice_policy import SCHEMA as voice_policy_schema
@@ -44,6 +45,9 @@ def initialize(path):
         db.execute("PRAGMA journal_mode=WAL")
         columns={r[1] for r in db.execute("PRAGMA table_info(schedules)")}
         migrate=""
+        trials={r[1] for r in db.execute("PRAGMA table_info(game_card_trials)")}
+        if trials and "kind" not in trials:
+            migrate+="ALTER TABLE game_card_trials ADD COLUMN kind TEXT NOT NULL DEFAULT 'catch' CHECK(kind IN ('catch','bag'));\n"
         if columns and "until" not in columns:
             migrate+="ALTER TABLE schedules ADD COLUMN until REAL;\n"
         if columns and "version" not in columns:
@@ -82,7 +86,7 @@ INSERT OR IGNORE INTO fishing_species(grp,member,fish,best_grams)
         upgrade_holds = not db.execute("SELECT 1 FROM sqlite_schema WHERE name='asset_action_holds'").fetchone()
         db.executescript("\n".join(("BEGIN IMMEDIATE;",migrate,SCHEMA.read_text(encoding="utf-8"),
                                     SCHEMA.with_name("permissions.sql").read_text(encoding="utf-8"),
-                                    group_tools_schema,moderation_schema,bulletin_schema,policy_schema,roster_schema,
+                                    group_tools_schema,moderation_schema,bulletin_schema,policy_schema,(roster_schema+asset_roster_schema),
                                     deliveries_schema,voice_policy_schema,voice_events_schema,backfill)))
         from .rod_stats import migrate as migrate_rod
         migrate_rod(db)
@@ -133,6 +137,7 @@ def demo(path, groups=("demo-group",)):
         for group in groups:
             db.execute("INSERT OR IGNORE INTO membership VALUES('sim-account',?)", (group,))
             db.execute("INSERT OR IGNORE INTO groups(id,account,config) VALUES(?,'sim-account',?)", (group, dump(DEFAULT)))
+            db.execute("INSERT OR IGNORE INTO simulation_members SELECT id,'operator' FROM groups WHERE id=? AND account='sim-account'", (group,))
             db.execute("INSERT OR IGNORE INTO managers VALUES(?,'operator')", (group,))
 
 

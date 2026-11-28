@@ -135,6 +135,13 @@ def queue(db, group, key, body, now, ttl=120):
                 return
     db.execute("""INSERT OR IGNORE INTO outbox(biz,account,grp,binding,body,state,created,expires,ready)
                VALUES(?,?,?,?,?,'PENDING',?,?,?)""",(key,group["account"],group["id"],group["binding"],body,now,now+ttl,now))
+    if hasattr(body, "card") and json.loads(group["config"]).get("fishing_cards"):
+        from .display_names import labels
+        sender=db.execute("SELECT member FROM inbox WHERE event_id=?", (key,)).fetchone()
+        caption=labels(db,group["id"])(sender[0]) if sender else ""
+        snapshot=dict(body.card,player=caption if caption!="一位群成员" else "")
+        db.execute("""INSERT OR IGNORE INTO fishing_reply_cards(task,snapshot)
+                      SELECT id,? FROM outbox WHERE biz=?""", (dump(snapshot),key))
 
 
 def expire(db, group, now):
@@ -152,15 +159,27 @@ def summary(rows):
 
 
 def game_list(db,g,e,cfg,prefix,args,manager,governed):
-    names=[n for n in [*GAMES,*plugins.active(db)] if n not in cfg.get("disabled_games",())]
+    extensions=plugins.active(db)
+    names=[n for n in [*GAMES,*extensions] if n not in cfg.get("disabled_games",())]
+    def category(name):
+        return GAMES[name].category if name in GAMES else "群插件"
+    categories=list(dict.fromkeys(category(name) for name in names))
+    parts=args.split() if args else []
+    chosen=parts.pop(0) if parts and parts[0] in categories else ""
+    if chosen:
+        names=[name for name in names if category(name)==chosen]
+    page_arg=" ".join(parts)
+    route="游戏列表"+(" "+chosen if chosen else "")
     per_page=12
     pages=max(1,(len(names)+per_page-1)//per_page)
-    if args and (not re.fullmatch(r"[1-9][0-9]{0,3}",args) or int(args)>pages):
-        return f"游戏列表共 {pages} 页，返回第一页\n{prefix}游戏列表"
-    page=int(args or 1)
+    if page_arg and (not re.fullmatch(r"[1-9][0-9]{0,3}",page_arg) or int(page_arg)>pages):
+        return f"{route}共 {pages} 页，返回第一页\n{prefix}{route}"
+    page=int(page_arg or 1)
     names=names[(page-1)*per_page:page*per_page]
     rows=sessions(db,g["id"])
     lines=["🎮 本群游戏"]
+    if page==1 and not chosen:
+        lines.extend(f"【游戏列表 {kind}】只看{kind}" for kind in categories)
     for row in rows if page==1 else ():
         code=row["code"]
         lines.extend(["",f"🎲 {row['game']} · {code}",f"【状态 {code}】查看盘面"])
@@ -177,7 +196,7 @@ def game_list(db,g,e,cfg,prefix,args,manager,governed):
         owns=row["owner"]==e["member"]
         if manager or (owns and not governed):
             lines.append(f"【结束 {code}】立即结束整局")
-            if governed or owns or db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone():
+            if not json.loads(row["rules"]).get("quiz_origin") and (governed or owns or db.execute("SELECT 1 FROM players WHERE game=? AND member=?",(row["id"],e["member"])).fetchone()):
                 lines.append(f"【{code} 重置】立即重置盘面")
     if names:
         lines.extend(["","🎮 本页游戏"])
@@ -191,10 +210,12 @@ def game_list(db,g,e,cfg,prefix,args,manager,governed):
             elif len(rows)>=cfg["max_games"]:
                 lines.append(name+" · 本群会话已满")
             else:
-                lines.append(f"【开始 {name}】立即开局")
+                prompt=GAMES[name].prompt if name in GAMES else extensions[name]["prompt"]
+                summary=re.split(r"[。；\n]",prompt,maxsplit=1)[0]
+                lines.append(f"【开始 {name}】"+(summary[:24]+"…" if len(summary)>25 else summary))
     if page<pages:
-        lines.append(f"【游戏列表 {page+1}】下一页（{page}/{pages}）")
-    if page==1 and "钓鱼" not in cfg.get("disabled_games",[]):
+        lines.append(f"【{route} {page+1}】下一页（{page}/{pages}）")
+    if page==1 and not chosen and "钓鱼" not in cfg.get("disabled_games",[]):
         lines.extend(["","🎣 自己玩","【抛竿】钓一条鱼","【钓鱼玩法】看钓鱼指南"])
     return "\n".join(lines)
 
@@ -261,6 +282,8 @@ def play(db,e,action,code,arg,manager,prefix="二狗"):
         db.execute("UPDATE games SET state='CANCELLED',ended=?,reason='主动结束' WHERE id=?",(e["arrived"],row["id"]))
         return f"{code} 已取消"
     if action=="退出":
+        if e["member"]==row["owner"] and json.loads(row["rules"]).get("quiz_origin"):
+            return quiz_rounds.end(db,row,json.loads(row["board"]),e["arrived"])
         if e["member"]==row["owner"]:raise ValueError(f"你是发起人，可以结束整局。发送即结束\n{prefix}结束 {code}" if not governed or manager else f"结束本局需要已授权的群管理员。查本局状态\n{prefix}状态 {code}")
         db.execute("DELETE FROM players WHERE game=? AND member=?",(row["id"],e["member"]))
         return f"已退出 {code}"
@@ -351,6 +374,14 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
             return play(db,e,"结束" if game[1] else "动作",(game[1] or game[2]).upper(),
                         "" if game[1] else "重置",False)
     prefix=prefix or cfg["prefix"]
+    if cmd in ("赞美","礼物商店","我的礼物","送礼") or cmd.startswith(("赞美 ","赞美@","送礼 ")):
+        from .social_gifts import handle
+        return handle(db,e,cmd,prefix)
+    if cmd in ("个人档案","个人信息","成就手册","我的成就","打工"):
+        from . import player_profile
+        if cmd=="打工":
+            return player_profile.work(db,e,prefix)
+        return player_profile.profile(db,e,prefix,cmd in ("成就手册","我的成就"))
     if cmd in ("签到","打卡"):
         from .group_tools import check_in
         return check_in(db,e,cfg,prefix)
@@ -365,7 +396,11 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     if topic:
         if topic.gate == "jianghu":
             mention_sender(db, e)
-        return feature_menu.page(db,g,e,cfg,prefix,topic)
+        reply=feature_menu.page(db,g,e,cfg,prefix,topic)
+        if topic.name=="钓鱼" and cfg.get("game_card_mode")=="image" and cfg["games"] and "钓鱼" not in cfg.get("disabled_games",()):
+            from .game_cards import CardReply
+            return CardReply(reply,"reference",title="钓鱼指南",text=reply)
+        return reply
     menu=canonical.rstrip("。！？!?").strip()
     if menu in ("全菜单","全部功能"):
         return feature_menu.full_menu(db,g,e,cfg,prefix)
@@ -415,7 +450,24 @@ def command(db,g,e,cmd,cfg,mentioned=False,*,prefix=None):
     if cmd=="重铸":
         return feature_menu.page(db,g,e,cfg,prefix,feature_menu.find_topic("强化帮助"))
     if fishing.matches(cmd):
-        return fishing.play(db,e,cmd,prefix or cfg["prefix"],cfg)
+        reply=fishing.play(db,e,cmd,prefix or cfg["prefix"],cfg)
+        from .game_cards import CardReply
+        if cfg.get("game_card_mode") in ("image","mixed") and not getattr(reply,"snapshot",None):
+            titles={"资产榜":"本群资产榜","重量榜":"本群重量榜","图鉴榜":"本群图鉴榜"}
+            title=titles.get(cmd)
+            if fishing.BOOK_PAGE.fullmatch(cmd):
+                title="鱼类图鉴"
+            if cfg.get("game_card_mode")=="image":
+                if cmd.startswith("查看鱼#") and "没有" not in reply:
+                    title="鱼类详情"
+                title=title or {"我的鱼竿":"装备状态","鱼线":"鱼线状态","鱼塘":"我的鱼塘"}.get(cmd)
+            if title:
+                return CardReply(reply,"reference",title=title,text=reply)
+        return reply
+    if first in ("抛竿","钓鱼","甩竿","甩杆","抛杆") and args:
+        if not cfg["games"] or "钓鱼" in cfg.get("disabled_games",()):
+            return f"本群已关闭钓鱼。查看可用功能：{prefix}菜单"
+        return f"未识别鱼饵。免费抛竿请发「{prefix}抛竿」，可用鱼饵见「{prefix}鱼饵」。"
     if first in ("百科","菜谱","点歌","星座") and not args:
         sample={"百科":"百科 大熊猫","菜谱":"菜谱 土豆","点歌":"点歌 茉莉花","星座":"星座 白羊座"}[first]
         return f"🔎 {first}用法\n把示例换成你要查的内容\n{prefix}{sample}"
@@ -528,6 +580,9 @@ def process(db,g,e):
         db.execute("UPDATE outbox SET state='CANCELLED' WHERE grp=? AND state IN ('PENDING','RETRY_WAIT')",(e["grp"],))
         return "DONE",None
     if e["kind"]=="leave":
+        quiz=quiz_rounds.active(db,g["id"])
+        if quiz and quiz["owner"]==e["member"]:
+            quiz_rounds.end(db,quiz,json.loads(quiz["board"]),e["arrived"])
         from . import roles
         room=db.execute("SELECT label FROM group_binding WHERE bot_id=? AND group_id=? AND owner_user_id=?",
                         (g["account"],g["id"],e["member"])).fetchone()
@@ -636,6 +691,24 @@ def settle(db,g,e):
         state,msg=process(db,g,e)
         if msg:
             queue(db,g,e["event_id"],msg,e["arrived"])
+            mode=json.loads(g["config"]).get("game_card_mode","text")
+            if mode!="text" and state=="DONE" and db.execute("SELECT mode FROM account WHERE id=?",(g["account"],)).fetchone()[0]=="simulation":
+                from .game_cards import CardReply
+                if hasattr(msg,"card") and not getattr(msg,"snapshot",None) and (mode=="image" or msg.card["heading"] in ("成就手册","个人档案","礼物手记","礼物收藏","礼物商店")):
+                    msg=CardReply(msg,"reference",title=msg.card["title"],text=str(msg))
+                if getattr(msg,"snapshot",None):
+                    from .display_names import labels
+                    msg.snapshot["nickname"]=labels(db,e["grp"])(e["member"])
+                    db.execute("INSERT OR IGNORE INTO game_card_snapshots SELECT id,? FROM outbox WHERE biz=?",
+                               (dump(msg.snapshot),e["event_id"]))
+            elif state=="DONE" and getattr(msg,"snapshot",{}).get("kind") in ("catch","bag"):
+                # 一次性实群验收只占用已获点名授权的原回复任务。
+                selected=db.execute("""UPDATE game_card_trials SET task=(SELECT id FROM outbox WHERE biz=?)
+                    WHERE grp=? AND account=? AND binding=? AND until>? AND kind=? AND task IS NULL
+                    AND EXISTS(SELECT 1 FROM directed_events d JOIN outbox o ON d.biz=o.biz WHERE o.biz=?)
+                    RETURNING task""",(e["event_id"],e["grp"],e["account"],e["binding"],time.time(),msg.snapshot["kind"],e["event_id"])).fetchone()
+                if selected:
+                    db.execute("INSERT INTO game_card_snapshots VALUES(?,?)",(selected[0],dump(msg.snapshot)))
     except ValueError as exc:
         db.execute("ROLLBACK TO business")
         state,msg="REJECTED",str(exc)

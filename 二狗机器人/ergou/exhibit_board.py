@@ -45,4 +45,7 @@ def board(db,key,prefix):
     lines.append(f"🎒 你的鱼包里还有 {len(ids)} 种未点亮。")
     if ids:
         lines.extend(["✨ 点亮其中一种",f"{prefix}收入图鉴#{ids[0]}"])
-    return "\n".join(lines)
+    from .fishing_cards import sheet
+    return sheet("\n".join(lines),prefix,"钓鱼排行榜","本群图鉴榜","已点亮鱼种  /  史诗与传说鱼种",
+                 entries=[(place+"  "+name,f"已点亮 {count}  ·  史诗与传说 {rare}") for place,name,count,rare in entries],
+                 lines=lines[3+len(entries):])

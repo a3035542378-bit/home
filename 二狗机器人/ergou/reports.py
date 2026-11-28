@@ -57,8 +57,14 @@ def weekly(db, group, end):
                 最长缺口分钟=max((b-a for a,b in gaps),default=0), 覆盖="按在线分钟采样，仅统计实际收到文本")
 
 
-def archive(db, group):
+def archive_rows(db, group, *, limit=200, offset=0, start=None, end=None):
     fields = ("周期","消息数","已观测成员","参与人次","参与人数","完成局数","取消局数",
               "当周开局平均参与人数","在线采样分钟","未覆盖分钟","缺口段数","最长缺口分钟","覆盖")
-    rows = db.execute("SELECT report FROM weekly WHERE grp=? ORDER BY start DESC LIMIT 200", (group,))
-    return [{key:report.get(key) for key in fields} for row in rows for report in json.loads(row[0])]
+    rows = db.execute("SELECT report FROM weekly WHERE grp=? AND (? IS NULL OR start>=?) AND (? IS NULL OR start<?) ORDER BY start DESC LIMIT ? OFFSET ?", (group,start,start,end,end,limit,offset))
+    for row in rows:
+        for report in json.loads(row[0]):
+            yield {key:report.get(key) for key in fields}
+
+
+def archive(db, group):
+    return list(archive_rows(db,group))

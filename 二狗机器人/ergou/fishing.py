@@ -6,6 +6,7 @@ import random
 import re
 from . import exhibit_batch, breed_metrics, breeding, exhibit_board, pond_growth, angler, fish_grades, fish_storage, fishing_bait, giant_fish, pond_raids
 from .fish_receipts import grid, single
+from .fishing_cards import JournalReply, sheet
 from .db import DEFAULT
 from . import rod as gear
 from . import tackle_wear as durability
@@ -116,7 +117,14 @@ def book(db,key,match,current_area,prefix):
             lines.append(f"【收入图鉴#{picks[fish]}】{fish}{action}")
         lines.extend(["","🌊 继续探索",f"【图鉴 {area}】查看本场","【全图鉴】全部钓场",
                       "【巨物图鉴】找巨物鱼种","【巨物鱼讯】看出没时间"])
-        return "\n".join(lines)
+        entries = [(row[0], row[-1] + "鱼种 · " +
+                    ("已点亮" if row[0] in exhibits else "已发现" if row[0] in best else "待发现"))
+                   for row in sorted(catalog,key=lambda row:(row[0] not in best,row[0] not in exhibits))[:6]]
+        return JournalReply("\n".join(lines), heading="鱼类图鉴", title=area,
+                            subtitle=f"已点亮 {lit}/{len(catalog)} 种  ·  已发现 {found} 种",
+                            entries=entries, notes=[next(line for line in lines if "集齐奖励" in line)],
+                            commands=[*(f"{prefix}收入图鉴#{picks[name]}" for name in ready),
+                                      f"{prefix}图鉴 {area}", prefix+"全图鉴"])
     visible=catalog[(page-1)*6:page*6]
     if giants and page==1:
         lines.append("体型：小型 / 标准 / 大型 / 巨物")
@@ -168,7 +176,10 @@ def book(db,key,match,current_area,prefix):
             command+=" "+area
         lines.append(f"【{command} {page+1}】下页")
     lines.append("【巨物鱼讯】查巨物出没" if giants else f"【{visible[0][0]}怎么钓？】查钓法")
-    return "\n".join(lines)
+    return sheet("\n".join(lines),prefix,"鱼类图鉴",title,f"第 {page}/{pages} 页  /  已点亮 {lit}/{len(catalog)}",
+                 entries=[(r[0],r[-1]+"鱼种  ·  "+("已点亮" if exhibits.get(r[0],0)>=thresholds[r[0]]
+                             else "已发现" if best.get(r[0],0)>=thresholds[r[0]] else "待发现")) for r in visible],
+                 lines=[s for s in lines if s.startswith(("【","　","🏅"))])
 
 
 FISH_QUESTION=re.compile(r"(?:怎么钓到|怎么钓|在哪(?:里)?(?:能|可以)?钓到|哪里能钓到|(?:怎么|如何)(?:获得|获取))\s*(.+?)|(.+?)\s*(?:怎么钓到|怎么钓|在哪(?:里)?(?:能|可以)?钓(?:到)?|(?:怎么|如何)(?:获得|获取)|的获取方式)")
@@ -216,7 +227,9 @@ def heavy_board(db,key):
             entries.append((f"第 {r['place']} 名",names(r['member']),r['best_name'],weight(r['best_grams'])))
         if r['member']==key[1]:
             mine=f"你的纪录：第 {r['place']} 名，{weight(r['best_grams'])}。"
-    return "\n".join([*lines,*grid(entries),"","📍 "+mine])
+    body="\n".join([*lines,*grid(entries),"","📍 "+mine])
+    return JournalReply(body,heading="重量排行榜",title="本群单尾纪录",subtitle="按亲手钓起时的重量排名",
+                        entries=[(fish,place+"  ·  "+name+"  ·  "+mass) for place,name,fish,mass in entries],notes=[mine])
 
 
 LINE_COST=(0,25,60,140,300)
@@ -286,11 +299,11 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     if event["adapter_version"]=="agent-wechat-events/2.7.1":
         from .display_names import mention_sender
         mention_sender(db,event)
+    if not cfg["games"] or "钓鱼" in cfg.get("disabled_games",[]):
+        raise ValueError(f"本群已关闭钓鱼，查看可用功能\n{prefix}菜单")
     if cmd in ("资产榜","资产排行榜"):
         pond_growth.settle(db,event["grp"],event["arrived"])
         return gear.leaderboard(db,event["grp"],event["member"])
-    if not cfg["games"] or "钓鱼" in cfg.get("disabled_games",[]):
-        raise ValueError(f"本群已关闭钓鱼，查看可用功能\n{prefix}菜单")
     key = (event["grp"], event["member"])
     pilot = breeding.enabled(db,key[0])
     cooldown = cfg.get("fishing_cooldown_seconds", DEFAULT["fishing_cooldown_seconds"])
@@ -350,7 +363,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
             return giant_fish.departure(key[0],area,sighting)
         previous=""
         if now<sighting.start-giant_fish.LEAD:
-            last=giant_fish.window(key[0],area,(sighting.start//3600-1)*3600)
+            last=giant_fish.scheduled(key[0],area,sighting.start//3600-1)
             claimed=db.execute("SELECT 1 FROM fishing_giant_claims WHERE grp=? AND area=? AND start=?",
                                (key[0],area,last.start)).fetchone()
             previous=f"上一场巨物{last.fish}"+("已被钓走。" if claimed else "已到时消失。")+"\n"
@@ -364,8 +377,11 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         target=cmd.split(maxsplit=1)[1]
         return guide(target) if target in WATERS else "未找到钓场。发「水域」查看名称。"
     if cmd=="鱼市":
-        return f"🪙 {area}鱼市\n售价＝基础价 × 体重系数 × 品级系数\n\n"+"\n".join(
+        body=f"🪙 {area}鱼市\n售价＝基础价 × 体重系数 × 品级系数\n\n"+"\n".join(
             f"{name}（{rarity}）基础 {base} 币" for name,_,_,base,rate,rarity in WATERS[area])
+        return JournalReply(body,heading="钓场鱼市",title=area+"鱼市",subtitle="基础售价  /  鱼币",
+                            entries=[(name,f"{rarity}鱼种  ·  基础 {base} 币") for name,_,_,base,_,rarity in WATERS[area]],
+                            notes=["实际售价由体重和单尾品级决定。"],commands=[prefix+"查看鱼包"])
     if cmd in ("重量榜","重量排行榜"):
         return heavy_board(db,key)
     page=BOOK_PAGE.fullmatch(cmd)
@@ -380,7 +396,7 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         return angler.profile(db,key,record["count"] if record else 0,area)
     if cmd == "我的鱼获":
         if not record:
-            return f"鱼篓还是空的。发「{prefix} 钓鱼」试试第一竿。"
+            return f"鱼篓还是空的。发「{prefix}抛竿」试试第一竿。"
         return (f"🧺 我的鱼获\n累计 {record['count']} 条　共 {weight(record['grams'])}\n\n"
                 f"🏆 最重纪录\n{record['best_name']}　{weight(record['best_grams'])}")
     if cmd!="钓鱼信息":
@@ -416,10 +432,16 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         landed=record["count"] if record else 0
         best=f"{record['best_name']}　{weight(record['best_grams'])}" if record else "暂无鱼获"
         growth=angler.profile(db,key,landed,area)
-        return (f"📋 我的钓鱼信息\n{growth}\n{first_epic.status(db,key)}\n【鱼讯】查本场鱼种和首获路线\n\n"
+        body=(f"📋 我的钓鱼信息\n{growth}\n{first_epic.status(db,key)}\n【鱼讯】查本场鱼种和首获路线\n\n"
                 f"🪙 当前余额　{coins} 鱼币\n🧰 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）　鱼线 {line_level} 级"
                 f"（{'已断' if broken else '可用'}）\n🧵 线耐久 {0 if broken else durability.percent(wear.line,line_max)}% · 竿耐久 {durability.percent(wear.rod,rod_max)}%\n🎒 鱼包 {bag}/{bag_limit} 条　鱼塘 {pond}/{pond_limit} 条\n"
                 f"🐟 累计钓获　{landed} 条\n🏆 最重纪录　{best}\n{pending_note}\n处理鱼获\n{prefix}查看鱼包")
+        return sheet(body,prefix,"钓手手记","我的钓鱼信息",area,
+                     facts=[("鱼币",str(coins)),("亲钓",f"{landed} 条"),("鱼包",f"{bag}/{bag_limit}"),("鱼塘",f"{pond}/{pond_limit}")],
+                     lines=[growth,first_epic.status(db,key),"最重纪录  "+best,
+                            f"鱼竿 {rod} 级，鱼线 {line_level} 级"+("（已断）" if broken else ""),
+                            f"鱼线耐久 {0 if broken else durability.percent(wear.line,line_max)}%  /  鱼竿耐久 {durability.percent(wear.rod,rod_max)}%",
+                            pending_note,prefix+"鱼讯",prefix+"查看鱼包"])
     if cmd in ("鱼线","升级鱼线"):
         if cmd=="升级鱼线":
             if pending_line:
@@ -449,7 +471,12 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         effect+=f"\n换新 {durability.LINE_PRICE} 鱼币，保留线级。"
         if wear.line and remaining>=durability.LINE_PRICE:
             effect+=f"\n{prefix}买鱼线"
-        return f"{paid}🧵 鱼线 {line_level} 级 · {durability.condition(wear.line,durability.LINE_LIMITS[line_level-1])}\n{effect}"
+        condition=durability.condition(wear.line,durability.LINE_LIMITS[line_level-1])
+        body=f"{paid}🧵 鱼线 {line_level} 级 · {condition}\n{effect}"
+        if cmd=="鱼线":
+            return sheet(body,prefix,"装备手记","我的鱼线",area,facts=[("线级",str(line_level)),("耐久",condition)],
+                         lines=[effect])
+        return body
     if cmd in ("买鱼线","购买鱼线"):
         if not broken and not wear.line:
             return "鱼线耐久 100%，无需购买。"
@@ -486,7 +513,11 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
         if pending_rod:
             maintenance+="\n再抛竿就会折竿降级。"
 
-        return f"🎣 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）\n{durability.condition(wear.rod,rod_max)}{maintenance}\n🪙 余额 {coins} 鱼币\n{next_level}\n\n"+gear.describe(db,key,rod,area)
+        details=gear.describe(db,key,rod,area)
+        body=f"🎣 鱼竿 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）\n{durability.condition(wear.rod,rod_max)}{maintenance}\n🪙 余额 {coins} 鱼币\n{next_level}\n\n"+details
+        return sheet(body,prefix,"装备手记",f"{gear.GRADE_BY_LEVEL[rod]}鱼竿",area,
+                     facts=[("竿级",str(rod)),("余额",f"{coins} 鱼币"),("耐久",durability.condition(wear.rod,rod_max))],
+                     lines=[maintenance,next_level,details])
     if cmd=="升级鱼竿":
         if rod+1 not in gear.GRADE_BY_LEVEL:
             return f"鱼竿已满 {rod} 级（{gear.GRADE_BY_LEVEL[rod]}）。"
@@ -653,6 +684,27 @@ def play(db, event, cmd, prefix, cfg, *, batch_ids=None):
     reward = f"\n🎁 {fish}品级新高　＋{points} 积分" if points else ""
     used=bag_count+1
     status="鱼包已满" if used==bag_capacity else "已收入鱼包"
-    return "\n".join(["🎣 上钩了！",story,"",f"📍 {area}"+(f" · {rarity}鱼种" if rarity!="普通" else ""),*single(item,fish,badge,grade,grams,price),
+    first_steps=[]
+    if not record or record["count"]==0:
+        first_steps.extend([f"第一尾鱼入包了！可卖 {price} 鱼币", f"{prefix}卖鱼#{item}"])
+        pond_used,pond_capacity,_=fish_storage.occupancy(db,key,"pond")
+        if pond_used<pond_capacity:
+            first_steps.extend(["想留下养，发这句", f"{prefix}放入鱼塘#{item}"])
+        first_steps.extend(["鱼币可升级装备。查看进度",prefix+"钓鱼信息"])
+    body = "\n".join(["🎣 上钩了！",story,"",f"📍 {area}"+(f" · {rarity}鱼种" if rarity!="普通" else ""),*single(item,fish,badge,grade,grams,price),
                       "",f"🎒 {status}（{used}/{bag_capacity} 条）"+reward+footer,
-                      "【查看鱼包】处理这条鱼",prefix+"查看鱼包"])
+                      *first_steps,"【查看鱼包】处理这条鱼",prefix+"查看鱼包"])
+    notes = [line for line in (story + reward + footer).splitlines()
+             if line and "钓手 " not in line and "线耐久 " not in line]
+    receipt=JournalReply(body, heading="渔获手记", title=fish, species=fish,
+                        subtitle=f"{area}  /  {rarity}鱼种  /  渔获 #{item}",
+                        facts=[("单尾品质", badge.replace("✨", "").strip()), ("大小", grade),
+                               ("实重", weight(grams)), ("售价", f"{price} 鱼币"),
+                               ("钓手", f"{angler.level(casts)} 级"), ("距离升级", f"{angler.CASTS_PER_LEVEL - casts % angler.CASTS_PER_LEVEL} 竿"),
+                               ("鱼包", f"{used}/{bag_capacity} 条"), ("鱼线 / 鱼竿", f"{0 if broken else line_pct}% / {rod_pct}%")],
+                        notes=notes+first_steps, commands=[prefix+"查看鱼包"])
+    receipt.snapshot=dict(kind="catch",title="钓获归档",fish=fish,area=area,rarity=rarity,quality=badge,
+                     size=grade or "未记录",item=item,grams=grams,price=price,casts=casts,
+                     capacity=f"{used}/{bag_capacity}",line=0 if broken else line_pct,rod=rod_pct,
+                     step=prefix+"查看鱼包")
+    return receipt

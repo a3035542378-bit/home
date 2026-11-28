@@ -1,5 +1,5 @@
-import csv
-import io
+from threading import BoundedSemaphore
+import shutil
 import json
 import logging
 import os
@@ -10,9 +10,10 @@ from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs,urlsplit
+from urllib.parse import parse_qs,urlsplit,urlencode
 from . import admin, bridge, jobs, models, operations, retention
-from .db import DEFAULT, closing_db, dump
+from . import csv_export
+from .db import audit, DEFAULT, closing_db, dump
 from .engine import receive
 from .monitor import overview
 from . import group_tools, reply_rules
@@ -20,7 +21,7 @@ from . import group_tools, reply_rules
 STATIC=Path(__file__).with_name("ui")
 ASSETS={"/":("index.html","text/html"),"/app.js":("app.js","text/javascript"),"/style.css":("style.css","text/css")}
 ASSETS["/voice-sample.wav"]=("voice-sample.wav","audio/wav")
-for script in ("rules.js","group-tools.js","member-notices.js","voice.js","accounts.js","wechat-login.js"):
+for script in ("workspace.js","rules.js","group-tools.js","member-notices.js","voice.js","accounts.js","wechat-login.js"):
     ASSETS["/"+script]=(script,"text/javascript")
 
 
@@ -36,7 +37,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length",str(len(body)))
         self.send_header("Cache-Control","no-store")
         self.send_header("X-Content-Type-Options","nosniff")
-        self.send_header("Content-Security-Policy","default-src 'self'; img-src 'self' https:; media-src 'self' blob:; frame-ancestors 'none'; object-src 'none'; base-uri 'none'")
+        self.send_header("Content-Security-Policy","default-src 'self'; img-src 'self' https: data:; media-src 'self' blob:; frame-ancestors 'none'; object-src 'none'; base-uri 'none'")
         if cookie:
             self.send_header("Set-Cookie",cookie)
         self.end_headers()
@@ -83,6 +84,13 @@ class Handler(BaseHTTPRequestHandler):
             from . import admin_accounts
             result=admin_accounts.create(db,u,data) if post else admin_accounts.view(db,u)
             return self.respond(201 if post else 200,result)
+        if path=="/api/wechat-groups":
+            from . import wechat_groups
+            client = wechat_groups.service(u)
+            params = parse_qs(url.query)
+            result = (wechat_groups.bind(db,client,data,u) if post else
+                      wechat_groups.directory(db,client,params.get("cursor",[""])[0],params.get("account",[None])[0]))
+            return self.respond(200,result)
         if path=="/api/wechat-login":
             from . import wechat_login
             return self.respond(200,wechat_login.action(u,data) if post else wechat_login.status(u))
@@ -102,16 +110,30 @@ class Handler(BaseHTTPRequestHandler):
                              FROM groups g JOIN account a ON a.id=g.account LEFT JOIN group_profile p ON p.grp=g.id
                              WHERE ?='系统管理员' OR g.id IN (SELECT value FROM json_each(?)) ORDER BY name,g.id""",
                             (u["role"],u["scopes"]))
-            return self.respond(200,[dict(r) for r in rows])
+            from .group_nicknames import attach
+            groups = [dict(r) for r in rows]
+            attach(groups)
+            return self.respond(200,groups)
         if path=="/api/me" and not post:
             groups=[r[0] for r in db.execute("SELECT id FROM groups ORDER BY id") if u["role"]=="系统管理员" or r[0] in json.loads(u["scopes"])]
             return self.respond(200,dict(name=u["name"],role=u["role"],groups=groups,group_aliases=group_tools.aliases(db,groups)))
         params=parse_qs(url.query)
         group=data.get("group") if post else params.get("group",[""])[0]
-        admin.permitted(u,group,post)
+        try:
+            admin.permitted(u,group,post)
+        except PermissionError:
+            if path in ("/api/export","/api/operation"):
+                audit(db,u["name"],None,"拒绝管理请求","无授权范围")
+            raise
         g=db.execute("SELECT g.*,a.mode,a.state FROM groups g JOIN account a ON a.id=g.account WHERE g.id=?",(group,)).fetchone()
         if not g:
             return self.respond(404,{"error":"群不存在"})
+        if path=="/api/grant-members" and not post:
+            admin.permitted(u,group,True)
+            from .asset_roster import candidates
+            members=candidates(db,group,g["mode"]=="simulation")
+            return self.respond(200,{"group":group,"members":list(members or {}),"labels":members or {},
+                                     "ready":members is not None})
         if path=="/api/reply-diagnostics" and not post:
             from . import monitor, reply_diagnostics
             with db:
@@ -151,17 +173,37 @@ class Handler(BaseHTTPRequestHandler):
         if not post and path=="/api/status":
             counts={r[0]:r[1] for r in db.execute("SELECT state,COUNT(*) FROM outbox WHERE grp=? GROUP BY state",(group,))}
             return self.respond(200,dict(group=group,mode=g["mode"],account=g["account"],state=g["state"],binding=g["binding"],paused=g["paused"],
-                version=g["version"],config=DEFAULT|json.loads(g["config"]),received=db.execute("SELECT COUNT(*) FROM inbox WHERE grp=?",(group,)).fetchone()[0],outbox=counts))
+                version=g["version"],config=DEFAULT|json.loads(g["config"]),alerts=db.execute("SELECT count(*) FROM group_alert WHERE grp=? AND recovered IS NULL",(group,)).fetchone()[0],received=db.execute("SELECT COUNT(*) FROM inbox WHERE grp=?",(group,)).fetchone()[0],outbox=counts))
         if not post and path in ("/api/view","/api/export"):
-            rows=admin.view(db,u,group,params.get("name",["会话"])[0])
+            name=params.get("name",["会话"])[0]
             if path.endswith("/export"):
-                buf=io.StringIO()
-                if rows:
-                    writer=csv.writer(buf)
-                    writer.writerow(rows[0].keys())
-                    for row in rows:
-                        writer.writerow(["'"+str(v) if str(v).lstrip().startswith(("=","+","-","@")) else v for v in row.values()])
-                return self.respond(200,buf.getvalue().encode("utf-8-sig"),"text/csv")
+                if not self.server.export_slot.acquire(blocking=False):
+                    return self.respond(429,{"error":"已有文件正在导出，请稍后重试"})
+                try:
+                    try:
+                        prepared=csv_export.prepare(db,u,group,name,params)
+                    except (ValueError, PermissionError):
+                        audit(db,u["name"],group,"导出拒绝","权限或查询参数无效")
+                        raise
+                    with prepared as output:
+                        audit(db,u["name"],group,"导出文件","已生成 "+name)
+                        self.send_response(200)
+                        self.send_header("Content-Type","text/csv; charset=utf-8")
+                        self.send_header("Content-Length",str(os.fstat(output.fileno()).st_size))
+                        self.send_header("Cache-Control","no-store")
+                        self.end_headers()
+                        self.connection.settimeout(30)
+                        shutil.copyfileobj(output.buffer,self.wfile,65536)
+                except (BrokenPipeError,ConnectionResetError,TimeoutError):
+                    audit(db,u["name"],group,"导出中断","下载连接关闭")
+                finally:
+                    self.server.export_slot.release()
+                return
+            offset=int(params.get("offset",["0"])[0])
+            if not 0<=offset<=2**63-1:
+                raise ValueError("分页位置无效")
+            rows=(list(csv_export.rows(db,u,group,name,params,offset=offset))
+                  if name in admin.VIEWS or name=="周报归档" else admin.view(db,u,group,name))
             return self.respond(200,rows)
         if post and path=="/api/config":
             return self.respond(200,dict(version=admin.configure(db,u,group,data["version"],data["patch"])))
@@ -173,7 +215,12 @@ class Handler(BaseHTTPRequestHandler):
         if post and path=="/api/schedule":
             return self.respond(201,dict(id=admin.schedule(db,u,group,data)))
         if post and path=="/api/operation":
-            return self.respond(200,{"result":operations.act(db,u,group,data)})
+            try:
+                result=operations.act(db,u,group,data)
+            except (ValueError,PermissionError):
+                audit(db,u["name"],group,"管理操作拒绝","参数、成员关系或权限校验失败")
+                raise
+            return self.respond(200,{"result":result})
         if post and path=="/api/switch":
             if u["role"]!="系统管理员":raise PermissionError("FORBIDDEN 仅系统管理员")
             if not isinstance(data.get("key"),str) or not 1<=len(data["key"])<=120:raise ValueError("需要幂等键")
@@ -186,12 +233,25 @@ class Handler(BaseHTTPRequestHandler):
                 payload["mention_account"]=g["account"]
             seq=receive(db,g["account"],group,"operator" if u["role"]=="系统管理员" else "ui-"+u["name"],data["key"],payload)
             return self.respond(202,{"seq":seq})
+        if not post and path=="/api/fishing-card" and g["mode"]=="simulation":
+            from .fishing_cards import render
+            row=db.execute("""SELECT c.snapshot FROM fishing_reply_cards c JOIN outbox o ON o.id=c.task
+                JOIN inbox i ON i.event_id=o.biz WHERE i.grp=? AND o.grp=i.grp AND i.seq=?""",
+                (group,params.get("seq",[""])[0])).fetchone()
+            jpeg=render(json.loads(row[0])) if row else None
+            return self.respond(200,jpeg,"image/jpeg") if jpeg else self.respond(404,{"error":"请查看文字回执"})
         if not post and path=="/api/simulation-result" and g["mode"]=="simulation":
             row=db.execute("""SELECT i.state,o.body FROM inbox i LEFT JOIN outbox o ON o.biz=i.event_id
                             WHERE i.seq=? AND i.grp=?""",(params.get("seq",["0"])[0],group)).fetchone()
             result=dict(row) if row else {}
             if result.get("body"):
+                from .game_cards import preview
+                result["game_card"]=preview(db,group,params.get("seq",["0"])[0])
                 result["media"]=reply_rules.simulation_media(db,group,params.get("seq",["0"])[0])
+                seq=params.get("seq",["0"])[0]
+                if db.execute("""SELECT 1 FROM fishing_reply_cards c JOIN outbox o ON c.task=o.id
+                    JOIN inbox i ON i.event_id=o.biz WHERE i.grp=? AND i.seq=?""",(group,seq)).fetchone():
+                    result["media"]={"type":"image","card":True,"url":"api/fishing-card?"+urlencode({"group":group,"seq":seq})}
             return self.respond(200,result)
         return self.respond(404,{"error":"接口不存在"})
 
@@ -215,6 +275,7 @@ def server(path,port):
     if not re.fullmatch(r"[A-Za-z0-9_]{1,64}",name):
         raise ValueError("后台会话 Cookie 名称无效")
     httpd=ThreadingHTTPServer(("127.0.0.1",port),Handler)
+    httpd.export_slot=BoundedSemaphore(1)
     httpd.database=path
     httpd.session_cookie=name
     return httpd

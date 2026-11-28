@@ -41,7 +41,10 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
         return pond_view.home(db,key,page,by_weight,prefix,changes or {},now)
     count, capacity, _ = occupancy(db, key, "bag")
     if not count:
-        return f"🎒 鱼包是空的（0/{capacity} 条）。\n{cast_step(db,key,prefix,now)}"
+        from .fishing_cards import sheet
+        step=cast_step(db,key,prefix,now)
+        return sheet(f"🎒 鱼包是空的（0/{capacity} 条）。\n{step}",prefix,"鱼包手记","空鱼包",
+                     f"已占 0/{capacity} 格",lines=[step])
     order="grams DESC,id DESC" if by_weight else "id DESC"
     rows=db.execute(f"""SELECT * FROM fishing_pond WHERE grp=? AND member=? AND storage='bag'
                         ORDER BY {order}""",key).fetchall()
@@ -69,7 +72,26 @@ def inventory(db, key, storage, page, by_weight, prefix, now=None, changes=None)
         total=db.execute("SELECT sum(price) FROM fishing_pond WHERE grp=? AND member=? AND storage='bag'",key).fetchone()[0]
         lines.append(f"【卖出鱼包】清空 {count} 条，共 {total} 鱼币")
     lines.extend(["", "💬 "+purpose,step])
-    return "\n".join(lines)
+    from .fishing_cards import JournalReply
+    entries = [(r["fish"], f"#{r['id']}  ·  {mass(r['grams'])}  ·  {r['price']} 鱼币  ·  " +
+                (fish_grades.label(r["grade"], r["grade_upgraded"]).replace("✨","").strip() or "历史鱼"))
+               for r in rows]
+    receipt=JournalReply("\n".join(lines), heading="鱼包手记", title="我的鱼包",
+                        subtitle=f"已占 {count}/{capacity} 格", entries=entries,
+                        notes=[line for line in lines if line.startswith(("原有", "🐣", "💬"))],
+                        commands=[step, prefix+"放入图鉴", prefix+f"卖鱼#{item}",
+                                  *([prefix+"批量卖出鱼包"] if count>1 else [])])
+    receipt.snapshot=dict(kind="bag",journal=receipt.card,title=f"我的鱼包   {count}/{capacity}",step=step,
+                     rows=[dict(id=r["id"],fish=r["fish"],grams=r["grams"],price=r["price"],
+                                quality=fish_grades.label(r["grade"],r["grade_upgraded"]) or "历史鱼") for r in rows])
+    if count>5:
+        pages=(count+4)//5
+        current=min(page,pages)
+        receipt.card["entries"]=entries[(current-1)*5:current*5]
+        route=prefix+"鱼包"+(" 重量" if by_weight else "")
+        receipt.card["subtitle"]+=f"  /  第 {current}/{pages} 页"
+        receipt.card["commands"]=[route+" "+str(n) for n in (current-1,current+1) if 1<=n<=pages]+[prefix+"批量卖出鱼包"]
+    return receipt
 
 
 def shortfall(db,key,cost,prefix,now,reason):

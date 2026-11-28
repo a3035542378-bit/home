@@ -10,6 +10,28 @@ class Quiz(unittest.TestCase):
     tearDown=test_robot.Robot.tearDown
     say=test_robot.Robot.say
 
+    def test_two_players_same_answer_and_owner_exit(self):
+        import concurrent.futures
+        from ergou import engine, db
+        self.say("二狗开始 猜成语")
+        self.say("二狗开始 猜歌词",group="b")
+        row=active(self.db,"a")
+        answer=json.loads(row["board"])["answer"]
+        def compete(member):
+            with db.closing_db(self.path) as conn:
+                engine.receive(conn,"sim-account","a",member,member,{"text":"二狗"+answer},now=self.clock+.1)
+                engine.step(conn)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            list(pool.map(compete,("guest1","guest2")))
+        self.assertEqual(2,json.loads(active(self.db,"a")["board"])["number"])
+        self.assertEqual(1,self.db.execute("SELECT count(*) FROM ledger WHERE game=?",(row["id"],)).fetchone()[0])
+        self.assertIn("已结束",self.say("二狗退出 "+row["code"])["body"])
+        self.assertIsNone(active(self.db,"a"))
+        self.assertEqual(1,json.loads(active(self.db,"b")["board"])["number"])
+        engine.receive(self.db,"sim-account","b","operator","depart",{},kind="leave",now=self.clock+.5)
+        engine.step(self.db)
+        self.assertIsNone(active(self.db,"b"))
+
     def test_direct_answer_and_owner_stop(self):
         self.say("二狗开始 猜图片")
         game=active(self.db,"a")

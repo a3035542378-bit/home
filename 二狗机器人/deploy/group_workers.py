@@ -211,6 +211,9 @@ def main():
                     audit(db,"local-cli",None,"绑定管理员名单变更",args.operation+" "+args.member)
                 print("绑定权限名单已更新")
                 return
+            if args.action in ("listen", "replies"):
+                while not current(db,SLOT) and not db.execute("SELECT 1 FROM binding_streams WHERE slot=?", (SLOT,)).fetchone():
+                    time.sleep(5)
             print(run(db,args.action,args.private_dir,getattr(args,"group_id",None)))
     except (OSError,ValueError,RuntimeError,sqlite3.Error,http.client.HTTPException) as exc:
         parser.exit(1,f"微信工作进程未启动：{exc}\n")

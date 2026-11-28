@@ -45,15 +45,23 @@ def number(value):
     return isinstance(value, str) and 0 < len(value) <= 20 and value.isascii() and value.isdecimal()
 
 
-@contextmanager
-def listener_lock(db, slot):
-    """Keep one consumer per database and slot. Process exit releases the OS lock."""
+class ListenerBusy(RuntimeError):
+    """Another process owns this slot."""
+
+
+def listener_lock_path(db, slot):
     path = next(row[2] for row in db.execute("PRAGMA database_list") if row[1] == "main")
     if not path:
         raise ValueError("监听进程需要持久化数据库")
     key = hashlib.sha256(slot.encode()).hexdigest()[:24]
     database = Path(path).resolve()
-    lock_path = database.with_name(f"{database.name}.{key}.lock")
+    return database.with_name(f"{database.name}.{key}.lock")
+
+
+@contextmanager
+def listener_lock(db, slot):
+    """Keep one consumer per database and slot. Process exit releases the OS lock."""
+    lock_path = listener_lock_path(db,slot)
     with lock_path.open("a+b") as handle:
         handle.seek(0)
         try:
@@ -65,9 +73,9 @@ def listener_lock(db, slot):
                 fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as exc:
             if exc.errno in (errno.EACCES, errno.EAGAIN) or getattr(exc, "winerror", None) == 33:
-                raise RuntimeError("该槽位已有监听进程") from exc
+                raise ListenerBusy("该槽位已有监听进程") from exc
             raise
-        yield
+        yield handle
 
 
 class Client:
@@ -287,6 +295,14 @@ class Listener:
                     wechat_roles.refresh_owner(self.db,self.client,self.account,self.group)
                 if cmd and (jianghu.DUEL.fullmatch(cmd) or jianghu.jianghu_world.society.TARGET.fullmatch(cmd)) and jianghu.enabled(self.db,self.group):
                     payload["duel_target"]=wechat_roles.target_member(self.db,self.client,self.account,self.group,message)
+                if cmd and cmd.startswith(("赞美","送礼")):
+                    try:
+                        target=wechat_roles.target_member(self.db,self.client,self.account,self.group,message)
+                    except (OSError,ValueError,RuntimeError,http.client.HTTPException):
+                        target=None
+                        payload["social_lookup_failed"]=True
+                    if target:
+                        payload.update(social_target=target,social_group=self.group)
                 from .pond_raids import TARGET
                 if (cmd and (TARGET.fullmatch(cmd.strip()) or cmd == "偷鱼")
                         and isinstance(mentions,dict) and mentions.get("state")=="known"
@@ -607,7 +623,45 @@ def replies(db,client,node_secret,token,name=None,*,group=None,once=False):
                             elif card:
                                 task["share"]=dict(kind="share",title=card["title"],url=card["url"],
                                                    description="在 Apple Music 查看搜索结果")
-                            state,detail=send_direct(client,token,task)
+                            def current_reply():
+                                return (listener.linked() and directed_authorized(task)
+                                        and time.time()<min(task["expires"],task["lease"])
+                                        and model_reply_authorized(db,task["biz"]))
+                            picture=db.execute("""SELECT c.snapshot FROM fishing_reply_cards c
+                                JOIN outbox o ON o.id=c.task JOIN groups g ON g.id=o.grp
+                                WHERE c.task=? AND json_extract(g.config,'$.fishing_cards')=1
+                                AND json_extract(g.config,'$.enabled')=1 AND g.paused=0
+                                AND g.account=o.account AND g.binding=o.binding""",(task["id"],)).fetchone()
+                            trial=db.execute("""SELECT c.snapshot FROM game_card_trials t JOIN game_card_snapshots c
+                                               ON c.task=t.task WHERE t.task=? AND t.grp=? AND t.account=? AND t.binding=?""",
+                                             (task["id"],task["grp"],listener.account,task["binding"])).fetchone()
+                            if trial:
+                                from .game_card_send import send_image
+                                def image_authorized():
+                                    verify_identity()
+                                    return (listener.linked() and directed_authorized(task)
+                                            and time.time()<min(task["lease"],task["expires"])
+                                            and db.execute("SELECT 1 FROM game_card_trials WHERE task=? AND until>?",
+                                                           (task["id"],time.time())).fetchone() is not None)
+                                state,detail=send_image(client,token,task,trial[0],image_authorized)
+                            elif picture:
+                                from .fishing_cards import render
+                                from .native_voice_send import send_media
+                                def image_authorized():
+                                    verify_identity()
+                                    return current_reply() and db.execute("""SELECT 1 FROM groups
+                                        WHERE id=? AND account=? AND binding=? AND NOT paused
+                                        AND json_extract(config,'$.enabled')=1 AND json_extract(config,'$.fishing_cards')=1""",
+                                        (task["grp"],task["account"],task["binding"])).fetchone()
+                                jpeg=render(json.loads(picture[0]))
+                                if jpeg:
+                                    state,detail=send_media(client,token,task,image_authorized,jpeg,"image")
+                                elif image_authorized():
+                                    state,detail=send_direct(client,token,task)
+                                else:
+                                    state,detail="FAILED","钓鱼回复已过期或群授权已变化"
+                            else:
+                                state,detail=send_direct(client,token,task)
                         else:
                             state,detail="FAILED","本群智能对话或语音上下文授权已变化"
                 except (ValueError,OSError,http.client.HTTPException):

@@ -27,8 +27,79 @@ async function renderWechatLogin(ticket){
   let state={}, timer=null, busy=false, imageKey="";
   const visible=()=>ticket===revision && card.isConnected;
   const clearQr=()=>{qr.hidden=true;qr.removeAttribute("src");imageKey="";};
+  const rooms=el("article","");
+  panel.append(rooms);
+  let generation=0;
+  async function loadRooms(account,version){
+    const records=new Map();
+    let cursor="",server="",partial=false,current=1;
+    const size=10,seen=new Set();
+    const valid=()=>visible()&&generation===version;
+    do{
+      const query=new URLSearchParams({account,cursor});
+      const result=await api("api/wechat-groups?"+query);
+      if(!valid())return;
+      if(result.account!==account||(server&&server!==result.server))throw Error("微信连接已变化，请刷新状态");
+      server=result.server;
+      partial=partial||result.partial;
+      for(const room of result.items)records.set(room.id,room);
+      cursor=result.next;
+      if(cursor&&seen.has(cursor))throw Error("群列表分页异常，请刷新状态");
+      seen.add(cursor);
+    }while(cursor);
+    const search=el("input",""),wrap=el("div",""),table=el("table","");
+    search.type="search";search.placeholder="搜索群名或群 ID";search.setAttribute("aria-label",search.placeholder);
+    wrap.className="room-scroll";table.className="room-table";wrap.append(table);
+    const header=table.createTHead().insertRow();
+    for(const title of ["ID","群名","状态","操作"]){const th=el("th",title);th.scope="col";header.append(th);}
+    const body=table.createTBody(),pager=el("div",""),prev=el("button","上一页"),next=el("button","下一页"),summary=el("span","");
+    pager.className="room-pager";pager.append(summary,prev,next);
+    rooms.replaceChildren(el("h2","选择要管理的微信群"),search,wrap,pager);
+    if(partial)rooms.append(el("p","微信群资料可能不完整，可刷新重试。"));
+    function show(){
+      const term=search.value.trim().toLowerCase();
+      const matches=[...records.values()].filter(r=>(r.name||"").toLowerCase().includes(term)||r.id.toLowerCase().includes(term));
+      const count=Math.max(1,Math.ceil(matches.length/size));
+      current=Math.min(current,count);
+      prev.disabled=current===1;next.disabled=current===count;
+      summary.textContent="共 "+matches.length+" 个群 · "+current+" / "+count+" 页";
+      body.replaceChildren();
+      if(!matches.length){const empty=body.insertRow().insertCell();empty.colSpan=4;empty.textContent=term?"没有匹配的微信群":"当前未列出微信群";}
+      for(const room of matches.slice((current-1)*size,current*size)){
+        const row=body.insertRow(),id=row.insertCell(),name=row.insertCell();
+        id.textContent=room.id.replace(/@chatroom$/,"");id.title=room.id;
+        name.textContent=room.name===room.id?"—":room.name;name.title=name.textContent;
+        row.insertCell().textContent=room.state;
+        const button=el("button",room.state==="已绑定"?"管理本群":"绑定并管理");
+        row.insertCell().append(button);
+        button.disabled=room.state==="其他账号已绑定";
+        button.onclick=async()=>{
+          button.disabled=true;
+          try{
+            await api("api/wechat-groups",{group:room.id,account,server:result.server});
+            if(!visible())return;
+            const me=await api("api/me");
+            if(!visible())return;
+            user=me;
+            $("group").replaceChildren(...me.groups.map(g=>new Option(me.group_aliases[g]||g,g)));
+            $("group").value=room.id;page="群组运营";await render();
+          }catch(err){if(visible())stateLabel.textContent=err.message;}
+          finally{button.disabled=false;}
+        };
+      }
+    }
+    search.oninput=()=>{current=1;show();};
+    prev.onclick=()=>{current--;show();};next.onclick=()=>{current++;show();};
+    show();
+  }
   function draw(next){
     state=next;
+    const version=++generation;
+    rooms.replaceChildren();
+    if(state.state==="online"){
+      rooms.append(el("p","正在读取微信群…"));
+      loadRooms(state.account,version).catch(err=>{if(visible()&&generation===version)rooms.replaceChildren(el("p",err.message));});
+    }
     const active=["starting","queued","running","resuming","awaiting_scan","awaiting_approval","authenticating"].includes(state.state);
     stateLabel.textContent=state.state==="online"?"已登录 · "+state.account:labels[state.state]||"请刷新登录状态。";
     if(state.hint)stateLabel.textContent+=" "+state.hint;

@@ -9,6 +9,7 @@ import time
 from ctypes import wintypes
 from datetime import datetime
 from typing import NamedTuple
+from urllib.parse import urlsplit
 
 from . import admin
 from .db import BJ, allowed, audit, dump, record_failure, transaction
@@ -93,7 +94,14 @@ def protect(value, decrypt=False):
 
 
 def _provider_json(host, path, key, payload=None, limit=262144):
-    conn = http.client.HTTPSConnection(host, timeout=18)
+    proxy_port = os.environ.get("ERGOU_OPENAI_PROXY_PORT") if host == "api.openai.com" else None
+    if proxy_port:
+        if not re.fullmatch(r"[0-9]{1,5}", proxy_port) or not 0 < int(proxy_port) < 65536:
+            raise ModelError("OpenAI 本地代理端口无效")
+        conn = http.client.HTTPSConnection("127.0.0.1", int(proxy_port), timeout=18)
+        conn.set_tunnel(host, 443)
+    else:
+        conn = http.client.HTTPSConnection(host, timeout=18)
     try:
         headers = {"Accept": "application/json"}
         if key is not None:
@@ -121,8 +129,27 @@ def _provider_json(host, path, key, payload=None, limit=262144):
         conn.close()
 
 
+def provider_endpoint(provider):
+    entry = PROVIDERS[provider]
+    base = os.environ.get("ERGOU_OPENAI_BASE_URL")
+    if provider != "openai" or not base:
+        return entry
+    try:
+        url = urlsplit(base)
+        valid = (url.scheme == "https" and url.hostname and not url.username
+                 and "@" not in url.netloc and not url.query and not url.fragment
+                 and (url.port is None or url.port > 0)
+                 and all(32 < ord(char) < 127 for char in base))
+    except ValueError:
+        valid = False
+    if not valid:
+        raise ModelError("OpenAI 网关地址无效，请配置 HTTPS API 基础地址")
+    prefix = url.path.rstrip("/")
+    return entry[0], url.netloc, prefix + "/chat/completions", prefix + "/models"
+
+
 def complete(provider, model, key, messages):
-    _, host, path, _ = PROVIDERS[provider]
+    _, host, path, _ = provider_endpoint(provider)
     payload = dict(model=model, messages=messages, stream=False)
     payload["max_completion_tokens" if provider=="openai" else "max_tokens"] = 1024
     result = _provider_json(host,path,key,payload)
@@ -148,7 +175,7 @@ def _catalog_ids(items, field):
 
 
 def provider_model_ids(provider, key):
-    _, host, _, path = PROVIDERS[provider]
+    _, host, _, path = provider_endpoint(provider)
     if provider == "glm":
         spec = _provider_json("docs.bigmodel.cn", path, None, limit=4*1024*1024)
         try:
@@ -240,6 +267,24 @@ def configure_controls(db, user, group, fields):
     members, version = fields.get("admins"), fields.get("version")
     if type(version) is not int or version < 0:
         raise ValueError("配置版本无效")
+    if "enabled" in fields:
+        enabled=fields["enabled"]
+        if type(enabled) is not bool:
+            raise ValueError("启停值无效")
+        with transaction(db):
+            state=control_settings(db,user,group)
+            if state["version"]!=version:
+                raise ValueError("CONFLICT 群设置已更新")
+            if enabled and not state["verified"]:
+                raise ValueError("请先验证并保存模型")
+            if enabled!=state["enabled"]:
+                db.execute("INSERT OR IGNORE INTO smart_controls(grp) VALUES(?)",(group,))
+                db.execute("UPDATE smart_controls SET enabled=?,version=version+1,generation=generation+1 WHERE grp=?",
+                           (enabled,group))
+                cancel_chat(db,group)
+                db.execute("DELETE FROM local_turns WHERE grp=?",(group,))
+                audit(db,user["name"],group,"后台切换智能对话","开启" if enabled else "暂停")
+        return control_settings(db,user,group)
     if (not isinstance(members,list) or len(members)>100 or
             any(not isinstance(m,str) or not 1<=len(m)<=160 or not m.isprintable()
                 or any(c.isspace() for c in m) for m in members)):
@@ -300,7 +345,7 @@ def configure(db, user, group, fields):
     if type(version) is not int or version < 0:
         raise ValueError("配置版本无效")
     disable = fields.get("action") == "disable"
-    if not disable and fields.get("action") != "verify":
+    if not disable and fields.get("action") not in ("verify","test","save"):
         raise ValueError("配置操作无效")
     old = db.execute("SELECT * FROM chat_models WHERE grp=?", (group,)).fetchone()
     if (old["version"] if old else 0) != version:
@@ -312,7 +357,8 @@ def configure(db, user, group, fields):
                 or not MODEL_ID.fullmatch(model)):
             raise ValueError("请选择官方供应商并填写有效的模型 ID")
         key=_request_key(old,provider,key)
-        sealed=old["credential"] if fields.get("key")=="" else protect(key.encode("ascii"))
+        if fields["action"]!="test":
+            sealed=old["credential"] if fields.get("key")=="" else protect(key.encode("ascii"))
         with transaction(db):
             if not allowed(db, "model-test/"+group, 6, 60, time.time()):
                 raise ValueError("RATE_LIMITED 测试频率过高，请稍后再试")
@@ -321,16 +367,21 @@ def configure(db, user, group, fields):
         except ValueError as exc:
             record_failure(db,group,None,"模型配置验证",exc.category if isinstance(exc,ModelError) else "供应商调用失败")
             raise
+        if fields["action"]=="test":
+            return {"tested":True}
         verified = time.time()
     with transaction(db):
         current = db.execute("SELECT version FROM chat_models WHERE grp=?", (group,)).fetchone()
         if (current[0] if current else 0) != version:
             raise ValueError("CONFLICT 另一位运营人员已修改配置，请刷新")
+        if fields["action"]=="save" and (not old or not old["verified"]):
+            db.execute("""INSERT INTO smart_controls(grp,enabled) VALUES(?,0)
+                        ON CONFLICT(grp) DO UPDATE SET enabled=0,version=version+1""",(group,))
         db.execute("INSERT OR REPLACE INTO chat_models VALUES(?,?,?,?,?,?)",
                    (group,version+1,provider,model,sealed,verified))
         cancel_chat(db,group)
         db.execute("DELETE FROM local_turns WHERE grp=?",(group,))
-        audit(db,user["name"],group,"停用群聊模型" if disable else "验证并启用群聊模型",provider+" "+model)
+        audit(db,user["name"],group,"停用群聊模型" if disable else "验证并保存群聊模型",provider+" "+model)
     return settings(db,user,group)
 
 

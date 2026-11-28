@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -75,6 +76,26 @@ class AgentWechat(unittest.TestCase):
         self.assertEqual(0, self.db.execute("SELECT COUNT(*) FROM outbox").fetchone()[0])
         aw.link(self.db, self.api, "测试群", self.secret, after="0")
         self.assertEqual("16", self.db.execute("SELECT cursor FROM agent_wechat_links").fetchone()[0])
+
+    def test_gift_uses_one_structured_mention_and_current_group_membership(self):
+        self.api.details.update(body="二狗送礼 奶茶 @昵称",mentions={"state":"known","userIds":["friend"]})
+        def member(path):
+            self.assertTrue(path.endswith("/groups/test%40chatroom/members/friend"))
+            return dict(groupId=self.api.room,username="friend",state="present",
+                        member=dict(username="friend",roomDisplayName="昵称"))
+        def offline(_):
+            raise ConnectionError("fixture offline")
+        for cursor,reply,expected in ((13,member,"friend"),(14,lambda _:dict(groupId="another",username="friend",state="present"),None),
+                                      (15,offline,None)):
+            self.api.details["serverId"]=str(1000+cursor)
+            with patch.object(self.api,"get",side_effect=reply):
+                seq=self.listener.consume(self.event(cursor),self.api.details)
+            payload=json.loads(self.db.execute("SELECT payload FROM inbox WHERE seq=?",(seq,)).fetchone()[0])
+            self.assertEqual(payload.get("social_target"),expected)
+            if expected:
+                self.assertEqual(payload["social_group"],self.api.room)
+            if cursor==15:
+                self.assertTrue(payload["social_lookup_failed"])
 
     def test_mismatched_detail_and_membership(self):
         self.api.details["threadId"] = "different@chatroom"

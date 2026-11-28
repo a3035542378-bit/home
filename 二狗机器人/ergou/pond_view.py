@@ -4,7 +4,9 @@ import re
 from . import breeding, fish_grades, pond_growth
 from .fish_receipts import grid, mass, single
 from .fishing_waters import SPECIES, size_grade
+from .fishing_cards import sheet
 
+PAGE_SIZE = 5
 DETAIL = re.compile(r"查看鱼\s*[#＃]([1-9][0-9]{0,17})")
 STOCK = """SELECT p.*,coalesce(g.original_grams,p.grams) original_grams,
     coalesce(g.original_price,p.price) original_price,coalesce(g.rounds,0) rounds,
@@ -40,10 +42,11 @@ def home(db,key,page,by_weight,prefix,changes,now):
     pending=breeding.banner(breeding.state(db,key),prefix,used>=capacity) if breeding.enabled(db,key[0]) else ""
     if not used and not pending:
         bag=db.execute("SELECT id,fish FROM fishing_pond WHERE grp=? AND member=? AND storage='bag' ORDER BY id DESC LIMIT 1",key).fetchone()
-        if bag:
-            return f"🐟 鱼塘是空的（0/{capacity} 条）。把鱼包里的 #{bag[0]} {bag[1]} 放进来吧。\n{prefix}放入鱼塘#{bag[0]}"
-        return f"🐟 鱼塘是空的（0/{capacity} 条）。先钓一条，再从鱼包放入鱼塘。\n{cast_step(db,key,prefix,now)}"
-    pages=max(1,(used+1)//2)
+        tip=f"把鱼包里的 #{bag[0]} {bag[1]} 放进来吧。" if bag else "先钓一条，再从鱼包放入鱼塘。"
+        step=f"{prefix}放入鱼塘#{bag[0]}" if bag else cast_step(db,key,prefix,now)
+        return sheet(f"🐟 鱼塘是空的（0/{capacity} 条）。{tip}\n{step}",prefix,"鱼塘手记","空鱼塘",
+                     f"已占 0/{capacity} 个塘位",lines=[tip,step])
+    pages=max(1,(used+PAGE_SIZE-1)//PAGE_SIZE)
     base=prefix+"鱼塘"+(" 重量" if by_weight else "")
     if page>pages:
         return f"鱼塘只有 {pages} 页。\n{base} {pages}"
@@ -55,7 +58,7 @@ def home(db,key,page,by_weight,prefix,changes,now):
     if pending:
         lines.extend([pending.replace("发送 ","")])
     order="p.grams DESC,p.id DESC" if by_weight else "p.id DESC"
-    rows=db.execute(STOCK+f" AND p.storage='pond' ORDER BY {order} LIMIT 2 OFFSET ?",(*key,2*(page-1))).fetchall()
+    rows=db.execute(STOCK+f" AND p.storage='pond' ORDER BY {order} LIMIT ? OFFSET ?",(*key,PAGE_SIZE,PAGE_SIZE*(page-1))).fetchall()
     lines.extend(["",*grid((f"编号: {r['id']}",r["fish"],mass(r["grams"]),f"{r['price']} 鱼币",
                              "已定型" if finished(r) else "在养" if r["next_at"] else "暂停") for r in rows)])
     for r in rows:
@@ -78,7 +81,11 @@ def home(db,key,page,by_weight,prefix,changes,now):
     if used > 1:
         lines.extend(["【批量投喂】喂多条鱼", "【批量收回鱼包】移出塘鱼", "【批量卖出塘鱼】按编号出售"])
     lines.extend(["","【鱼塘操作】看单鱼、出售或扩容"])
-    return "\n".join(lines)
+    return sheet("\n".join(lines),prefix,"鱼塘手记","我的鱼塘",f"{level} 级鱼塘  /  第 {page} 页",
+                 facts=[("塘位",f"{used}/{capacity}"),("成长位",f"{len(active)}/{pond_growth.SLOTS[level-1]}")],
+                 entries=[(r["fish"],f"#{r['id']}  ·  {mass(r['grams'])}  ·  {r['price']} 鱼币  ·  "+
+                           ("已定型" if finished(r) else "在养" if r["next_at"] else "暂停")) for r in rows],
+                 lines=[line for line in lines[2:] if not line.startswith("[")])
 
 
 def detail(db,key,item,prefix):
@@ -114,7 +121,11 @@ def detail(db,key,item,prefix):
         effect=f"换展，编号 {row['old_id']} 回包" if row["shown"] is not None else "首次点亮"
         lines.append(f"【放入图鉴#{item}】{effect}")
     lines.append(f"【卖鱼#{item}】立即出售，到账 {row['price']} 鱼币。{note}")
-    return "\n".join(lines)
+    species=SPECIES.get(row["fish"])
+    return sheet("\n".join(lines),prefix,"单鱼档案",row["fish"],
+                 f"渔获 #{item}  /  "+("鱼塘" if pond else "鱼包")+"  /  "+(species[-1]+"鱼种" if species else "历史鱼种"),
+                 species=row["fish"],facts=[("品质",quality(row).replace("✨","")),("大小",size_grade(row["fish"],row["grams"]) or "未记录")],
+                 lines=lines[3:])
 
 
 def actions(db,key,prefix):

@@ -87,6 +87,20 @@ class PondDirectoryTests(unittest.TestCase):
             self.assertIn("5/5",self.send("二狗抛竿"))
         self.assertIn("鱼包已满",self.send("二狗抛竿"))
 
+    def test_seven_fish_in_two_pages(self):
+        self.db.execute("UPDATE fishing_storage_levels SET level=4 WHERE storage='pond'")
+        for item in range(1,8):
+            self.stock(item,"鲫鱼",300-item)
+        for suffix,order in (("",list(range(7,0,-1))),(" 重量",list(range(1,8)))):
+            cmd="二狗鱼塘"+suffix
+            home=self.send(cmd)
+            second=self.send(cmd+" 2")
+            for body,expected in ((home,order[:5]),(second,order[5:])):
+                ids=[int(line.split("]")[0].split(":")[1]) for line in body.splitlines() if line.startswith("[编号:")]
+                self.assertEqual(ids,expected)
+            self.assertIn(cmd+" 2",commands(home))
+            self.assertIn("只有 2 页",self.send(cmd+" 3"))
+
     def test_home_details_and_copyable_actions(self):
         self.scenario()
         home=self.send("二狗鱼塘")
@@ -97,7 +111,8 @@ class PondDirectoryTests(unittest.TestCase):
         self.assertNotIn("一键卖鱼",home)
         for line in home.splitlines():
             self.assertLessEqual(sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in line),80 if line.startswith("[") else 44,line)
-        self.assertIn("[编号: 71]",self.send(next(l for l in commands(home) if l=="二狗鱼塘 2")))
+        self.assertIn("[编号: 71]",home)
+        self.assertNotIn("下一页",home)
         guide=self.send(commands(home)[-1])
         detail=self.send(next(l for l in commands(guide) if l.startswith("二狗查看鱼#")))
         for field in ("原重","现重","上限","品相加价","原价","现价"):
